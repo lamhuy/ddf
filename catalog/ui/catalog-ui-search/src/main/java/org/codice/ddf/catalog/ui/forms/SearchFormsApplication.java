@@ -13,10 +13,15 @@
  */
 package org.codice.ddf.catalog.ui.forms;
 
+import static ddf.catalog.data.types.Core.METACARD_TAGS;
+import static ddf.catalog.data.types.Security.ACCESS_ADMINISTRATORS;
+import static ddf.catalog.data.types.Security.ACCESS_GROUPS;
+import static ddf.catalog.data.types.Security.ACCESS_INDIVIDUALS;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.codice.ddf.catalog.ui.forms.data.AttributeGroupType.ATTRIBUTE_GROUP_TAG;
 import static org.codice.ddf.catalog.ui.forms.data.QueryTemplateType.QUERY_TEMPLATE_TAG;
+import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE;
 import static org.codice.gsonsupport.GsonTypeAdapters.MAP_STRING_TO_OBJECT_TYPE;
 import static spark.Spark.delete;
 import static spark.Spark.exception;
@@ -46,17 +51,31 @@ import ddf.catalog.source.IngestException;
 import ddf.catalog.source.SourceUnavailableException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.security.Subject;
+import ddf.security.SubjectUtils;
+import ddf.security.permission.CollectionPermission;
+import ddf.security.permission.KeyValueCollectionPermission;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.codice.ddf.catalog.ui.forms.model.pojo.CommonTemplate;
+import org.codice.ddf.catalog.ui.security.AccessControlSecurityConfiguration;
+import org.codice.ddf.catalog.ui.security.Constants;
 import org.codice.ddf.catalog.ui.util.EndpointUtil;
 import org.codice.gsonsupport.GsonTypeAdapters.DateLongFormatTypeAdapter;
 import org.codice.gsonsupport.GsonTypeAdapters.LongDoubleTypeAdapter;
@@ -94,15 +113,19 @@ public class SearchFormsApplication implements SparkApplication {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchFormsApplication.class);
 
+  private final AccessControlSecurityConfiguration accessControlSecurityConfiguration;
+
   public SearchFormsApplication(
       CatalogFramework catalogFramework,
       FilterBuilder filterBuilder,
       TemplateTransformer transformer,
-      EndpointUtil util) {
+      EndpointUtil util,
+      AccessControlSecurityConfiguration accessControlSecurityConfiguration) {
     this.catalogFramework = catalogFramework;
     this.filterBuilder = filterBuilder;
     this.transformer = transformer;
     this.util = util;
+    this.accessControlSecurityConfiguration = accessControlSecurityConfiguration;
   }
 
   /**
@@ -114,7 +137,7 @@ public class SearchFormsApplication implements SparkApplication {
     get(
         "/forms/query",
         (req, res) ->
-            util.getMetacardsByTag(QUERY_TEMPLATE_TAG)
+            getVisibleForms(QUERY_TEMPLATE_TAG)
                 .values()
                 .stream()
                 .map(Result::getMetacard)
@@ -128,7 +151,7 @@ public class SearchFormsApplication implements SparkApplication {
     get(
         "/forms/result",
         (req, res) ->
-            util.getMetacardsByTag(ATTRIBUTE_GROUP_TAG)
+            getVisibleForms(ATTRIBUTE_GROUP_TAG)
                 .values()
                 .stream()
                 .map(Result::getMetacard)
@@ -282,6 +305,49 @@ public class SearchFormsApplication implements SparkApplication {
           res.header(CONTENT_TYPE, APPLICATION_JSON);
           res.body(util.getJson(ImmutableMap.of(RESP_MSG, SOMETHING_WENT_WRONG)));
         });
+  }
+
+  private String getSubjectEmail() {
+    return SubjectUtils.getEmailAddress(SecurityUtils.getSubject());
+  }
+
+  private List<String> getSubjectRoles() {
+    return SubjectUtils.getAttribute(SecurityUtils.getSubject(), Constants.ROLES_CLAIM_URI);
+  }
+
+  private Map<String, Result> getVisibleForms(String tag) {
+    String email = getSubjectEmail();
+    Map<String, Set<String>> permissions = new HashMap<>();
+    if (StringUtils.isNotEmpty(accessControlSecurityConfiguration.getSystemUserAttributeValue())) {
+      Set<String> systemUserSet =
+          new HashSet<>(
+              Arrays.asList(accessControlSecurityConfiguration.getSystemUserAttributeValue()));
+      permissions.put(ACCESS_GROUPS, systemUserSet);
+    }
+
+    KeyValueCollectionPermission securityPermission =
+        new KeyValueCollectionPermission(CollectionPermission.READ_ACTION, permissions);
+
+    if (SecurityUtils.getSubject().isPermitted(securityPermission)) {
+      return util.getMetacardsByTag(tag);
+    } else {
+
+      List<String> subjectRoles = getSubjectRoles();
+      Map<String, Collection<String>> attributeMap = new HashMap<>();
+      if (StringUtils.isNotEmpty(email)) {
+        attributeMap.put(Core.METACARD_OWNER, Collections.singletonList(email));
+        attributeMap.put(ACCESS_ADMINISTRATORS, Collections.singletonList(email));
+        attributeMap.put(ACCESS_INDIVIDUALS, Collections.singletonList(email));
+      }
+
+      if (CollectionUtils.isNotEmpty(subjectRoles)) {
+        attributeMap.put(ACCESS_GROUPS, subjectRoles);
+      }
+
+      attributeMap.put(METACARD_TAGS, Collections.singletonList(SYSTEM_TEMPLATE));
+
+      return util.getMetacardsWithTagByLikeAttributes(attributeMap, tag);
+    }
   }
 
   private Map<String, Object> parseMap(String json) {

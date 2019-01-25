@@ -549,6 +549,7 @@
         <argument ref="filterBuilder"/>
         <argument ref="templateTransformer"/>
         <argument ref="endpointUtil"/>
+        <argument ref="accessControlSecurityConfiguration"/>
     </bean>
 
     <reference id="logoutService" interface="org.codice.ddf.security.logout.service.LogoutService"/>

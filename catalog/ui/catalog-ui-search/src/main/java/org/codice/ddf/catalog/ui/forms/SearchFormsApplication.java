@@ -16,7 +16,9 @@ package org.codice.ddf.catalog.ui.forms;
 import static ddf.catalog.data.types.Core.METACARD_TAGS;
 import static ddf.catalog.data.types.Security.ACCESS_ADMINISTRATORS;
 import static ddf.catalog.data.types.Security.ACCESS_GROUPS;
+import static ddf.catalog.data.types.Security.ACCESS_GROUPS_READ;
 import static ddf.catalog.data.types.Security.ACCESS_INDIVIDUALS;
+import static ddf.catalog.data.types.Security.ACCESS_INDIVIDUALS_READ;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.codice.ddf.catalog.ui.forms.data.AttributeGroupType.ATTRIBUTE_GROUP_TAG;
@@ -323,6 +325,7 @@ public class SearchFormsApplication implements SparkApplication {
           new HashSet<>(
               Arrays.asList(accessControlSecurityConfiguration.getSystemUserAttributeValue()));
       permissions.put(ACCESS_GROUPS, systemUserSet);
+      permissions.put(ACCESS_GROUPS_READ, systemUserSet);
     }
 
     KeyValueCollectionPermission securityPermission =
@@ -338,9 +341,11 @@ public class SearchFormsApplication implements SparkApplication {
         attributeMap.put(Core.METACARD_OWNER, Collections.singletonList(email));
         attributeMap.put(ACCESS_ADMINISTRATORS, Collections.singletonList(email));
         attributeMap.put(ACCESS_INDIVIDUALS, Collections.singletonList(email));
+        attributeMap.put(ACCESS_INDIVIDUALS_READ, Collections.singletonList(email));
       }
 
       if (CollectionUtils.isNotEmpty(subjectRoles)) {
+        attributeMap.put(ACCESS_GROUPS_READ, subjectRoles);
         attributeMap.put(ACCESS_GROUPS, subjectRoles);
       }
 

@@ -15,8 +15,7 @@
 /*global define*/
 import React from 'react'
 import MarionetteRegionContainer from '../../react-component/container/marionette-region-container'
-import styled from '../../react-component/styles/styled-components'
-import { readableColor } from 'polished'
+
 import MetacardInteractionsDropdown from '../../react-component/container/metacard-interactions/metacard-interactions-dropdown'
 const Backbone = require('backbone')
 const Marionette = require('marionette')
@@ -39,9 +38,6 @@ require('../../behaviors/button.behavior.js')
 require('../../behaviors/dropdown.behavior.js')
 const HandleBarsHelpers = require('../../js/HandlebarsHelpers.js')
 const ResultLinkView = require('../result-link/result-link.view.js')
-const {
-  SelectItemToggle,
-} = require('../selection-checkbox/selection-checkbox.view.js')
 const plugin = require('plugins/result-item')
 
 const LIST_DISPLAY_TYPE = 'List'
@@ -68,17 +64,6 @@ const getResultDisplayType = () =>
       .get('preferences')
       .get('resultDisplay')) ||
   LIST_DISPLAY_TYPE
-
-const Divider = styled.div`
-  height: ${props => props.theme.borderRadius};
-  background: ${props => readableColor(props.theme.backgroundContent)};
-  opacity: 0.1;
-  margin-top: ${props => props.theme.minimumSpacing};
-`
-
-const Footer = styled.div`
-  background: rgba(0, 0, 0, 0.05);
-`
 
 const ResultItemView = Marionette.LayoutView.extend({
   template(data) {
@@ -207,9 +192,7 @@ const ResultItemView = Marionette.LayoutView.extend({
               )}
             </div>
             {this.getExtensions()}
-            <Divider />
-            <Footer className="content-footer">
-              <div className="checkbox-container" />
+            <div className="content-footer">
               <div className="result-validation">
                 {data.hasError ? (
                   <span
@@ -252,18 +235,10 @@ const ResultItemView = Marionette.LayoutView.extend({
               <MetacardInteractionsDropdown
                 model={new Backbone.Collection([this.options.model])}
               />
-            </Footer>
+            </div>
           </div>
         </div>
       </React.Fragment>
-    )
-  },
-  onRender() {
-    this.checkbox.show(
-      new SelectItemToggle({
-        model: this.model,
-        selectionInterface: this.options.selectionInterface,
-      })
     )
   },
   getExtensions: function() {
@@ -284,7 +259,6 @@ const ResultItemView = Marionette.LayoutView.extend({
   },
   regions: {
     resultAdd: '.result-add',
-    checkbox: '.checkbox-container',
   },
   behaviors() {
     return {

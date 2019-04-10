@@ -75,7 +75,7 @@ module.exports = Marionette.LayoutView.extend({
       this.handleSelectionChange
     )
     this.listenTo(
-      this.options.selectionInterface.getActiveSearchResults(),
+      this.options.selectionInterface.getCompleteActiveSearchResults(),
       'update add remove reset',
       this.handleResultsChange
     )
@@ -101,7 +101,8 @@ module.exports = Marionette.LayoutView.extend({
   handleResultsChange: function() {
     this.$el.toggleClass(
       'has-results',
-      this.options.selectionInterface.getActiveSearchResults().length > 0
+      this.options.selectionInterface.getCompleteActiveSearchResults().length >
+        0
     )
   },
   handleSelectionChange: function() {
@@ -132,6 +133,9 @@ module.exports = Marionette.LayoutView.extend({
     )
     this.selectionInterface.addSelectedResult(
       this.options.selectionInterface.getSelectedResults().models
+    )
+    this.selectionInterface.setCompleteActiveSearchResults(
+      this.options.selectionInterface.getSelectedResults()
     )
     lightboxInstance.model.updateTitle('Histogram')
     lightboxInstance.model.open()

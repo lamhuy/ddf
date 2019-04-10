@@ -112,7 +112,7 @@ module.exports = Backbone.AssociatedModel.extend({
     )
     this.listenTo(
       this.get('queuedResults'),
-      'add',
+      'reset',
       _.throttle(this.mergeQueue, 30, {
         leading: false,
       })
@@ -266,8 +266,15 @@ module.exports = Backbone.AssociatedModel.extend({
       )
     }
 
+    this.addQueuedResults(resp.results)
+
+    if (this.get('queuedResults').fullCollection.length !== 0) {
+      // merges the remaining queued results not from the cache
+      this.mergeQueue(true, false)
+    }
+
     return {
-      queuedResults: resp.results,
+      queuedResults: [],
       results: [],
       status: resp.status,
       merged: this.get('merged') === false ? false : resp.results.length === 0,
@@ -275,8 +282,10 @@ module.exports = Backbone.AssociatedModel.extend({
   },
   // we have to do a reset because adding is so slow that it will cause a partial merge to initiate
   addQueuedResults(results) {
-    const existingQueue = this.get('queuedResults').models
-    this.get('queuedResults').reset(existingQueue.concat(results))
+    const existingQueue = this.get('queuedResults').fullCollection.models
+    this.get('queuedResults').fullCollection.reset(
+      existingQueue.concat(results)
+    )
   },
   allowAutoMerge: function() {
     if (this.get('results').length === 0 || !this.get('currentlyViewed')) {
@@ -285,16 +294,16 @@ module.exports = Backbone.AssociatedModel.extend({
       return Date.now() - this.lastMerge < properties.getAutoMergeTime()
     }
   },
-  mergeQueue: function(userTriggered) {
+  mergeQueue: function(userTriggered, includeQueuedCache = true) {
     if (userTriggered === true || this.allowAutoMerge()) {
       this.lastMerge = Date.now()
 
       var resultsIncludingDuplicates = this.get('results')
-        .map(function(m) {
+        .fullCollection.map(function(m) {
           return m.pick('id', 'src')
         })
         .concat(
-          this.get('queuedResults').map(function(m) {
+          this.get('queuedResults').fullCollection.map(function(m) {
             return m.pick('id', 'src')
           })
         )
@@ -303,28 +312,36 @@ module.exports = Backbone.AssociatedModel.extend({
       )
 
       var interimCollection = new QueryResultCollection(
-        this.get('results').models
+        this.get('results').fullCollection.models
       )
 
-      interimCollection.add(this.get('queuedResults').models, {
+      const queuedResults = this.get('queuedResults').fullCollection.models
+      const resultsToAdd = includeQueuedCache
+        ? queuedResults
+        : queuedResults.filter(result => result.get('src') !== 'cache')
+      interimCollection.add(resultsToAdd, {
         merge: true,
       })
-      interimCollection.comparator = this.get('results').comparator
-      interimCollection.sort()
+      interimCollection.fullCollection.comparator = this.get(
+        'results'
+      ).fullCollection.comparator
+      interimCollection.fullCollection.sort()
       var maxResults = user
         .get('user')
         .get('preferences')
         .get('resultCount')
-      this.get('results').reset(interimCollection.slice(0, maxResults))
+      this.get('results').fullCollection.reset(
+        interimCollection.fullCollection.slice(0, maxResults)
+      )
 
       this.updateResultCountsBySource(
         this.createIndexOfSourceToResultCount(
           metacardIdToSourcesIndex,
-          this.get('results')
+          this.get('results').fullCollection
         )
       )
 
-      this.get('queuedResults').reset()
+      this.get('queuedResults').fullCollection.reset()
       this.updateStatus()
       this.set('merged', true)
     }
@@ -394,12 +411,12 @@ module.exports = Backbone.AssociatedModel.extend({
     this.setCacheChecked()
     this.get('status').forEach(
       function(statusModel) {
-        statusModel.updateStatus(this.get('results'))
+        statusModel.updateStatus(this.get('results').fullCollection)
       }.bind(this)
     )
   },
   updateMerged: function() {
-    this.set('merged', this.get('queuedResults').length === 0)
+    this.set('merged', this.get('queuedResults').fullCollection.length === 0)
   },
   isUnmerged: function() {
     return !this.get('merged')

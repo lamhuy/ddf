@@ -74,7 +74,7 @@ module.exports = Marionette.LayoutView.extend({
         results: this.model
           .get('result')
           .get('results')
-          .toJSON(),
+          .fullCollection.toJSON(),
         status: this.model
           .get('result')
           .get('status')

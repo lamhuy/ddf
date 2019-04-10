@@ -13,16 +13,17 @@
  *
  **/
 /*global define*/
-import * as React from 'react'
+const Backbone = require('backbone')
 const Marionette = require('marionette')
+const _ = require('underscore')
+const $ = require('jquery')
+const template = require('./result-indicator.hbs')
+const CustomElements = require('../../js/CustomElements.js')
 const store = require('../../js/store.js')
-import ResultIndicator from './result-indicator'
 
 module.exports = Marionette.ItemView.extend({
-  template({ colors }) {
-    return <ResultIndicator colors={colors} />
-  },
-  className: 'customElement',
+  template: template,
+  tagName: CustomElements.register('result-indicator'),
   initialize: function() {
     this.debouncedRender = _.debounce(function() {
       if (!this.isDestroyed) {
@@ -36,6 +37,9 @@ module.exports = Marionette.ItemView.extend({
       colors: this.colors,
     }
   },
+  checkCollection: function() {},
+  checkResult: function() {},
+  checkQueries: function() {},
   calculateColors: function() {
     var self = this
     self.colors = []
@@ -43,7 +47,7 @@ module.exports = Marionette.ItemView.extend({
     if (currentWorkspace) {
       currentWorkspace.get('queries').forEach(function(query) {
         if (!self.isDestroyed && query.get('result')) {
-          var results = query.get('result').get('results')
+          var results = query.get('result').get('results').fullCollection
           for (var i = 0; i <= results.length - 1; i++) {
             if (
               results.models[i]

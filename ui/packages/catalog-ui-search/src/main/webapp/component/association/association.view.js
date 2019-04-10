@@ -38,7 +38,7 @@ function determineChoices(view) {
     .getCurrentQuery()
     .get('result')
     .get('results')
-    .filter(function(result) {
+    .fullCollection.filter(function(result) {
       return result.get('metacard').id !== currentMetacard.get('metacard').id
     })
     .filter(function(result) {

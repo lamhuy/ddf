@@ -10,6 +10,7 @@
  *
  **/
 /*global define*/
+var DEFAULT_PAGE_SIZE = 25
 var DEFAULT_AUTO_MERGE_TIME = 1000
 
 const $ = require('jquery')
@@ -144,6 +145,9 @@ var properties = {
   },
   hasExperimentalEnabled: function() {
     return this.isExperimental
+  },
+  getPageSize: function() {
+    return this.resultPageSize || DEFAULT_PAGE_SIZE
   },
   getAutoMergeTime: function() {
     return this.autoMergeTime || DEFAULT_AUTO_MERGE_TIME

@@ -155,46 +155,6 @@ pipeline {
                 }*/
             }
         }
-        /* stage('Security Analysis') {
-            parallel {
-                stage ('Owasp') {
-                    steps {
-                        withMaven(maven: 'M35', jdk: 'jdk8-latest', globalMavenSettingsConfig: 'default-global-settings', mavenSettingsConfig: 'codice-maven-settings', mavenOpts: '${LARGE_MVN_OPTS} ${LINUX_MVN_RANDOM}') {
-                            script {
-                                // If this build is not a pull request, run owasp scan on the distribution. Otherwise run incremental scan
-                                if (env.CHANGE_ID == null) {
-                                    sh 'mvn verify -q -B -Powasp-dist -DskipTests=true -DskipStatic=true -pl !$DOCS $DISABLE_DOWNLOAD_PROGRESS_OPTS'
-                                } else {
-                                    sh 'mvn verify -q -B -Powasp -DskipTests=true -DskipStatic=true -pl !$DOCS -Dgib.enabled=true -Dgib.referenceBranch=/refs/remotes/origin/$CHANGE_TARGET $DISABLE_DOWNLOAD_PROGRESS_OPTS'
-                                }
-                            }
-                        }
-                    }
-                }
-                stage ('NodeJsSecurity') {
-                    agent { label 'linux-small' }
-                    steps {
-                        retry(3) {
-                            checkout scm
-                        }
-                        script {
-                            def packageFiles = findFiles(glob: '**/package.json')
-                            for (int i = 0; i < packageFiles.size(); i++) {
-                                dir(packageFiles[i].path.split('package.json')[0]) {
-                                    def packageFile = readJSON file: 'package.json'
-                                    if (packageFile.scripts =~ /.*webpack.*/ || packageFile.containsKey("browserify")) {
-                                        nodejs(configId: 'npmrc-default', nodeJSInstallationName: 'nodejs') {
-                                            echo "Scanning ${packageFiles[i].path}"
-                                            sh 'nsp check'
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } */
         /*
           Deploy stage will only be executed for deployable branches. These include master and any patch branch matching M.m.x format (i.e. 2.10.x, 2.9.x, etc...).
           It will also only deploy in the presence of an environment variable JENKINS_ENV = 'prod'. This can be passed in globally from the jenkins master node settings.

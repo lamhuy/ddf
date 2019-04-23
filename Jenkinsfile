@@ -21,7 +21,7 @@ pipeline {
           Restrict nightly builds to master branch, all others will be built on change only.
           Note: The BRANCH_NAME will only work with a multi-branch job using the github-branch-source
         */
-        cron(BRANCH_NAME == "master" ? "H H(17-19) * * *" : "")
+        cron(BRANCH_NAME == "master" || BRANCH_NAME == "13.x" ? "H H(20-21) * * *" : "")
     }
     environment {
         DOCS = 'distribution/docs'
@@ -35,7 +35,7 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                dockerd {}
+                //dockerd {}
                 slackSend color: 'good', message: "STARTED: ${JOB_NAME} ${BUILD_NUMBER} ${BUILD_URL}"
             }
         }
@@ -155,7 +155,7 @@ pipeline {
                 }*/
             }
         }
-        stage('Security Analysis') {
+        /* stage('Security Analysis') {
             parallel {
                 stage ('Owasp') {
                     steps {
@@ -194,7 +194,7 @@ pipeline {
                     }
                 }
             }
-        }
+        } */
         /*
           Deploy stage will only be executed for deployable branches. These include master and any patch branch matching M.m.x format (i.e. 2.10.x, 2.9.x, etc...).
           It will also only deploy in the presence of an environment variable JENKINS_ENV = 'prod'. This can be passed in globally from the jenkins master node settings.

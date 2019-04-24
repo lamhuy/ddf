@@ -25,9 +25,10 @@ pipeline {
     }
     environment {
         DOCS = 'distribution/docs'
-        ITESTS = 'distribution/test/itests/test-itests-ddf'
+        ITESTS = 'distribution/test/itests/test-itests-ddf,!ddf.distribution.docker:ddf,!ddf.distribution.docker:solr'        
         POMFIX = 'libs/libs-pomfix,libs/libs-pomfix-run'
         LARGE_MVN_OPTS = '-Xmx8192M -Xss128M -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC '
+        SKIP_TEST_FORMAT = '-DskipTests=true -Dcheckstyle.skip=true -Dfmt.skip=true -DskipStatic=true'
         DISABLE_DOWNLOAD_PROGRESS_OPTS = '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn '
         LINUX_MVN_RANDOM = '-Djava.security.egd=file:/dev/./urandom'
         COVERAGE_EXCLUSIONS = '**/test/**/*,**/itests/**/*,**/*Test*,**/sdk/**/*,**/*.js,**/node_modules/**/*,**/jaxb/**/*,**/wsdl/**/*,**/nces/sws/**/*,**/*.adoc,**/*.txt,**/*.xml'
@@ -101,7 +102,7 @@ pipeline {
                         timeout(time: 2, unit: 'HOURS') {
                             // TODO: Maven downgraded to work around a linux build issue. Falling back to system java to work around a linux build issue. re-investigate upgrading later
                             withMaven(maven: 'Maven 3.3.9', globalMavenSettingsConfig: 'default-global-settings', mavenSettingsConfig: 'codice-maven-settings', mavenOpts: '${LARGE_MVN_OPTS} ${LINUX_MVN_RANDOM}') {
-                                sh 'mvn clean install -B -pl !$ITESTS $DISABLE_DOWNLOAD_PROGRESS_OPTS'
+                                sh 'mvn clean install -B -pl !$ITESTS $SKIP_TEST_FORMAT $DISABLE_DOWNLOAD_PROGRESS_OPTS'
                             }
                         }
                     }
@@ -122,7 +123,7 @@ pipeline {
                 }*/
             }
         }
-        stage('Integration Tests Only Build') {
+        /*stage('Integration Tests Only Build') {
             when { expression { env.CHANGE_ID == null } }
             parallel {
                 stage ('Linux') {
@@ -152,9 +153,9 @@ pipeline {
                             }
                         }
                     }
-                }*/
+                }
             }
-        }
+        }*/
         /*
           Deploy stage will only be executed for deployable branches. These include master and any patch branch matching M.m.x format (i.e. 2.10.x, 2.9.x, etc...).
           It will also only deploy in the presence of an environment variable JENKINS_ENV = 'prod'. This can be passed in globally from the jenkins master node settings.
@@ -169,7 +170,7 @@ pipeline {
             }
             steps{
                 withMaven(maven: 'M3', jdk: 'jdk8-latest', globalMavenSettingsConfig: 'default-global-settings', mavenSettingsConfig: 'codice-maven-settings', mavenOpts: '${LINUX_MVN_RANDOM}') {
-                    sh 'mvn deploy -B -DskipStatic=true -DskipTests=true -DretryFailedDeploymentCount=10 $DISABLE_DOWNLOAD_PROGRESS_OPTS'
+                    sh 'mvn deploy -B $SKIP_TEST_FORMAT -DretryFailedDeploymentCount=10 $DISABLE_DOWNLOAD_PROGRESS_OPTS'
                 }
             }
         }

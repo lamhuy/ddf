@@ -64,16 +64,8 @@
 
     <profiles>
         <profile>
-            <!-- The docker profile activates automatically on linux systems
-              otherwise docker builds will be skipped. This will be removed in the future 
-              once testing has been done on running docker builds cross-platform. -->
+            <!-- The docker profile docker builds will be skipped.-->
             <id>docker</id>
-            <activation>
-                <os>
-                    <family>unix</family>
-                    <name>Linux</name>
-                </os>
-            </activation>
             <build>
                 <plugins>
                     <plugin>

@@ -30,6 +30,9 @@ const ResultSortDropdownView = require('../dropdown/result-sort/dropdown.result-
 const user = require('../singletons/user-instance.js')
 const ResultStatusView = require('../result-status/result-status.view.js')
 require('../../behaviors/selection.behavior.js')
+const {
+  SelectAllToggle,
+} = require('../selection-checkbox/selection-checkbox.view.js')
 
 function mixinBlackListCQL(originalCQL) {
   var blackListCQL = {
@@ -79,6 +82,7 @@ var ResultSelector = Marionette.LayoutView.extend({
     resultDisplay: '.menu-resultDisplay',
     resultFilter: '.menu-resultFilter',
     resultSort: '.menu-resultSort',
+    checkboxContainer: '.checkbox-container',
   },
   initialize: function(options) {
     if (!this.model.get('result')) {
@@ -95,6 +99,13 @@ var ResultSelector = Marionette.LayoutView.extend({
     this.startListeningToResult()
     this.startListeningToMerged()
     this.startListeningToStatus()
+  },
+  showCheckbox: function() {
+    this.checkboxContainer.show(
+      new SelectAllToggle({
+        selectionInterface: this.options.selectionInterface,
+      })
+    )
   },
   mergeNewResults: function() {
     this.model.get('result').mergeNewResults()
@@ -186,6 +197,7 @@ var ResultSelector = Marionette.LayoutView.extend({
     this.showResultFilterDropdown()
     this.showResultSortDropdown()
     this.handleFiltering(collapsedResults)
+    this.showCheckbox()
     this.handleMerged()
     this.handleStatus()
     let resultCountOnly =

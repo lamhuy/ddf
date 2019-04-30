@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global require, window*/
 
 /*
     This file exists to address inabilities of current media queries.  Specifically, it's impossible to 

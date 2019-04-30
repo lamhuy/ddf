@@ -12,6 +12,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global require*/
 
 var Marionette = require('marionette')
 var template = require('./save.hbs')

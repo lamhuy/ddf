@@ -9,6 +9,8 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global define, window*/
+/*jslint bitwise: true */
 
 import {
   Restrictions,

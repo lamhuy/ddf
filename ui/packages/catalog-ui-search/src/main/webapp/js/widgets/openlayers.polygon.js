@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global define, window*/
 
 const Marionette = require('marionette')
 const Backbone = require('backbone')

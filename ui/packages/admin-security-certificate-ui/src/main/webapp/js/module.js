@@ -13,6 +13,7 @@
  *
  **/
 
+/*global define*/
 define([
   'application',
   'js/view/Store.view',

@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global require*/
 
 module.exports = {
   getFontSize: function(percentage) {

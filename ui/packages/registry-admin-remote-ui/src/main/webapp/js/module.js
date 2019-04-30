@@ -13,6 +13,7 @@
  *
  **/
 
+/*global define*/
 define([
   'js/application',
   'js/view/Registry.view.js',

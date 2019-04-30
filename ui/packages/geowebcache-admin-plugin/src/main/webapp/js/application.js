@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global define, require */
 
 // #Main Application
 define(['backbone.marionette', 'bootstrap'], function(Marionette) {

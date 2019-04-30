@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global define*/
 
 var user = require('../../component/singletons/user-instance.js')
 

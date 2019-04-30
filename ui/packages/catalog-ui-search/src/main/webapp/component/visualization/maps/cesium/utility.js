@@ -9,6 +9,7 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
+/*global window*/
 
 var _ = require('underscore')
 var Cesium = require('cesium')

@@ -13,6 +13,7 @@
  *
  **/
 
+/*global define*/
 define([
   'wreqr',
   'js/application',

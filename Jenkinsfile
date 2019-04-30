@@ -25,7 +25,7 @@ pipeline {
     }
     environment {
         DOCS = 'distribution/docs'
-        ITESTS = 'distribution/test/itests/test-itests-ddf
+        ITESTS = 'distribution/test/itests/test-itests-ddf'
         DOCKER = '!ddf.distribution.docker:ddf,!ddf.distribution.docker:solr'        
         POMFIX = 'libs/libs-pomfix,libs/libs-pomfix-run'
         LARGE_MVN_OPTS = '-Xmx8192M -Xss128M -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC '

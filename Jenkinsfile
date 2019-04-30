@@ -175,7 +175,7 @@ pipeline {
                 }
             }
         }
-        stage('Quality Analysis') {
+        /*stage('Quality Analysis') {
             parallel {
                 stage ('SonarCloud') {
                     steps {
@@ -208,7 +208,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
     }
     post {
         success {

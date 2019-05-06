@@ -159,7 +159,7 @@
         <abdera.version>1.1.3</abdera.version>
         <antlr.version>4.3</antlr.version>
         <apache.shiro.version>1.4.0</apache.shiro.version>
-        <artemis.version>2.6.2</artemis.version>
+        <artemis.version>2.6.3</artemis.version>
         <asm.version>3.3.1</asm.version>
         <awaitility.version>3.1.2</awaitility.version>
         <aws-java-sdk-bundle.version>1.11.344_1</aws-java-sdk-bundle.version>
@@ -179,11 +179,11 @@
         <commons-exec.version>1.3</commons-exec.version>
         <commons-io.version>2.6</commons-io.version>
         <commons-lang.version>2.6</commons-lang.version>
-        <commons-lang3.version>3.8</commons-lang3.version>
+        <commons-lang3.version>3.8.1</commons-lang3.version>
         <commons-logging.version>1.2</commons-logging.version>
         <commons-net.version>3.5</commons-net.version>
         <commons-pool.version>1.6</commons-pool.version>
-        <commons-text.version>1.2</commons-text.version>
+        <commons-text.version>1.4</commons-text.version>
         <commons-validator.version>1.6</commons-validator.version>
         <components-font-awesome.version>4.7.0</components-font-awesome.version>
         <countryconverter.version>0.1.5</countryconverter.version>
@@ -253,7 +253,7 @@
         <mina.version>2.0.6</mina.version>
         <mpegts-streamer.version>0.1.0_2</mpegts-streamer.version>
         <net.minidev.asm.version>1.0.2</net.minidev.asm.version>
-        <netty.version>4.1.24.Final</netty.version>
+        <netty.version>4.1.25.Final</netty.version>
         <objenesis.version>2.5.1</objenesis.version>
         <ogc-tools-gml-jts.version>1.0.3</ogc-tools-gml-jts.version>
         <opendj-embedded.app.version>1.3.3</opendj-embedded.app.version>

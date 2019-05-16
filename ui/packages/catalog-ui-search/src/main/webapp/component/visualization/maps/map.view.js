@@ -159,6 +159,7 @@ module.exports = Marionette.LayoutView.extend({
     if (!options.selectionInterface) {
       throw 'Selection interface has not been provided'
     }
+    this.onMapLoaded = options.onMapLoaded || (() => {})
     this.mapModel = new MapModel()
     this.listenTo(store.get('content'), 'change:drawing', this.handleDrawing)
     this.handleDrawing()
@@ -416,6 +417,7 @@ module.exports = Marionette.LayoutView.extend({
       function(Map) {
         this.createMap(Map)
         this.hasLoadedMap = true
+        this.onMapLoaded(this.map.getOpenLayersMap())
       }.bind(this)
     )
   },

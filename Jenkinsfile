@@ -1,6 +1,7 @@
 //"Jenkins Pipeline is a suite of plugins which supports implementing and integrating continuous delivery pipelines into Jenkins. Pipeline provides an extensible set of tools for modeling delivery pipelines "as code" via the Pipeline DSL."
 //More information can be found on the Jenkins Documentation page https://jenkins.io/doc/
 
+library 'github-utils-shared-library@master'
 @Library('github.com/connexta/cx-pipeline-library@master') _
 
 pipeline {
@@ -213,20 +214,40 @@ pipeline {
     post {
         success {
             slackSend color: 'good', message: "SUCCESS: ${JOB_NAME} ${BUILD_NUMBER}"
+            withCredentials([usernameColonPassword(credentialsId: 'cxbot', variable: 'GITHUB_TOKEN')]) {
+                postCommentIfPR("Build success! See the job results in [legacy Jenkins UI](${BUILD_URL}) or in [Blue Ocean UI](${BUILD_URL}display/redirect).", "${GITHUB_USERNAME}", "${GITHUB_REPONAME}", "${GITHUB_TOKEN}")
+            }
         }
         failure {
             slackSend color: '#ea0017', message: "FAILURE: ${JOB_NAME} ${BUILD_NUMBER}. See the results here: ${BUILD_URL}"
+            withCredentials([usernameColonPassword(credentialsId: 'cxbot', variable: 'GITHUB_TOKEN')]) {
+                script {
+                    postCommentIfPR("Build failure. See the job results in [legacy Jenkins UI](${BUILD_URL}) or in [Blue Ocean UI](${BUILD_URL}display/redirect).", "${GITHUB_USERNAME}", "${GITHUB_REPONAME}", "${GITHUB_TOKEN}")
+
+                    def logUrl = env.BUILD_URL + 'consoleText'
+                    
+                    def response = sh(returnStdout: true, script: "curl -L -k ${logUrl}")
+                    
+                    def failureMessage = getFailureMessage(response)
+
+                    postCommentIfPR("${failureMessage}", "${GITHUB_USERNAME}", "${GITHUB_REPONAME}", "${GITHUB_TOKEN}")
+                }
+            }
         }
         unstable {
             slackSend color: '#ffb600', message: "UNSTABLE: ${JOB_NAME} ${BUILD_NUMBER}. See the results here: ${BUILD_URL}"
+            withCredentials([usernameColonPassword(credentialsId: 'cxbot', variable: 'GITHUB_TOKEN')]) {
+                postCommentIfPR("Build unstable. See the job results in [legacy Jenkins UI](${BUILD_URL}) or in [Blue Ocean UI](${BUILD_URL}display/redirect).", "${GITHUB_USERNAME}", "${GITHUB_REPONAME}", "${GITHUB_TOKEN}")
+            }
         }
         cleanup {
             echo '...Cleaning up workspace'
             cleanWs()
             sh 'rm -rf ~/.m2/repository'
             wrap([$class: 'MesosSingleUseSlave']) {
-                sh 'echo "...Shutting down Jenkins slave: `hostname`"'
+                sh 'echo "...Shutting down single-use slave: `hostname`"'
             }
         }
     }
+
 }

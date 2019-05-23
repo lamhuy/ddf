@@ -34,6 +34,8 @@ pipeline {
         DISABLE_DOWNLOAD_PROGRESS_OPTS = '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn '
         LINUX_MVN_RANDOM = '-Djava.security.egd=file:/dev/./urandom'
         COVERAGE_EXCLUSIONS = '**/test/**/*,**/itests/**/*,**/*Test*,**/sdk/**/*,**/*.js,**/node_modules/**/*,**/jaxb/**/*,**/wsdl/**/*,**/nces/sws/**/*,**/*.adoc,**/*.txt,**/*.xml'
+        GITHUB_USERNAME = 'connexta'
+        GITHUB_REPONAME = 'ddf-yorktown'
     }
     stages {
         stage('Setup') {

@@ -15,9 +15,6 @@ pipeline {
         disableConcurrentBuilds()
         timestamps()
     }
-    triggers {
-        cron(BRANCH_NAME == "11.x" ? "H H(6-8) * * *" : "")
-    }
     environment {
         DOCS = 'distribution/docs'
         ITESTS = 'distribution/test/itests/test-itests-ddf'

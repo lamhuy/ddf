@@ -35,8 +35,12 @@ import org.apache.commons.collections.MapUtils;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.GmdConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.converter.CswRecordConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AbstractGmdTransformer implements MetacardTransformer {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGmdTransformer.class);
 
   public static final String GML_PREFIX = "gml:";
 
@@ -68,7 +72,14 @@ public class AbstractGmdTransformer implements MetacardTransformer {
     MarshallingContext context = new TreeMarshaller(writer, null, null);
     copyArgumentsToContext(context, arguments);
 
+    long startTime = System.currentTimeMillis();
     converterSupplier.get().marshal(metacard, writer, context);
+
+    if (LOGGER.isTraceEnabled()) {
+      long totalElapsedTime = System.currentTimeMillis() - startTime;
+
+      LOGGER.trace("Total Marshall elapsed time {} ms", totalElapsedTime);
+    }
 
     ByteArrayInputStream bais =
         new ByteArrayInputStream(stringWriter.toString().getBytes(StandardCharsets.UTF_8));

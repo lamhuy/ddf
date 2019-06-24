@@ -104,5 +104,16 @@
         <module>catalog-core-metacardtype</module>
         <module>catalog-core-attachment</module>
         <module>catalog-core-attachment-impl</module>
+        <module>catalog-core-provider</module>
+        <module>catalog-core-solr-indexprovider</module>
+        <module>catalog-core-solr-storageprovider</module>
+        <module>catalog-core-jdbc-storageprovider</module>
+        <module>catalog-core-solr-api</module>
+        <module>catalog-core-solr-api-impl</module>
+        <module>catalog-core-solr-defaultindexcollectionprovider</module>
+        <module>catalog-core-solr-resourceindexcollectionprovider</module>
+        <module>catalog-core-solr-nrtindexcollectionprovider</module>
+        <module>catalog-core-solr-suggesterindexcollectionprovider</module>
+        <module>catalog-core-metacardtypecache</module>
     </modules>
 </project>

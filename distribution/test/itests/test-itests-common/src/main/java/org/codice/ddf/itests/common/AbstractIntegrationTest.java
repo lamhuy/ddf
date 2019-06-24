@@ -178,7 +178,7 @@ public abstract class AbstractIntegrationTest {
   @Filter(timeout = 300000L)
   BootFinished bootFinished;
 
-  private AdminConfig adminConfig;
+  protected AdminConfig adminConfig;
 
   private ServiceManager serviceManager;
 
@@ -537,7 +537,12 @@ public abstract class AbstractIntegrationTest {
             getClass()
                 .getClassLoader()
                 .getResource("ddf.catalog.solr.provider.SolrCatalogProvider.config"),
-            "/etc/ddf.catalog.solr.provider.SolrCatalogProvider.config"));
+            "/etc/ddf.catalog.solr.provider.SolrCatalogProvider.config"),
+        installStartupFile(
+            getClass()
+                .getClassLoader()
+                .getResource("ddf.catalog.provider.MuxCatalogProvider.config"),
+            "/etc/ddf.catalog.provider.MuxCatalogProvider.config"));
   }
 
   protected Option[] configureMavenRepos() {

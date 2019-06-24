@@ -52,6 +52,18 @@ public class XmlParser implements Parser {
 
   private static final String UNMARSHALLING_ERROR_MSG = "Error unmarshalling";
 
+  private XMLInputFactory xmlInputFactory;
+
+  {
+    xmlInputFactory = XMLInputFactory.newInstance();
+    xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.FALSE);
+    xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
+    xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.FALSE);
+    xmlInputFactory.setProperty(XMLInputFactory.IS_VALIDATING, Boolean.FALSE);
+    xmlInputFactory.setProperty(
+        XMLInputFactory.SUPPORT_DTD, Boolean.FALSE); // This disables DTDs entirely for that factory
+  }
+
   private LoadingCache<CacheKey, JAXBContext> jaxbContextCache =
       CacheBuilder.newBuilder()
           .expireAfterWrite(1, TimeUnit.DAYS)
@@ -116,17 +128,8 @@ public class XmlParser implements Parser {
         configurator,
         unmarshaller -> {
           try {
-            XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
-            xmlInputFactory.setProperty(
-                XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.FALSE);
-            xmlInputFactory.setProperty(
-                XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
-            xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.FALSE);
-            xmlInputFactory.setProperty(XMLInputFactory.IS_VALIDATING, Boolean.FALSE);
-            xmlInputFactory.setProperty(
-                XMLInputFactory.SUPPORT_DTD,
-                Boolean.FALSE); // This disables DTDs entirely for that factory
             XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(stream);
+            long startTime = System.currentTimeMillis();
             @SuppressWarnings("unchecked")
             T unmarshal = (T) unmarshaller.unmarshal(xmlStreamReader);
             return unmarshal;

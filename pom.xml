@@ -294,6 +294,8 @@
         <solr.zookeeper.version>3.4.14</solr.zookeeper.version>
         <solr.noggit.version>0.8</solr.noggit.version>
         <solr.spatial4j.version>0.7</solr.spatial4j.version>
+        <docker-maven-plugin.version>0.30.0</docker-maven-plugin.version>
+        <maven.assembly.plugin.version>2.2.2</maven.assembly.plugin.version>
 
         <spark.version>2.5.5</spark.version>
         <spatial4j.version>0.7</spatial4j.version>
@@ -324,6 +326,7 @@
         <tink.version>1.2.2</tink.version>
         <org.json.version>20170516</org.json.version>
         <ehcache.version>2.10.6</ehcache.version>
+        <postgres.version>42.2.5</postgres.version>
     </properties>
     <!--
     NOTE: The properties ddf.scm.connection.url, snapshots.repository.url and releases.repository.url should be defined

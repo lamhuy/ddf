@@ -99,7 +99,6 @@ public abstract class AbstractGmdConverter implements Converter {
 
     XstreamPathValueTracker pathValueTracker = buildPaths(metacard);
     XmlTree tree = buildTree(pathValueTracker.getPaths());
-
     tree.accept(new XstreamTreeWriter(trackingWriter, tracker, pathValueTracker));
   }
 

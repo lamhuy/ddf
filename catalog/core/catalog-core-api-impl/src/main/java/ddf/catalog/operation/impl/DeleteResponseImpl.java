@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** The DeleteResponseImpl represents a default implementation of the {@link DefaultResponse}. */
+/** The DeleteResponseImpl represents a default implementation of the {@link DeleteResponse}. */
 public class DeleteResponseImpl extends ResponseImpl<DeleteRequest> implements DeleteResponse {
 
   private List<Metacard> deletedMetacards;

@@ -286,7 +286,7 @@ public class CswQueryResponseTransformer implements QueryResponseTransformer {
     }
 
     InputStream[] contents = new InputStream[results.size()];
-
+    long startTime = System.currentTimeMillis();
     while (!futures.isEmpty()) {
       try {
         Future<BinaryContent> completedFuture = completionService.take();
@@ -308,6 +308,12 @@ public class CswQueryResponseTransformer implements QueryResponseTransformer {
         Thread.currentThread().interrupt();
         throw new CatalogTransformerException("Metacard transform interrupted", e);
       }
+    }
+    if (LOGGER.isTraceEnabled()) {
+      long cswTransformeTime = System.currentTimeMillis() - startTime;
+
+      LOGGER.trace(
+          "CSW Response Transform for {} results elapsed {} ms", results.size(), cswTransformeTime);
     }
 
     CharArrayWriter accum = new CharArrayWriter(ACCUM_INITIAL_SIZE);

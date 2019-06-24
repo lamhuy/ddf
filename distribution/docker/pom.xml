@@ -27,5 +27,7 @@
     <modules>
         <module>ddf</module>
         <module>solr</module>
+        <module>solr-cloud</module>
+        <module>postgres</module>
     </modules>
 </project>

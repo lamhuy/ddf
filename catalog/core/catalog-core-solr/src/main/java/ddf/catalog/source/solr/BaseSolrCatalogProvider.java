@@ -23,6 +23,7 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceResponse;
@@ -30,6 +31,7 @@ import ddf.catalog.operation.Update;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateResponseImpl;
+import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.DeleteResponseImpl;
 import ddf.catalog.operation.impl.UpdateImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
@@ -50,6 +52,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -68,9 +71,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** {@link CatalogProvider} implementation using Apache Solr */
-public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider {
+public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SolrCatalogProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(BaseSolrCatalogProvider.class);
 
   private static final String COULD_NOT_COMPLETE_DELETE_REQUEST_MESSAGE =
       "Could not complete delete request.";
@@ -85,8 +88,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
 
   static {
     try (InputStream propertiesStream =
-        ddf.catalog.source.solr.SolrCatalogProvider.class.getResourceAsStream(
-            DESCRIBABLE_PROPERTIES_FILE)) {
+        BaseSolrCatalogProvider.class.getResourceAsStream(DESCRIBABLE_PROPERTIES_FILE)) {
       DESCRIBABLE_PROPERTIES.load(propertiesStream);
     } catch (IOException e) {
       LOGGER.info("Failed to load describable properties", e);
@@ -99,7 +101,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
 
   private final SolrMetacardClientImpl client;
 
-  private final FilterAdapter filterAdapter;
+  protected final FilterAdapter filterAdapter;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -108,7 +110,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
    * @param adapter injected implementation of FilterAdapter
    * @param resolver Solr schema resolver
    */
-  public SolrCatalogProvider(
+  public BaseSolrCatalogProvider(
       SolrClient solrClient,
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
@@ -122,7 +124,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     this.resolver = resolver;
 
     LOGGER.debug(
-        "Constructing {} with Solr client [{}]", SolrCatalogProvider.class.getName(), solr);
+        "Constructing {} with Solr client [{}]", BaseSolrCatalogProvider.class.getName(), solr);
 
     solr.whenAvailable(this::addFieldsFromClientToResolver);
     this.client =
@@ -135,11 +137,19 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
    * @param solrClient Solr client
    * @param adapter injected implementation of FilterAdapter
    */
-  public SolrCatalogProvider(
+  public BaseSolrCatalogProvider(
       SolrClient solrClient,
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory) {
     this(solrClient, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
+  }
+
+  public SolrClient getSolrClient() {
+    return solr;
+  }
+
+  public SolrMetacardClient getSolrMetacardClient() {
+    return client;
   }
 
   @Override
@@ -176,6 +186,15 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     return isAvailable(); // then trigger an active ping
   }
 
+  public boolean isAvailable(long timeout, long pollInterval, TimeUnit unit) {
+    try {
+      return solr.isAvailable(timeout, pollInterval, unit);
+    } catch (InterruptedException e) {
+      LOGGER.debug("Solr client is available interrupted exception {}", e);
+      return false;
+    }
+  }
+
   @Override
   public String getDescription() {
     return DESCRIBABLE_PROPERTIES.getProperty("description");
@@ -204,8 +223,59 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
 
   @Override
   public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
+    long startTime = System.currentTimeMillis();
     SourceResponse response = client.query(request);
+    LOGGER.debug("Time elapsed for Query {} ms", System.currentTimeMillis() - startTime);
     return response;
+  }
+
+  /**
+   * Querying against the index collection to obtain just the metacard id.
+   *
+   * @param request
+   * @return
+   * @throws UnsupportedQueryException
+   */
+  public IndexQueryResponse queryIndex(QueryRequest request) throws UnsupportedQueryException {
+    IndexQueryResponse response = client.queryIndex(request);
+    return response;
+  }
+
+  public IndexQueryResponse queryIndexCache(QueryRequest request) throws UnsupportedQueryException {
+    return client.queryIndexCache(request);
+  }
+
+  public void deleteIndex(DeleteRequest deleteRequest) throws IngestException {
+    nonNull(deleteRequest);
+
+    String attributeName = deleteRequest.getAttributeName();
+    if (StringUtils.isBlank(attributeName)) {
+      throw new IngestException(
+          "Attribute name cannot be empty. Please provide the name of the attribute.");
+    }
+
+    @SuppressWarnings("unchecked")
+    List<? extends Serializable> identifiers = deleteRequest.getAttributeValues();
+    if (CollectionUtils.isEmpty(identifiers)) {
+      return;
+    }
+
+    if (identifiers.size() <= MAX_BOOLEAN_CLAUSES) {
+      deleteIndex(identifiers, attributeName);
+    } else {
+      List<? extends Serializable> identifierPaged;
+      int currPagingSize;
+
+      for (currPagingSize = MAX_BOOLEAN_CLAUSES;
+          currPagingSize < identifiers.size();
+          currPagingSize += MAX_BOOLEAN_CLAUSES) {
+        identifierPaged = identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, currPagingSize);
+        deleteIndex(identifierPaged, attributeName);
+      }
+      identifierPaged =
+          identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, identifiers.size());
+      deleteIndex(identifierPaged, attributeName);
+    }
   }
 
   @Override
@@ -239,12 +309,17 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
       output.add(metacard);
     }
 
+    long startTime = System.currentTimeMillis();
     try {
       client.add(output, isForcedAutoCommit());
     } catch (SolrServerException | SolrException | IOException | MetacardCreationException e) {
       LOGGER.info("Solr could not ingest metacard(s) during create.", e);
-      throw new IngestException("Could not ingest metacard(s).");
+      throw new IngestException("Could not ingest metacard(s).", e);
     }
+    LOGGER.debug(
+        "Time elapsed to create {} metacards is {} ms",
+        metacards.size(),
+        System.currentTimeMillis() - startTime);
 
     return new CreateResponseImpl(request, request.getProperties(), output);
   }
@@ -327,6 +402,10 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     }
 
     return new UpdateResponseImpl(updateRequest, updateRequest.getProperties(), updateList);
+  }
+
+  public DeleteResponse deleteByIds(Set<String> ids) throws IngestException {
+    return delete(new DeleteRequestImpl(ids.toArray(new String[0])));
   }
 
   @Override
@@ -443,6 +522,21 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     }
   }
 
+  private void deleteIndex(List<? extends Serializable> identifiers, String attributeName)
+      throws IngestException {
+    String fieldName = attributeName + SchemaFields.TEXT_SUFFIX;
+
+    try {
+      // the assumption is if something was deleted, it should be gone
+      // right away, such as expired data, etc.
+      // so we force the commit
+      client.deleteByIds(fieldName, identifiers, true);
+    } catch (SolrServerException | SolrException | IOException e) {
+      LOGGER.info("Failed to delete metacards by ID(s).", e);
+      throw new IngestException(COULD_NOT_COMPLETE_DELETE_REQUEST_MESSAGE);
+    }
+  }
+
   private void deleteListOfMetacards(
       List<Metacard> deletedMetacards,
       List<? extends Serializable> identifiers,
@@ -507,7 +601,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     return query;
   }
 
-  private String generatePrimaryKey() {
+  public String generatePrimaryKey() {
     return UUID.randomUUID().toString().replaceAll("-", "");
   }
 
@@ -543,7 +637,9 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     @Override
     public MetacardImpl createMetacard(SolrDocument doc) throws MetacardCreationException {
       MetacardImpl metacard = super.createMetacard(doc);
-      metacard.setSourceId(getId());
+      if (metacard != null) {
+        metacard.setSourceId(getId());
+      }
       return metacard;
     }
   }

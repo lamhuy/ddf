@@ -299,6 +299,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>ddf.distribution.docker</groupId>
+            <artifactId>postgres</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>ddf</groupId>
             <artifactId>solr-distro</artifactId>
             <version>${project.version}</version>
@@ -378,6 +385,100 @@
                 </plugins>
             </build>
         </profile>
+      <profile>
+        <id>docker</id>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>unpack-postgres-docker</id>
+                  <phase>pre-integration-test</phase>
+                  <goals>
+                    <goal>unpack</goal>
+                  </goals>
+                  <configuration>
+                    <artifactItems>
+                      <artifactItem>
+                        <groupId>ddf.distribution.docker</groupId>
+                        <artifactId>postgres</artifactId>
+                        <version>${project.version}</version>
+                        <type>zip</type>
+                        <!--FYI: Maven dependency plugin ignores the instruction "destFileName"-->
+                        <!--if the goal is "unpack"-->
+                      </artifactItem>
+                    </artifactItems>
+                    <outputDirectory>${project.build.directory}/postgres-docker</outputDirectory>
+                    <includes>**</includes>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>exec-maven-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>postgres-start</id>
+                  <goals>
+                    <goal>exec</goal>
+                  </goals>
+                  <phase>pre-integration-test</phase>
+                  <configuration>
+                    <basedir>${project.build.directory}/postgres-docker</basedir>
+                    <executable>docker-compose</executable>
+                    <arguments>
+                      <argument>-f</argument>
+                      <argument>postgres-compose.yml</argument>
+                      <argument>up</argument>
+                      <argument>-d</argument>
+                    </arguments>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>postgres-stop</id>
+                  <goals>
+                    <goal>exec</goal>
+                  </goals>
+                  <phase>post-integration-test</phase>
+                  <configuration>
+                    <basedir>${project.build.directory}/postgres-docker</basedir>
+                    <executable>docker-compose</executable>
+                    <arguments>
+                      <argument>-f</argument>
+                      <argument>postgres-compose.yml</argument>
+                      <argument>down</argument>
+                    </arguments>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-failsafe-plugin</artifactId>
+              <!--Using version 2.17 instead of the latest (2.19.1) because everything after 2.17 has-->
+              <!--problems connecting to the container or running the tests-->
+              <version>${failsafe.pax-exam-compatible.version}</version>
+              <configuration>
+                <includes>
+                  <include>**/*DockerSuite.java</include>
+                </includes>
+              </configuration>
+              <executions>
+                <execution>
+                  <id>docker-integration-tests</id>
+                  <goals>
+                    <goal>integration-test</goal>
+                    <goal>verify</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
     </profiles>
 
     <build>
@@ -536,7 +637,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <includes>
-                        <include>**/*Suite.java</include>
+                        <include>**/*ItestSuite.java</include>
                     </includes>
                     <argLine>-Dddf.version=${project.version} -Djava.awt.headless=true -noverify
                     </argLine>
@@ -551,6 +652,9 @@
                             <goal>integration-test</goal>
                             <goal>verify</goal>
                         </goals>
+                        <configuration>
+                            <skip>${skipDefaultDDFItests}</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

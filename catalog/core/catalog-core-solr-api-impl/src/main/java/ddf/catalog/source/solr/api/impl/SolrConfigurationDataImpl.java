@@ -11,15 +11,37 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.test.itests;
+package ddf.catalog.source.solr.api.impl;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.io.InputStream;
+import org.codice.solr.factory.SolrConfigurationData;
 
-/**
- * This suite is for test classes that need their own container The test classes are run in the same
- * order as they appear in the array.
- */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({})
-public class ContainerPerClassItestSuite {}
+public class SolrConfigurationDataImpl implements SolrConfigurationData {
+
+  private String fileName;
+
+  private InputStream data;
+
+  public SolrConfigurationDataImpl(String fileName, InputStream data) {
+    setFileName(fileName);
+    setData(data);
+  }
+
+  @Override
+  public String getFileName() {
+    return fileName;
+  }
+
+  @Override
+  public InputStream getConfigurationData() {
+    return data;
+  }
+
+  public void setFileName(String fileName) {
+    this.fileName = fileName;
+  }
+
+  public void setData(InputStream data) {
+    this.data = data;
+  }
+}

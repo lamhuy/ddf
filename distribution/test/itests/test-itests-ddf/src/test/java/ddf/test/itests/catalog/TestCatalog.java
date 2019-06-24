@@ -2531,6 +2531,9 @@ public class TestCatalog extends AbstractIntegrationTest {
         OPENSEARCH_PATH.getUrl() + "?" + "format=" + "xml" + "&" + "q=*" + "&" + "count=100";
     final Response response = when().get(buffer);
     String id = XmlPath.given(response.asString()).get("metacards.metacard[0].@gml:id");
+
+    assertThat(id, is(notNullValue()));
+
     Path path =
         Paths.get("data/backup/metacard", id.substring(0, 3), id.substring(3, 6), id + ".xml");
 

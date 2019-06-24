@@ -13,6 +13,7 @@
  */
 package org.codice.solr.factory.impl
 
+import ddf.catalog.source.solr.api.impl.SolrConfigurationDataImpl
 import net.jodah.failsafe.FailsafeException
 import net.jodah.failsafe.RetryPolicy
 import org.apache.solr.client.solrj.SolrClient
@@ -29,10 +30,12 @@ import org.apache.solr.common.cloud.SolrZkClient
 import org.apache.solr.common.cloud.ZkStateReader
 import org.apache.solr.common.util.NamedList
 import org.apache.zookeeper.KeeperException
+import org.codice.solr.factory.SolrConfigurationData
 import org.codice.spock.ClearInterruptions
 import org.codice.spock.Supplemental
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -54,7 +57,25 @@ class SolrCloudClientFactorySpec extends Specification {
 
   static final int MAX_RETRIES = 2
 
-  static final int AVAILABLE_TIMEOUT_IN_SECS = 25
+  static final int AVAILABLE_TIMEOUT_IN_SECS = 45
+
+  @Shared
+  def aliasResponseWithAlias = Mock(NamedList) {
+    get("aliases") >> Collections.singletonMap("test_alias", CORE)
+  }
+
+  @Shared
+  def aliasResponseWithOtherAlias = Mock(NamedList) {
+    get("aliases") >> Collections.singletonMap("test_alias", "collection_1,collection_2")
+  }
+
+  @Shared
+  def aliasResponseWithNullAliases = Mock(NamedList) {
+    get("aliases") >> null
+  }
+
+  @Shared
+  def aliasResponseWithoutAlias = Mock(NamedList)
 
   @Rule
   TemporaryFolder tempFolder = new TemporaryFolder();
@@ -105,7 +126,7 @@ class SolrCloudClientFactorySpec extends Specification {
       // ping will be successful right away. Therefore this should all happen very quickly without
       // a hitch. Worst case scenario we have a bug and it will take about 30 seconds to detect it.
       // Best case scenario, it will return pretty much right away.
-      def available = client.isAvailable(AVAILABLE_TIMEOUT_IN_SECS + 5L, SECONDS)
+      def available = client.isAvailable(AVAILABLE_TIMEOUT_IN_SECS + 5L, 5L, SECONDS)
 
     then: "it should be"
       available
@@ -157,10 +178,12 @@ class SolrCloudClientFactorySpec extends Specification {
       def zkClient = Mock(SolrZkClient)
       def listResponse = Mock(NamedList)
       def aliasResponse = Mock(NamedList)
+      def zkStateProvider = Mock(ZkClientClusterStateProvider)
       def cloudClient = Mock(CloudSolrClient) {
         getZkStateReader() >> Mock(ZkStateReader) {
           getZkClient() >> zkClient
         }
+        newZkStateProvider() >> zkStateProvider
       }
       def factory = Spy(SolrCloudClientFactory)
 
@@ -176,11 +199,14 @@ class SolrCloudClientFactorySpec extends Specification {
     and: "it is being connected"
       1 * cloudClient.connect() >> null
 
+    then: "verify zookeeper is consulted to see if the alias exists"
+      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
+
     then: "verify zookeeper is consulted to see if the configuration exists"
       1 * zkClient.exists("/configs/$CORE", true) >> true
 
     and: "therefore, the config is never uploaded to zookeeper"
-      0 * cloudClient.uploadConfig(*_)
+      0 * zkStateProvider.uploadConfig(*_)
 
     then: "verify zookeeper is consulted to see if the collection exists"
       1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
@@ -190,51 +216,52 @@ class SolrCloudClientFactorySpec extends Specification {
     and: "the collection is never created"
       0 * cloudClient.request({ it instanceof CollectionAdminRequest.Create }, null)
 
-    and: "close() is never called on the underlying client"
-      0 * cloudClient.close()
   }
 
   def 'test creating a Solr cloud client when configuration is already uploaded and the collection alias already exists'() {
     given:
-    def zkClient = Mock(SolrZkClient)
-    def listResponse = Mock(NamedList)
-    def aliasResponse = Mock(NamedList)
-    def cloudClient = Mock(CloudSolrClient) {
-      getZkStateReader() >> Mock(ZkStateReader) {
-        getZkClient() >> zkClient
+      def zkClient = Mock(SolrZkClient)
+      def listResponse = Mock(NamedList)
+      def aliasResponse = Mock(NamedList)
+      def zkStateProvider = Mock(ZkClientClusterStateProvider)
+      def cloudClient = Mock(CloudSolrClient) {
+        getZkStateReader() >> Mock(ZkStateReader) {
+          getZkClient() >> zkClient
+        }
+        newZkStateProvider() >> zkStateProvider
       }
-    }
-    def factory = Spy(SolrCloudClientFactory)
+      def factory = Spy(SolrCloudClientFactory)
 
     when:
-    def createdClient = factory.createSolrCloudClient(SOLR_CLOUD_ZOOKEEPERS, CORE)
+      def createdClient = factory.createSolrCloudClient(SOLR_CLOUD_ZOOKEEPERS, CORE)
 
     then: "verify the Solr cloud client is created"
-    1 * factory.newCloudSolrClient(SOLR_CLOUD_ZOOKEEPERS) >> cloudClient
+      1 * factory.newCloudSolrClient(SOLR_CLOUD_ZOOKEEPERS) >> cloudClient
 
     and: "the returned client is the one we created"
-    createdClient.is(cloudClient)
+      createdClient.is(cloudClient)
 
     and: "it is being connected"
-    1 * cloudClient.connect() >> null
+      1 * cloudClient.connect() >> null
+
+    then: "verify zookeeper is consulted to see if the alias exists"
+      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
+      aliasResponse.get('aliases') >> Collections.singletonMap(CORE, Collections.singletonList("CORE"))
 
     then: "verify zookeeper is consulted to see if the configuration exists"
-    1 * zkClient.exists("/configs/$CORE", true) >> true
+      0 * zkClient.exists("/configs/$CORE", true)
 
     and: "therefore, the config is never uploaded to zookeeper"
-    0 * cloudClient.uploadConfig(*_)
+      0 * zkStateProvider.uploadConfig(*_)
 
     then: "verify zookeeper is consulted to see if the collection exists"
-    1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
-    aliasResponse.get('aliases') >> Collections.singletonMap(CORE, Collections.singletonList("CORE"))
-    0 * cloudClient.request({ it instanceof CollectionAdminRequest.List }, null) >> listResponse
-    0 * listResponse.get('collections') >> Collections.singletonList(CORE)
+      0 * cloudClient.createCollection(*_)
 
     and: "the collection is never created"
-    0 * cloudClient.request({ it instanceof CollectionAdminRequest.Create }, null)
+      0 * cloudClient.request({ it instanceof CollectionAdminRequest.Create }, null)
 
     and: "close() is never called on the underlying client"
-    0 * cloudClient.close()
+      0 * cloudClient.close()
   }
 
   def 'test creating a Solr cloud client when configuration is already uploaded and the collection does not exists'() {
@@ -248,6 +275,7 @@ class SolrCloudClientFactorySpec extends Specification {
       def listResponse = Mock(NamedList)
       def createResponse = Mock(NamedList)
       def aliasResponse = Mock(NamedList)
+      def zkStateProvider = Mock(ZkClientClusterStateProvider)
       def clusterState = Mock(ClusterState) {
         hasCollection(CORE) >> true
         getCollection(CORE) >> Mock(DocCollection)
@@ -257,6 +285,7 @@ class SolrCloudClientFactorySpec extends Specification {
           getZkClient() >> zkClient
           getClusterState() >> clusterState
         }
+        newZkStateProvider() >> zkStateProvider
       }
       def factory = Spy(SolrCloudClientFactory)
 
@@ -272,11 +301,14 @@ class SolrCloudClientFactorySpec extends Specification {
     and: "it is being connected"
       1 * cloudClient.connect() >> null
 
+    then: "verify zookeeper is consulted to see if the alias exists"
+      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
+
     then: "verify zookeeper is consulted to see if the configuration exists"
       1 * zkClient.exists("/configs/$CORE", true) >> true
 
     and: "therefore, the config is never uploaded to zookeeper"
-      0 * cloudClient.uploadConfig(*_)
+      0 * zkStateProvider.uploadConfig(*_)
 
     then: "verify zookeeper is consulted to see if the collection exists"
       1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
@@ -338,6 +370,9 @@ class SolrCloudClientFactorySpec extends Specification {
     and: "it is being connected"
       1 * cloudClient.connect() >> null
 
+    then: "verify zookeeper is consulted to see if the alias exists"
+      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
+
     then: "verify zookeeper is consulted to see if the configuration exists"
       1 * zkClient.exists("/configs/$CORE", true) >> false
 
@@ -375,6 +410,7 @@ class SolrCloudClientFactorySpec extends Specification {
   def 'test creating a Solr cloud client when failing to check if the configuration was already uploaded with #exception.class.noSpockSimpleName'() {
     given:
       def zkClient = Mock(SolrZkClient)
+      def aliasResponse = Mock(NamedList)
       def cloudClient = Mock(CloudSolrClient) {
         connect() >> null
         getZkStateReader() >> Mock(ZkStateReader) {
@@ -387,6 +423,9 @@ class SolrCloudClientFactorySpec extends Specification {
 
     when:
       def createdClient = factory.createSolrCloudClient(SOLR_CLOUD_ZOOKEEPERS, CORE)
+
+    then: "verify zookeeper is consulted to see if the alias exists"
+      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
 
     then: "fail when zookeeper is consulted to see if the configuration exists"
       1 * zkClient.exists("/configs/$CORE", true) >> { throw exception }
@@ -465,7 +504,7 @@ class SolrCloudClientFactorySpec extends Specification {
       def createdClient = factory.createSolrCloudClient(SOLR_CLOUD_ZOOKEEPERS, CORE)
 
     then: "fail when trying to list existing collections"
-      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
+      2 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> aliasResponse
       1 * cloudClient.request({ it instanceof CollectionAdminRequest.List }, null) >> {
         throw exception
       }
@@ -499,7 +538,7 @@ class SolrCloudClientFactorySpec extends Specification {
       def createdClient = factory.createSolrCloudClient(SOLR_CLOUD_ZOOKEEPERS, CORE)
 
     then: "fail when trying to list existing collections"
-      1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> Mock(NamedList)
+      2 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> Mock(NamedList)
       1 * cloudClient.request({ it instanceof CollectionAdminRequest.List }, null) >> list_response
 
     then: "verify the underlying client is closed"
@@ -645,5 +684,270 @@ class SolrCloudClientFactorySpec extends Specification {
       'a retry failure occurred while creating it'           || 1                                   | false                | 0                                     | false          | 0                               | null             | 0                                 | SOLR_SHARD_COUNT
       'the shards are not started'                           || 1                                   | true                 | 1                                     | true           | 1                               | true             | MAX_RETRIES + 1                   | 0
       'a retry failure occurred while retrieving the shards' || 1                                   | true                 | 1                                     | true           | 1                               | false            | 0                                 | 0
+  }
+
+  @Unroll
+  def 'test adding collection to alias because #alias_creation_because'() {
+    given:
+    def zkClient = Mock(SolrZkClient)  {
+      exists(*_) >> true
+    }
+    def aliasCreateResponse = Mock(NamedList)
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> zkClient
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.addCollectionToAlias("test_alias", CORE, "test_")
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    then: "list aliases called"
+    list_invocations * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >>> alias_response
+
+    and: "create alias called"
+    create_invocations * cloudClient.request({ it instanceof CollectionAdminRequest.CreateAlias }, null) >> aliasCreateResponse
+
+    where:
+    alias_creation_because      || list_invocations | create_invocations | alias_response
+    'no existing alias'         || 3                | 1                  | [aliasResponseWithoutAlias, aliasResponseWithoutAlias, aliasResponseWithAlias]
+    'existing other aliases'    || 2                | 1                  | [aliasResponseWithOtherAlias, aliasResponseWithOtherAlias, aliasResponseWithAlias]
+    'alias already exists'      || 1                | 0                  | [aliasResponseWithAlias]
+  }
+
+  @Unroll
+  def 'test is_available because #is_available_because'() {
+    given:
+    def zkClient = Mock(SolrZkClient) {
+      exists(*_) >> true
+      getIdField() >> id_field
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> zkClient
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.isAvailable() == available
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    where:
+    is_available_because       || id_field     | available
+    'required data exists'     || "id_txt"     | true
+    'single entry collection'  || null         | false
+  }
+
+  @Unroll
+  def 'test getting collections for alias because #get_collection_for_alias_because'() {
+    given:
+    def zkClient = Mock(SolrZkClient)  {
+      exists(*_) >> true
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> zkClient
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.getCollectionsForAlias("test_alias").size() == expected_data_size
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    then: "list aliases called"
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases }, null) >> alias_response
+
+    where:
+    get_collection_for_alias_because      || alias_response               | expected_data_size
+    'null alias response'                 || aliasResponseWithNullAliases | 0
+    'no aliases response'                 || aliasResponseWithoutAlias    | 0
+    'single alias response'               || aliasResponseWithAlias       | 1
+    'multi alias response'                || aliasResponseWithOtherAlias  | 2
+  }
+
+  def "test is solr cloud"() {
+    given:
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "test solr cloud is true"
+    factory.isSolrCloud()
+
+    then:
+    true
+  }
+
+  @Unroll
+  def 'test collections exists because #collection_exists_because'() {
+    given:
+    def zkClient = Mock(SolrZkClient)  {
+      exists(*_) >> true
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      connect() >> null
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> Mock(SolrZkClient) {
+          exists(*_) >> true
+        }
+      }
+      request({ it instanceof CollectionAdminRequest.List }, null) >> Mock(NamedList) {
+        1 * get("collections") >> collections
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.collectionExists(collection_name) == collection_exists
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    where:
+    collection_exists_because  || collections                                  | collection_name   | collection_exists
+    'no collections'           || Collections.emptyList()                      | "test_collection" | false
+    'does not exist'           || Collections.singletonList("coll2")           | "test_collection" | false
+    'does not exist multi'     || Arrays.asList("coll1","coll2")               | "test_collection" | false
+    'exist single'             || Collections.singletonList("test_collection") | "test_collection" | true
+    'exist multi'              || Arrays.asList("coll1","test_collection")     | "test_collection" | true
+  }
+
+  def 'test remove collection'() {
+    given:
+    def zkClient = Mock(SolrZkClient)  {
+      exists(*_) >> true
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      connect() >> null
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> Mock(SolrZkClient) {
+          exists(*_) >> true
+        }
+      }
+    }
+    def deleteResponse = Mock(NamedList)
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.removeCollection("test_collection")
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    then: "remove collection"
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.Delete }, null) >> deleteResponse
+  }
+
+  def 'test remove alias'() {
+    given:
+    def zkClient = Mock(SolrZkClient)  {
+      exists(*_) >> true
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      connect() >> null
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> Mock(SolrZkClient) {
+          exists(*_) >> true
+        }
+      }
+    }
+    def deleteAliasResponse = Mock(NamedList)
+    def factory = Spy(SolrCloudClientFactory)
+
+    when: "add collection to alias"
+    factory.removeAlias("test_alias")
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    then: "remove alias"
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.DeleteAlias }, null) >> deleteAliasResponse
+  }
+
+  @Unroll
+  def 'test add configuration #add_config_because'() {
+    given:
+    def zkClient = Mock(SolrZkClient)
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> zkClient
+      }
+      request({ it instanceof CollectionAdminRequest.List }, null) >> Mock(NamedList) {
+        get("collections") >> Collections.emptyList()
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+    SolrConfigurationData configData = new SolrConfigurationDataImpl("test_config_file.txt", new ByteArrayInputStream());
+    System.setProperty("solr.cloud.zookeeper", SOLR_CLOUD_ZOOKEEPERS)
+
+    when: "add collection to alias"
+    factory.addConfiguration(CORE, Collections.singletonList(configData));
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    and: "verify zookeeper is consulted to see if the configuration exists"
+    1 * zkClient.exists("/configs/$CORE", true) >> zk_config_exists
+
+    and: "check configuration uploaded"
+    upload_count * factory.newZkStateProvider(*_) >> zkStateProvider
+    upload_count * zkStateProvider.uploadConfig(*_) >> null
+
+    where:
+    add_config_because       || zk_config_exists | upload_count
+    'config does not exist'  || false            | 1
+    'config exists'          || true             | 0
+  }
+
+  def 'test add collection'() {
+    given:
+    def zkClient = Mock(SolrZkClient) {
+      exists(*_) >> true
+    }
+    def zkStateProvider = Mock(ZkClientClusterStateProvider)
+    def cloudClient = Mock(CloudSolrClient) {
+      getZkStateReader() >> Mock(ZkStateReader) {
+        getZkClient() >> zkClient
+      }
+    }
+    def factory = Spy(SolrCloudClientFactory)
+    SolrConfigurationData configData = new SolrConfigurationDataImpl("test_config_file.txt", new ByteArrayInputStream());
+    System.setProperty("solr.cloud.zookeeper", SOLR_CLOUD_ZOOKEEPERS)
+
+    when: "add collection to alias"
+    factory.addCollection(CORE, 1, CORE);
+
+    then: "configure client"
+    1 * factory.newCloudSolrClient(*_) >> cloudClient
+    1 * cloudClient.connect() >> null
+
+    and: "check that create collection called"
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.List }, null) >> Mock(NamedList) {
+      get("collections") >> Collections.emptyList()
+    }
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.ListAliases}, null) >> aliasResponseWithNullAliases
+    1 * cloudClient.request({ it instanceof CollectionAdminRequest.Create }, null) >> Mock(NamedList)
   }
 }

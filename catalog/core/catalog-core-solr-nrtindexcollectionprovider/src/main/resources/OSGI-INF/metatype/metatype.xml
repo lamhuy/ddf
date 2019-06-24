@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ **/
+
+ -->
+<metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
+
+  <OCD name="Near Real Time Index Collection Provider"
+    id="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider">
+
+    <AD description="Set initial shard count for collection created for this index. Must be set before the collection is created."
+    name="Shard Count" id="shardCount"
+    type="Integer" default="2"/>
+
+    <AD description="List of Near Real Time metacard types."
+      name="NRT Metacard Types" id="nrtMetacardTypes"
+      type="String" default="workspace,metacard.query,metacard.list,query-template,attribute-group,resource-note" cardinality="100"/>
+  </OCD>
+
+  <Designate pid="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider">
+    <Object ocdref="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider"/>
+  </Designate>
+
+</metatype:MetaData>

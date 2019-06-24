@@ -60,15 +60,15 @@ import org.slf4j.LoggerFactory;
   SolrProviderUpdate.class,
   SolrProviderXpath.class
 })
-public class SolrProviderTest {
+public class BaseSolrProviderTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SolrProviderTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(BaseSolrProviderTest.class);
 
   @Rule @ClassRule public static TemporaryFolder baseDir = new TemporaryFolder();
 
   private static SolrClient solrClient;
 
-  protected static SolrCatalogProvider provider = null;
+  protected static BaseSolrCatalogProvider provider = null;
 
   private static MiniSolrCloudCluster miniSolrCloud;
 
@@ -100,14 +100,14 @@ public class SolrProviderTest {
 
     Assert.assertThat(
         "Solr client is not available for testing",
-        solrClient.isAvailable(30L, TimeUnit.SECONDS),
+        solrClient.isAvailable(30L, 5L, TimeUnit.SECONDS),
         Matchers.equalTo(true));
 
     DynamicSchemaResolver dynamicSchemaResolver = new DynamicSchemaResolver();
     dynamicSchemaResolver.addMetacardType(BASIC_METACARD);
 
     provider =
-        new SolrCatalogProvider(
+        new BaseSolrCatalogProvider(
             solrClient,
             new GeotoolsFilterAdapterImpl(),
             new SolrFilterDelegateFactoryImpl(),
@@ -136,7 +136,7 @@ public class SolrProviderTest {
     }
   }
 
-  public static SolrCatalogProvider getProvider() {
+  public static BaseSolrCatalogProvider getProvider() {
     return provider;
   }
 }

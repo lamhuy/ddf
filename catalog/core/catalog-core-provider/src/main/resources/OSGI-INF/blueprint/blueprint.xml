@@ -1,0 +1,40 @@
+<!--
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or any later version. 
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ **/
+-->
+<blueprint xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+		   xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
+
+	<reference id="solrClientFactory" interface="org.codice.solr.factory.SolrClientFactory" />
+
+	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
+
+	<reference id="indexProvider" interface="ddf.catalog.source.IndexProvider" availability="mandatory"/>
+
+	<reference id="storageProvider" interface="ddf.catalog.source.StorageProvider" availability="mandatory" />
+
+	<reference id="filterBuilder" interface="ddf.catalog.filter.FilterBuilder" />
+
+	<bean id="muxCatalogProvider" class="ddf.catalog.provider.MuxCatalogProvider"
+		destroy-method="shutdown">
+		<!-- Aries does not call my object on startup if set to component-managed. Therefore, we will use container-managed
+		and have the setter call the update method. -->
+		<cm:managed-properties persistent-id="ddf.catalog.provider.MuxCatalogProvider"
+			update-strategy="container-managed"/>
+		<argument ref="indexProvider"/>
+		<argument ref="storageProvider" />
+		<argument ref="filterBuilder" />
+	</bean>
+
+	<service ref="muxCatalogProvider" interface="ddf.catalog.source.CatalogProvider" ranking="10"/>
+
+</blueprint>

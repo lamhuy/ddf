@@ -53,7 +53,8 @@ import static org.codice.solr.factory.impl.SolrClientAdapter.State.CLOSED;
 class SolrClientAdapterAsyncSpec extends Specification {
   static final String CORE = "test_core"
   static final String COLLECTION = 'collection'
-  static final int TIMEOUT_IN_SECS = 25
+  static final int TIMEOUT_IN_SECS = 45
+  static final int POLL_INTERVAL_IN_SECS = 5
   static final String PING_ERROR_MSG = 'failing ping'
 
   @Shared
@@ -808,7 +809,7 @@ class SolrClientAdapterAsyncSpec extends Specification {
       adapter.available
 
     and: "even when checked with a timeout"
-      adapter.isAvailable(TIMEOUT_IN_SECS, SECONDS)
+      adapter.isAvailable(TIMEOUT_IN_SECS, POLL_INTERVAL_IN_SECS, SECONDS)
 
     and: "verify failsafe controllers"
       createController.verify()
@@ -841,7 +842,7 @@ class SolrClientAdapterAsyncSpec extends Specification {
       !adapter.available
 
     when: "checking availability with a timeout"
-      def available = adapter.isAvailable(TIMEOUT_IN_SECS, SECONDS)
+      def available = adapter.isAvailable(TIMEOUT_IN_SECS, POLL_INTERVAL_IN_SECS, SECONDS)
 
     then: "it should return eventually as available"
       available
@@ -883,7 +884,7 @@ class SolrClientAdapterAsyncSpec extends Specification {
       Thread.currentThread().interrupt()
 
     and: "checking availability with a timeout"
-      adapter.isAvailable(TIMEOUT_IN_SECS, SECONDS)
+      adapter.isAvailable(TIMEOUT_IN_SECS, POLL_INTERVAL_IN_SECS, SECONDS)
 
     then: "it should be interrupted right away"
       thrown(InterruptedException)
@@ -932,7 +933,7 @@ class SolrClientAdapterAsyncSpec extends Specification {
       !adapter.available
 
     when: "checking availability with a timeout"
-      def available = adapter.isAvailable(timeout, unit)
+      def available = adapter.isAvailable(timeout, 1, unit)
 
     then: "make sure the waiter was called or not"
       waitCalled.get() == wait_count
@@ -962,8 +963,8 @@ class SolrClientAdapterAsyncSpec extends Specification {
       with_a_timeout_of || timeout | unit         || wait_count
       'negative'        || -25     | NANOSECONDS  || 0
       '0 seconds'       || 0       | SECONDS      || 0
-      '1 millisecond'   || 1       | MILLISECONDS || 1
-      '5 seconds'       || 5       | SECONDS      || 1
+      '1 millisecond'   || 2       | MILLISECONDS || 1
+      '5 seconds'       || 5       | SECONDS      || 4
   }
 
   def 'test isAvailable() with a listener as the adapter changes states'() {

@@ -81,9 +81,22 @@ const determineView = comparator => {
   return necessaryView
 }
 
-// strip extra quotes
-const stripQuotes = property => {
-  return property.replace(/^"(.+(?="$))"$/, '$1')
+function comparatorToCQL() {
+  return {
+    BEFORE: 'BEFORE',
+    AFTER: 'AFTER',
+    RELATIVE: '=',
+    BETWEEN: 'DURING',
+    INTERSECTS: 'INTERSECTS',
+    CONTAINS: 'ILIKE',
+    MATCHCASE: 'LIKE',
+    EQUALS: '=',
+    '>': '>',
+    '<': '<',
+    '=': '=',
+    '<=': '<=',
+    '>=': '>=',
+  }
 }
 
 module.exports = Marionette.LayoutView.extend({
@@ -110,7 +123,6 @@ module.exports = Marionette.LayoutView.extend({
   },
   onBeforeShow: function() {
     this.$el.toggleClass('is-sortable', this.options.isSortable || true)
-    this._filterDropdownModel = new DropdownModel({ value: 'CONTAINS' })
     this.filterAttribute.show(
       DropdownView.createSimpleDropdown({
         list: metacardDefinitions.sortedMetacardTypes
@@ -129,7 +141,7 @@ module.exports = Marionette.LayoutView.extend({
               value: metacardType.id,
             }
           }),
-        defaultSelection: ['anyText'],
+        defaultSelection: [this.model.get('type') || 'anyText'],
         hasFiltering: true,
       })
     )
@@ -138,6 +150,9 @@ module.exports = Marionette.LayoutView.extend({
       'change:value',
       this.handleAttributeUpdate
     )
+    this._filterDropdownModel = new DropdownModel({
+      value: this.model.get('comparator') || 'CONTAINS',
+    })
     this.filterComparator.show(
       new FilterComparatorDropdownView({
         model: this._filterDropdownModel,
@@ -171,44 +186,7 @@ module.exports = Marionette.LayoutView.extend({
     }
     return value
   },
-  comparatorToCQL: function() {
-    return {
-      BEFORE: 'BEFORE',
-      AFTER: 'AFTER',
-      RELATIVE: '=',
-      BETWEEN: 'DURING',
-      INTERSECTS: 'INTERSECTS',
-      CONTAINS: 'ILIKE',
-      MATCHCASE: 'LIKE',
-      EQUALS: '=',
-      '>': '>',
-      '<': '<',
-      '=': '=',
-      '<=': '<=',
-      '>=': '>=',
-    }
-  },
-  CQLtoComparator: function() {
-    var comparator = {}
-    for (var key in this.comparatorToCQL()) {
-      comparator[this.comparatorToCQL()[key]] = key
-    }
-    return comparator
-  },
   // With the relative date comparator being the same as =, we need to try and differentiate them this way
-  getComparatorForFilter(filter) {
-    const propertyDefinition =
-      metacardDefinitions.metacardTypes[stripQuotes(filter.property)]
-    if (
-      propertyDefinition &&
-      propertyDefinition.type === 'DATE' &&
-      filter.type === '='
-    ) {
-      return 'RELATIVE'
-    } else {
-      return this.CQLtoComparator()[filter.type]
-    }
-  },
   updateTypeDropdown: function() {
     this.filterAttribute.currentView.model.set('value', [
       this.model.get('type'),
@@ -238,7 +216,7 @@ module.exports = Marionette.LayoutView.extend({
         if (['INTERSECTS'].indexOf(currentComparator) === -1) {
           this.model.set('comparator', 'INTERSECTS')
         }
-        this.toggleLocationClass(true)
+        this.toggleLocationClass(currentComparator !== 'IS EMPTY')
         break
       case 'DATE':
         if (
@@ -275,14 +253,12 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   updateValueFromInput: function() {
-    if (
-      this.filterInput.currentView &&
-      this.filterInput.currentView.model.hasChanged()
-    ) {
-      this.model.set(
-        'value',
-        Common.duplicate(this.filterInput.currentView.model.getValue())
+    if (this.filterInput.currentView) {
+      const value = Common.duplicate(
+        this.filterInput.currentView.model.getValue()
       )
+      const isValid = this.filterInput.currentView.isValid()
+      this.model.set({ value, isValid }, { silent: true })
     }
   },
   determineInput: function() {
@@ -296,14 +272,16 @@ module.exports = Marionette.LayoutView.extend({
       currentComparator
     )
     const ViewToUse = determineView(currentComparator)
+    const model = new PropertyModel(propertyJSON)
+    this.listenTo(model, 'change:value', this.updateValueFromInput)
     this.filterInput.show(
       new ViewToUse({
-        model: new PropertyModel(propertyJSON),
+        model: model,
       })
     )
 
     var isEditing = this.$el.hasClass('is-editing')
-    if (isEditing) {
+    if (isEditing || this.options.editing) {
       this.turnOnEditing()
     } else {
       this.turnOffEditing()
@@ -313,91 +291,10 @@ module.exports = Marionette.LayoutView.extend({
   getValue: function() {
     var text = '('
     text += this.model.get('type') + ' '
-    text += this.comparatorToCQL()[this.model.get('comparator')] + ' '
+    text += comparatorToCQL()[this.model.get('comparator')] + ' '
     text += this.filterInput.currentView.model.getValue()
     text += ')'
     return text
-  },
-  getFilters: function() {
-    var property = this.model.get('type')
-    var comparator = this.model.get('comparator')
-    var value = this.filterInput.currentView.model.getValue()[0]
-
-    if (comparator === 'NEAR') {
-      return CQLUtils.generateFilterForFilterFunction('proximity', [
-        property,
-        value.distance,
-        value.value,
-      ])
-    }
-
-    var type = this.comparatorToCQL()[comparator]
-    if (metacardDefinitions.metacardTypes[this.model.get('type')].multivalued) {
-      return {
-        type: 'AND',
-        filters: this.filterInput.currentView.model
-          .getValue()
-          .map(function(currentValue) {
-            return CQLUtils.generateFilter(type, property, currentValue)
-          }),
-      }
-    } else {
-      return CQLUtils.generateFilter(type, property, value)
-    }
-  },
-  deleteInvalidFilters: function() {
-    if (!this.filterInput.currentView.isValid()) {
-      this.delete()
-    }
-  },
-  setFilter: function(filter) {
-    setTimeout(
-      function() {
-        if (CQLUtils.isGeoFilter(filter.type)) {
-          filter.value = _.clone(filter)
-        }
-        if (_.isObject(filter.property)) {
-          // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
-          // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
-          // attribute is what actually contains that proximity() call.
-          this.setFilterFromFilterFunction(filter.property)
-        } else {
-          let value = [filter.value]
-          if (filter.type === 'DURING') {
-            value = [`${filter.from}/${filter.to}`]
-          }
-          this.model.set({
-            value,
-            type: filter.property.split('"').join(''),
-            comparator: this.getComparatorForFilter(filter),
-          })
-        }
-      }.bind(this),
-      0
-    )
-  },
-  setFilterFromFilterFunction(filter) {
-    if (filter.filterFunctionName === 'proximity') {
-      var property = filter.params[0]
-      var distance = filter.params[1]
-      var value = filter.params[2]
-
-      this.model.set({
-        value: [
-          {
-            value: value,
-            distance: distance,
-          },
-        ],
-        // this is confusing but 'type' on the model is actually the name of the property we're filtering on
-        type: property,
-        comparator: 'NEAR',
-      })
-    } else {
-      throw new Error(
-        'Unsupported filter function in filter view: ' + filterFunctionName
-      )
-    }
   },
   onDestroy: function() {
     this._filterDropdownModel.destroy()

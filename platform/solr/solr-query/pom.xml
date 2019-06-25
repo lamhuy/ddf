@@ -17,7 +17,7 @@
     <parent>
         <groupId>ddf.platform.solr</groupId>
         <artifactId>platform-solr</artifactId>
-        <version>2.14.11523-SNAPSHOT</version>
+        <version>2.14.0.11523</version>
     </parent>
     <artifactId>solr-query</artifactId>
     <name>DDF :: Platform :: Solr :: Query</name>

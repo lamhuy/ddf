@@ -16,22 +16,9 @@ package ddf.catalog.source.solr;
 import static ddf.catalog.source.solr.DynamicSchemaResolver.FIVE_MEGABYTES;
 
 import ddf.catalog.filter.proxy.adapter.GeotoolsFilterAdapterImpl;
-import ddf.catalog.source.solr.provider.SolrProviderContentTypes;
-import ddf.catalog.source.solr.provider.SolrProviderCreate;
-import ddf.catalog.source.solr.provider.SolrProviderDelete;
-import ddf.catalog.source.solr.provider.SolrProviderExtensibleMetacards;
-import ddf.catalog.source.solr.provider.SolrProviderQuery;
-import ddf.catalog.source.solr.provider.SolrProviderSorting;
-import ddf.catalog.source.solr.provider.SolrProviderSource;
-import ddf.catalog.source.solr.provider.SolrProviderSpatial;
-import ddf.catalog.source.solr.provider.SolrProviderTemporal;
-import ddf.catalog.source.solr.provider.SolrProviderUpdate;
-import ddf.catalog.source.solr.provider.SolrProviderXpath;
 import java.nio.file.Paths;
-import java.util.concurrent.TimeUnit;
 import org.apache.solr.client.solrj.embedded.JettyConfig;
 import org.apache.solr.cloud.MiniSolrCloudCluster;
-import org.codice.solr.client.solrj.SolrClient;
 import org.codice.solr.factory.impl.SolrCloudClientFactory;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -47,27 +34,26 @@ import org.slf4j.LoggerFactory;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  SolrProviderContentTypes.class,
-  SolrProviderCreate.class,
-  SolrProviderDelete.class,
-  SolrProviderExtensibleMetacards.class,
-  SolrProviderQuery.class,
-  SolrProviderSorting.class,
-  SolrProviderSource.class,
-  SolrProviderSpatial.class,
-  SolrProviderTemporal.class,
-  SolrProviderUpdate.class,
-  SolrProviderXpath.class
+  //  SolrProviderContentTypes.class,
+  //  SolrProviderCreate.class,
+  //  SolrProviderDelete.class,
+  //  SolrProviderExtensibleMetacards.class,
+  //  SolrProviderQuery.class,
+  //  SolrProviderSorting.class,
+  //  SolrProviderSource.class,
+  //  SolrProviderSpatial.class,
+  //  SolrProviderTemporal.class,
+  //  SolrProviderUpdate.class,
+  //  SolrProviderXpath.class
 })
-public class SolrProviderTest {
+public class AbstractCatalogProviderTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SolrProviderTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCatalogProviderTest.class);
 
   @Rule @ClassRule public static TemporaryFolder baseDir = new TemporaryFolder();
 
-  private static SolrClient solrClient;
-
-  protected static BaseSolrCatalogProvider provider = null;
+  private static SolrIndexProvider indexProvider = null;
+  private static SolrStorageProvider storageProvider = null;
 
   private static MiniSolrCloudCluster miniSolrCloud;
 
@@ -81,8 +67,6 @@ public class SolrProviderTest {
     System.setProperty("solr.data.dir", solrDataPath);
     store.setDataDirectoryPath(solrDataPath);
 
-    System.setProperty("jute.maxbuffer", "20000000"); // windows solution
-
     miniSolrCloud =
         new MiniSolrCloudCluster(
             1, baseDir.getRoot().toPath(), JettyConfig.builder().setContext("/solr").build());
@@ -95,19 +79,24 @@ public class SolrProviderTest {
     System.setProperty("metadata.size.limit", Integer.toString(FIVE_MEGABYTES));
 
     SolrCloudClientFactory solrClientFactory = new SolrCloudClientFactory();
-    solrClient = solrClientFactory.newClient("catalog");
 
-    Assert.assertThat(
-        "Solr client is not available for testing",
-        solrClient.isAvailable(30L, TimeUnit.SECONDS),
-        Matchers.equalTo(true));
-
-    provider =
-        new BaseSolrCatalogProvider(
-            solrClient, new GeotoolsFilterAdapterImpl(), new SolrFilterDelegateFactoryImpl());
+    indexProvider =
+        new SolrIndexProvider(
+            solrClientFactory,
+            new GeotoolsFilterAdapterImpl(),
+            new SolrFilterDelegateFactoryImpl());
+    storageProvider =
+        new SolrStorageProvider(
+            solrClientFactory,
+            new GeotoolsFilterAdapterImpl(),
+            new SolrFilterDelegateFactoryImpl());
 
     // Mask the id, this is something that the CatalogFramework would usually do
-    provider.setId(MASKED_ID);
+    indexProvider.maskId(MASKED_ID);
+    storageProvider.maskId(MASKED_ID);
+
+    Assert.assertThat(indexProvider.isAvailable(), Matchers.equalTo(true));
+    Assert.assertThat(storageProvider.isAvailable(), Matchers.equalTo(true));
   }
 
   @AfterClass
@@ -124,12 +113,7 @@ public class SolrProviderTest {
       miniSolrCloud.shutdown();
     }
 
-    if (solrClient != null) {
-      solrClient.close();
-    }
-  }
-
-  public static BaseSolrCatalogProvider getProvider() {
-    return provider;
+    indexProvider.shutdown();
+    storageProvider.shutdown();
   }
 }

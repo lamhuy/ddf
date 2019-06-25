@@ -42,8 +42,8 @@ import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
+import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.ConfigurationStore;
-import ddf.catalog.source.solr.SolrCatalogProvider;
 import ddf.catalog.source.solr.SolrProviderTest;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ import org.opengis.filter.FilterFactory;
 
 public class SolrProviderCreate {
 
-  private static SolrCatalogProvider provider;
+  private static BaseSolrCatalogProvider provider;
 
   @BeforeClass
   public static void setUp() {
@@ -154,7 +154,7 @@ public class SolrProviderCreate {
   /** Testing that you cannot instantiate with a null Solr client. */
   @Test(expected = IllegalArgumentException.class)
   public void testSolrClientNull() {
-    new SolrCatalogProvider(null, null, null);
+    new BaseSolrCatalogProvider(null, null, null);
   }
 
   /** Tests what happens when the whole request is null. */

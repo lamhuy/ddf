@@ -68,9 +68,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** {@link CatalogProvider} implementation using Apache Solr */
-public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider {
+public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SolrCatalogProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(BaseSolrCatalogProvider.class);
 
   private static final String COULD_NOT_COMPLETE_DELETE_REQUEST_MESSAGE =
       "Could not complete delete request.";
@@ -85,8 +85,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
 
   static {
     try (InputStream propertiesStream =
-        ddf.catalog.source.solr.SolrCatalogProvider.class.getResourceAsStream(
-            DESCRIBABLE_PROPERTIES_FILE)) {
+        BaseSolrCatalogProvider.class.getResourceAsStream(DESCRIBABLE_PROPERTIES_FILE)) {
       DESCRIBABLE_PROPERTIES.load(propertiesStream);
     } catch (IOException e) {
       LOGGER.info("Failed to load describable properties", e);
@@ -108,7 +107,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
    * @param adapter injected implementation of FilterAdapter
    * @param resolver Solr schema resolver
    */
-  public SolrCatalogProvider(
+  public BaseSolrCatalogProvider(
       SolrClient solrClient,
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
@@ -122,7 +121,7 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
     this.resolver = resolver;
 
     LOGGER.debug(
-        "Constructing {} with Solr client [{}]", SolrCatalogProvider.class.getName(), solr);
+        "Constructing {} with Solr client [{}]", BaseSolrCatalogProvider.class.getName(), solr);
 
     solr.whenAvailable(this::addFieldsFromClientToResolver);
     this.client =
@@ -135,11 +134,15 @@ public class SolrCatalogProvider extends MaskableImpl implements CatalogProvider
    * @param solrClient Solr client
    * @param adapter injected implementation of FilterAdapter
    */
-  public SolrCatalogProvider(
+  public BaseSolrCatalogProvider(
       SolrClient solrClient,
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory) {
     this(solrClient, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
+  }
+
+  public SolrClient getSolrClient() {
+    return solr;
   }
 
   @Override

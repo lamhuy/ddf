@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
 import org.slf4j.Logger;
@@ -44,7 +45,7 @@ public class SolrStorageProvider implements StorageProvider {
 
   protected static final String SOLR_CATALOG_CORE_NAME = "catalog";
 
-  private Map<String, CatalogProvider> catalogProviders = new HashMap<>();
+  private Map<String, BaseSolrCatalogProvider> catalogProviders = new HashMap<>();
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
    *
@@ -65,8 +66,11 @@ public class SolrStorageProvider implements StorageProvider {
     /** Create storage collection to provider map */
     catalogProviders.put(
         SOLR_CATALOG_CORE_NAME,
-        new SolrCatalogProvider(
-            clientFactory.newClient("catalog"), adapter, solrFilterDelegateFactory, resolver));
+        new BaseSolrCatalogProvider(
+            clientFactory.newClient(SOLR_CATALOG_CORE_NAME),
+            adapter,
+            solrFilterDelegateFactory,
+            resolver));
   }
 
   /**
@@ -104,12 +108,19 @@ public class SolrStorageProvider implements StorageProvider {
 
   public void shutdown() {
     LOGGER.debug("Closing down Solr client.");
-    this.catalogProviders.forEach((k, p) -> ((SolrCatalogProvider) p).shutdown());
+    this.catalogProviders.forEach((k, p) -> ((BaseSolrCatalogProvider) p).shutdown());
   }
 
   @Override
   public boolean isAvailable() {
-    return false;
+    try {
+      return catalogProviders
+          .get(SOLR_CATALOG_CORE_NAME)
+          .getSolrClient()
+          .isAvailable(30L, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      return false;
+    }
   }
 
   @Override

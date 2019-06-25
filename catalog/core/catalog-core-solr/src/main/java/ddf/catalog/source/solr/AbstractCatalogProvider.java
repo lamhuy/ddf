@@ -14,7 +14,6 @@
 package ddf.catalog.source.solr;
 
 import ddf.catalog.data.ContentType;
-import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
@@ -36,14 +35,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import javax.annotation.Nullable;
-import org.codice.solr.factory.SolrClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Common base class for all Catalog providers.
- * This class utilize two providers: one for handling index, one for handling the storage of data
- * */
+/**
+ * Common base class for all Catalog providers. This class utilize two providers: one for handling
+ * index, one for handling the storage of data
+ */
 public abstract class AbstractCatalogProvider extends MaskableImpl implements CatalogProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCatalogProvider.class);
@@ -64,40 +62,12 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   private IndexProvider indexProvider;
   private StorageProvider storageProvider;
 
-  /**
-   * Constructor.
-   *
-   * @param filterAdapter filter adaptor this provider will use
-   * @param clientFactory client factory this provider will use to connect to Solr
-   * @param solrFilterDelegateFactory Solr filter delegate factory this provider will use
-   * @param resolver schema resolver this provider will use. A default schema resolver will be used
-   *     if this parameter is {@code null}.
-   */
-  public AbstractCatalogProvider(
-      FilterAdapter filterAdapter,
-      SolrClientFactory clientFactory,
-      SolrFilterDelegateFactory solrFilterDelegateFactory,
-      @Nullable DynamicSchemaResolver resolver) {
+  /** Constructor. */
+  public AbstractCatalogProvider(IndexProvider indexProvider, StorageProvider storageProvider) {
 
-    // TODO: should this be a service reference look up or inject here ?
-    this.indexProvider =
-        new SolrIndexProvider(
-            clientFactory,
-            filterAdapter,
-            solrFilterDelegateFactory,
-            (resolver == null) ? new DynamicSchemaResolver() : resolver);
+    this.indexProvider = indexProvider;
+    this.storageProvider = storageProvider;
     indexProvider.maskId(getId());
-
-    /**
-     * TODO: should this be a service reference look up rather a new instance here? either using
-     * SolrStorageProvider or MixStorageProvider or RDBMSStorageProvider?
-     */
-    this.storageProvider =
-        new SolrStorageProvider(
-            clientFactory,
-            filterAdapter,
-            solrFilterDelegateFactory,
-            (resolver == null) ? new DynamicSchemaResolver() : resolver);
     storageProvider.maskId(getId());
   }
 
@@ -135,7 +105,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public boolean isAvailable() {
-    return indexProvider.isAvailable() & storageProvider.isAvailable();
+    return indexProvider.isAvailable() && storageProvider.isAvailable();
   }
 
   @Override

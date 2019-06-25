@@ -28,8 +28,8 @@ import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
+import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.ConfigurationStore;
-import ddf.catalog.source.solr.SolrCatalogProvider;
 import ddf.catalog.source.solr.SolrProviderTest;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +40,7 @@ import org.opengis.filter.Filter;
 
 public class SolrProviderXpath {
 
-  private static SolrCatalogProvider provider;
+  private static BaseSolrCatalogProvider provider;
 
   @BeforeClass
   public static void setUp() {

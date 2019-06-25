@@ -27,6 +27,7 @@ import ddf.catalog.source.UnsupportedQueryException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
 
@@ -35,7 +36,7 @@ public class SolrIndexProvider implements IndexProvider {
 
   protected static final String SOLR_CATALOG_CORE_NAME = "catalog";
 
-  private Map<String, SolrCatalogProvider> catalogProviders = new HashMap<>();
+  private Map<String, BaseSolrCatalogProvider> catalogProviders = new HashMap<>();
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -57,8 +58,11 @@ public class SolrIndexProvider implements IndexProvider {
     /** Create storage collection to provider map */
     catalogProviders.put(
         SOLR_CATALOG_CORE_NAME,
-        new SolrCatalogProvider(
-            clientFactory.newClient("catalog"), adapter, solrFilterDelegateFactory, resolver));
+        new BaseSolrCatalogProvider(
+            clientFactory.newClient(SOLR_CATALOG_CORE_NAME),
+            adapter,
+            solrFilterDelegateFactory,
+            resolver));
   }
 
   /**
@@ -91,7 +95,14 @@ public class SolrIndexProvider implements IndexProvider {
 
   @Override
   public boolean isAvailable() {
-    return false;
+    try {
+      return catalogProviders
+          .get(SOLR_CATALOG_CORE_NAME)
+          .getSolrClient()
+          .isAvailable(30L, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      return false;
+    }
   }
 
   @Override

@@ -66,7 +66,7 @@ public class SolrProviderRealTimeQueryTest {
 
   private static MiniSolrCloudCluster miniSolrCloud;
 
-  private static SolrCatalogProvider provider;
+  private static BaseSolrCatalogProvider provider;
 
   public static final String MASKED_ID = "scp";
 
@@ -106,7 +106,7 @@ public class SolrProviderRealTimeQueryTest {
         Matchers.equalTo(true));
 
     provider =
-        new SolrCatalogProvider(
+        new BaseSolrCatalogProvider(
             solrClient, new GeotoolsFilterAdapterImpl(), new SolrFilterDelegateFactoryImpl());
 
     // Mask the id, this is something that the CatalogFramework would usually do

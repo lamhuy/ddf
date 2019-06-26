@@ -20,6 +20,7 @@ import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
 import ddf.catalog.operation.QueryRequest;
+import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
@@ -28,6 +29,7 @@ import ddf.catalog.source.IngestException;
 import ddf.catalog.source.SourceMonitor;
 import ddf.catalog.source.StorageProvider;
 import ddf.catalog.source.UnsupportedQueryException;
+import ddf.catalog.util.impl.DescribableImpl;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** {@link CatalogProvider} implementation using Apache Solr */
-public class SolrStorageProvider implements StorageProvider {
+public class SolrStorageProvider extends DescribableImpl implements StorageProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrStorageProvider.class);
 
@@ -88,27 +90,34 @@ public class SolrStorageProvider implements StorageProvider {
 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
-    // TODO: method to return the correct catalog provider given the request
-    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).create(createRequest);
+    return getCatalogProvider(createRequest).create(createRequest);
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
-    return null;
+    return getCatalogProvider(updateRequest).update(updateRequest);
   }
 
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    return null;
+    return getCatalogProvider(deleteRequest).delete(deleteRequest);
   }
 
-  public SourceResponse query(List<String> ids) throws UnsupportedQueryException {
-    return null;
+  @Override
+  public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
+    return getCatalogProvider(queryRequest).query(queryRequest);
+  }
+
+  public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
+      throws UnsupportedQueryException {
+    // for a solr storage provider quering by IDs might not be optimal.
+    // hence handling as a normal query
+    return getCatalogProvider(queryRequest).query(queryRequest);
   }
 
   public void shutdown() {
     LOGGER.debug("Closing down Solr client.");
-    this.catalogProviders.forEach((k, p) -> ((BaseSolrCatalogProvider) p).shutdown());
+    this.catalogProviders.forEach((k, p) -> p.shutdown());
   }
 
   @Override
@@ -125,44 +134,20 @@ public class SolrStorageProvider implements StorageProvider {
 
   @Override
   public boolean isAvailable(SourceMonitor callback) {
-    return false;
-  }
-
-  @Override
-  public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
-    return null;
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).isAvailable(callback);
   }
 
   @Override
   public Set<ContentType> getContentTypes() {
-    return null;
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).getContentTypes();
   }
 
   @Override
-  public void maskId(String id) {}
-
-  @Override
-  public String getVersion() {
-    return null;
+  public void maskId(String id) {
+    catalogProviders.forEach((k, p) -> p.maskId(id));
   }
 
-  @Override
-  public String getId() {
-    return null;
-  }
-
-  @Override
-  public String getTitle() {
-    return null;
-  }
-
-  @Override
-  public String getDescription() {
-    return null;
-  }
-
-  @Override
-  public String getOrganization() {
-    return null;
+  private CatalogProvider getCatalogProvider(Request request) {
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME);
   }
 }

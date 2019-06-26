@@ -15,15 +15,20 @@ package ddf.catalog.source.solr;
 
 import ddf.catalog.data.ContentType;
 import ddf.catalog.filter.FilterAdapter;
+import ddf.catalog.operation.CreateRequest;
+import ddf.catalog.operation.CreateResponse;
+import ddf.catalog.operation.DeleteRequest;
+import ddf.catalog.operation.DeleteResponse;
 import ddf.catalog.operation.QueryRequest;
-import ddf.catalog.operation.Request;
-import ddf.catalog.operation.Response;
 import ddf.catalog.operation.SourceResponse;
+import ddf.catalog.operation.UpdateRequest;
+import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.SourceMonitor;
 import ddf.catalog.source.UnsupportedQueryException;
+import ddf.catalog.util.impl.DescribableImpl;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +37,7 @@ import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
 
 /** {@link CatalogProvider} implementation using Apache Solr */
-public class SolrIndexProvider implements IndexProvider {
+public class SolrIndexProvider extends DescribableImpl implements IndexProvider {
 
   protected static final String SOLR_CATALOG_CORE_NAME = "catalog";
 
@@ -79,18 +84,23 @@ public class SolrIndexProvider implements IndexProvider {
   }
 
   @Override
-  public Response create(Request createRequest) throws IngestException {
+  public CreateResponse create(CreateRequest createRequest) throws IngestException {
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).create(createRequest);
+  }
+
+  @Override
+  public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
     return null;
   }
 
   @Override
-  public Response update(Request updateRequest) throws IngestException {
-    return null;
+  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).delete(deleteRequest);
   }
 
   @Override
-  public Response delete(Request deleteRequest) throws IngestException {
-    return null;
+  public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).query(request);
   }
 
   @Override
@@ -105,50 +115,22 @@ public class SolrIndexProvider implements IndexProvider {
     }
   }
 
-  @Override
-  public boolean isAvailable(SourceMonitor callback) {
-    return false;
-  }
-
-  @Override
-  public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
-    return null;
-  }
-
   public void shutdown() {
     this.catalogProviders.forEach((k, p) -> p.shutdown());
   }
 
   @Override
+  public boolean isAvailable(SourceMonitor callback) {
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).isAvailable(callback);
+  }
+
+  @Override
   public Set<ContentType> getContentTypes() {
-    return null;
+    return catalogProviders.get(SOLR_CATALOG_CORE_NAME).getContentTypes();
   }
 
   @Override
-  public void maskId(String id) {}
-
-  @Override
-  public String getVersion() {
-    return null;
-  }
-
-  @Override
-  public String getId() {
-    return null;
-  }
-
-  @Override
-  public String getTitle() {
-    return null;
-  }
-
-  @Override
-  public String getDescription() {
-    return null;
-  }
-
-  @Override
-  public String getOrganization() {
-    return null;
+  public void maskId(String id) {
+    catalogProviders.forEach((k, p) -> p.maskId(id));
   }
 }

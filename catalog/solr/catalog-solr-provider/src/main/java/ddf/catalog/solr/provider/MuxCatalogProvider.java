@@ -18,8 +18,8 @@ import ddf.catalog.source.StorageProvider;
 import ddf.catalog.source.solr.AbstractCatalogProvider;
 
 /** Catalog Provider that interfaces with Solr */
-public class SolrMuxCatalogProvider extends AbstractCatalogProvider {
-  public SolrMuxCatalogProvider(IndexProvider indexProvider, StorageProvider storageProvider) {
+public class MuxCatalogProvider extends AbstractCatalogProvider {
+  public MuxCatalogProvider(IndexProvider indexProvider, StorageProvider storageProvider) {
     super(indexProvider, storageProvider);
   }
 }

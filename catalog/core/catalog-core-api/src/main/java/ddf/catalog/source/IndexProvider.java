@@ -13,8 +13,12 @@
  */
 package ddf.catalog.source;
 
-import ddf.catalog.operation.Request;
-import ddf.catalog.operation.Response;
+import ddf.catalog.operation.CreateRequest;
+import ddf.catalog.operation.CreateResponse;
+import ddf.catalog.operation.DeleteRequest;
+import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.UpdateRequest;
+import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.util.Maskable;
 
 /**
@@ -28,13 +32,13 @@ import ddf.catalog.util.Maskable;
 public interface IndexProvider extends Source, Maskable {
 
   /** Publishes a list of id into the catalog. */
-  public Response create(Request createRequest) throws IngestException;
+  public CreateResponse create(CreateRequest createRequest) throws IngestException;
 
   /** Updates a list of ids. Ids that are not in the Catalog will not be created. * */
-  public Response update(Request updateRequest) throws IngestException;
+  public UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
 
   /** Deletes records specified by a list id */
-  public Response delete(Request deleteRequest) throws IngestException;
+  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
 
   public void shutdown();
 }

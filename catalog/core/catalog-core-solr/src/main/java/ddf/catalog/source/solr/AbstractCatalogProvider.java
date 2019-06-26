@@ -22,6 +22,8 @@ import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
+import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -31,10 +33,10 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,8 +118,14 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
     SourceResponse indexResponse = indexProvider.query(queryRequest);
-    List<String> ids = new ArrayList<>();
-    return storageProvider.query(ids);
+    List<String> ids =
+        indexResponse
+            .getResults()
+            .stream()
+            .map(r -> r.getMetacard().getId())
+            .collect(Collectors.toList());
+    SourceResponse queryResponse = storageProvider.queryByIds(queryRequest, ids);
+    return queryResponse != null ? queryResponse : indexResponse;
   }
 
   @Override
@@ -142,17 +150,28 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
-    return storageProvider.create(createRequest);
+    CreateResponse response = indexProvider.create(createRequest);
+    // insert those metacard with ID generated into storageProvider
+    if (response != null && !response.getCreatedMetacards().isEmpty()) {
+      CreateRequest storageRequest = new CreateRequestImpl(response.getCreatedMetacards());
+      storageProvider.create(storageRequest);
+    }
+    return response;
   }
 
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    return storageProvider.delete(deleteRequest);
+    DeleteResponse deleteResponse = indexProvider.delete(deleteRequest);
+    String[] ids =
+        (String[]) deleteResponse.getDeletedMetacards().stream().map(c -> c.getId()).toArray();
+    storageProvider.delete(new DeleteRequestImpl(ids));
+    return deleteResponse;
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
-    return storageProvider.update(updateRequest);
+    storageProvider.update(updateRequest);
+    return indexProvider.update(updateRequest);
   }
 
   /** Shuts down the connection to Solr and releases resources. */

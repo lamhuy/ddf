@@ -18,11 +18,11 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
-	<bean id="solrCatalogProvider" class="ddf.catalog.solr.provider.SolrCatalogProvider"
+	<bean id="solrCatalogProvider" class="ddf.core.solr.provider.SolrCatalogProvider"
           destroy-method="shutdown">
 		<!-- Aries does not call my object on startup if set to component-managed. Therefore, we will use container-managed
 		and have the setter call the update method. -->
-        <cm:managed-properties persistent-id="ddf.catalog.solr.provider.SolrCatalogProvider"
+        <cm:managed-properties persistent-id="ddf.core.solr.provider.SolrCatalogProvider"
                                update-strategy="container-managed"/>
 		<argument ref="filterAdapter"/>
         <argument ref="solrClientFactory" />
@@ -32,43 +32,5 @@
 	</bean>
 
 	<service ref="solrCatalogProvider" interface="ddf.catalog.source.CatalogProvider"/>
-
-	<bean id="solrIndexProvider" class="ddf.catalog.source.solr.SolrIndexProvider">
-		<cm:managed-properties persistent-id="ddf.catalog.solr.SolrIndexProvider"
-			update-strategy="container-managed"/>
-		<argument ref="filterAdapter"/>
-		<argument ref="solrClientFactory" />
-		<argument>
-			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
-		</argument>
-	</bean>
-
-	<bean id="solrStorageProvider" class="ddf.catalog.source.solr.SolrStorageProvider">
-		<cm:managed-properties persistent-id="ddf.catalog.solr.SolrStorageProvider"
-			update-strategy="container-managed"/>
-		<argument ref="filterAdapter"/>
-		<argument ref="solrClientFactory" />
-		<argument>
-			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
-		</argument>
-	</bean>
-
-	<service ref="solrIndexProvider" interface="ddf.catalog.source.IndexProvider" />
-	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />
-
-	<reference id="indexProvider" interface="ddf.catalog.source.IndexProvider" />
-	<reference id="storageProvider" interface="ddf.catalog.source.StorageProvider" />
-
-	<bean id="muxCatalogProvider" class="ddf.catalog.solr.provider.MuxCatalogProvider"
-		destroy-method="shutdown">
-		<!-- Aries does not call my object on startup if set to component-managed. Therefore, we will use container-managed
-		and have the setter call the update method. -->
-		<cm:managed-properties persistent-id="ddf.catalog.solr.provider.MuxCatalogProvider"
-			update-strategy="container-managed"/>
-		<argument ref="indexProvider"/>
-		<argument ref="storageProvider" />
-	</bean>
-
-	<service ref="muxCatalogProvider" interface="ddf.catalog.source.CatalogProvider"/>
 
 </blueprint>

@@ -50,6 +50,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -98,7 +99,7 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
 
   private final SolrMetacardClientImpl client;
 
-  private final FilterAdapter filterAdapter;
+  protected final FilterAdapter filterAdapter;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -148,6 +149,10 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
   @Override
   public Set<ContentType> getContentTypes() {
     return client.getContentTypes();
+  }
+
+  public boolean isAvailable(long timeout, TimeUnit unit) throws InterruptedException {
+    return solr.isAvailable(timeout, unit);
   }
 
   @Override

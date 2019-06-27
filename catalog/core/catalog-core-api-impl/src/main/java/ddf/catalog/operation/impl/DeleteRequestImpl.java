@@ -105,8 +105,6 @@ public class DeleteRequestImpl extends OperationImpl implements DeleteRequest {
   public DeleteRequestImpl(
       List<Serializable> values, String attributeName, Map<String, Serializable> properties) {
     this(values, attributeName, properties, new HashSet<>());
-    this.name = attributeName;
-    this.values = values;
   }
 
   public DeleteRequestImpl(

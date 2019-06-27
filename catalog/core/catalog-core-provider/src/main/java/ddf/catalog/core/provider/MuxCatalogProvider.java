@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.solr.provider;
+package ddf.catalog.core.provider;
 
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.StorageProvider;

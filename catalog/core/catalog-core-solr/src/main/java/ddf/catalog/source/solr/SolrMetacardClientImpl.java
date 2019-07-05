@@ -42,10 +42,12 @@ import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.FacetAttributeResult;
+import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.TermFacetProperties;
 import ddf.catalog.operation.impl.FacetAttributeResultImpl;
+import ddf.catalog.operation.impl.IndexQueryResponseImpl;
 import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.source.UnsupportedQueryException;
@@ -160,6 +162,16 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
 
   public SolrClient getClient() {
     return client;
+  }
+
+  @Override
+  public IndexQueryResponse queryIndex(QueryRequest request) throws UnsupportedQueryException {
+    if (request == null || request.getQuery() == null) {
+      return new IndexQueryResponseImpl(request, new HashMap<>(), new ArrayList<>(), 0L);
+    }
+    // TODO: build just index response without full metacard
+
+    return null;
   }
 
   @Override

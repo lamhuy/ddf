@@ -49,7 +49,7 @@ public class DeleteRequestImpl extends OperationImpl implements DeleteRequest {
   /**
    * Instantiates a new DeleteRequestImpl with an array of {@link String} id to be deleted.
    *
-   * @param id1 - the id to be used for the delete operation
+   * @param ids - the id to be used for the delete operation
    */
   public DeleteRequestImpl(String[] ids) {
     this(Arrays.asList((Serializable[]) ids), DeleteRequest.DELETE_BY_ID, null);

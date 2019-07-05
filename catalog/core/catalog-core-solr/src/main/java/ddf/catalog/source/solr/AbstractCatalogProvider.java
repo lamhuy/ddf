@@ -18,12 +18,13 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexDeleteResponse;
+import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateRequestImpl;
-import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -33,10 +34,9 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,25 +107,22 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public boolean isAvailable() {
-    return indexProvider.isAvailable() && storageProvider.isAvailable();
+    return storageProvider.isAvailable();
   }
 
   @Override
   public boolean isAvailable(SourceMonitor callback) {
-    return indexProvider.isAvailable(callback) && storageProvider.isAvailable(callback);
+    return storageProvider.isAvailable(callback);
   }
 
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
-    SourceResponse indexResponse = indexProvider.query(queryRequest);
-    List<String> ids =
-        indexResponse
-            .getResults()
-            .stream()
-            .map(r -> r.getMetacard().getId())
-            .collect(Collectors.toList());
-    SourceResponse queryResponse = storageProvider.queryByIds(queryRequest, ids);
-    return queryResponse != null ? queryResponse : indexResponse;
+    IndexQueryResponse indexQueryResponse = indexProvider.query(queryRequest);
+    SourceResponse queryResponse =
+        storageProvider.queryByIds(
+            queryRequest,
+            indexQueryResponse == null ? Collections.emptyList() : indexQueryResponse.getIds());
+    return queryResponse;
   }
 
   @Override
@@ -150,21 +147,19 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
-    CreateResponse response = indexProvider.create(createRequest);
-    // insert those metacard with ID generated into storageProvider
-    if (response != null && !response.getCreatedMetacards().isEmpty()) {
-      CreateRequest storageRequest = new CreateRequestImpl(response.getCreatedMetacards());
-      storageProvider.create(storageRequest);
+    CreateResponse createResponse = storageProvider.create(createRequest);
+    // create index only for those inserted metacard
+    if (createResponse != null && !createResponse.getCreatedMetacards().isEmpty()) {
+      CreateRequest indexRequest = new CreateRequestImpl(createResponse.getCreatedMetacards());
+      indexProvider.create(indexRequest);
     }
-    return response;
+    return createResponse;
   }
 
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    DeleteResponse deleteResponse = indexProvider.delete(deleteRequest);
-    String[] ids =
-        (String[]) deleteResponse.getDeletedMetacards().stream().map(c -> c.getId()).toArray();
-    storageProvider.delete(new DeleteRequestImpl(ids));
+    IndexDeleteResponse indexDeleteResponse = indexProvider.delete(deleteRequest);
+    DeleteResponse deleteResponse = storageProvider.delete(indexDeleteResponse);
     return deleteResponse;
   }
 

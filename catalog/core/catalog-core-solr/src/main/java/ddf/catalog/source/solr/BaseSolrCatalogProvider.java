@@ -23,6 +23,8 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexDeleteResponse;
+import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceResponse;
@@ -30,7 +32,9 @@ import ddf.catalog.operation.Update;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateResponseImpl;
+import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.DeleteResponseImpl;
+import ddf.catalog.operation.impl.IndexDeleteResponseImpl;
 import ddf.catalog.operation.impl.UpdateImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
@@ -216,6 +220,54 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return response;
   }
 
+  /**
+   * Querying against the index collection to obtain just the metacard id.
+   *
+   * @param request
+   * @return
+   * @throws UnsupportedQueryException
+   */
+  public IndexQueryResponse queryIndex(QueryRequest request) throws UnsupportedQueryException {
+    IndexQueryResponse response = client.queryIndex(request);
+    return response;
+  }
+
+  public IndexDeleteResponse deleteIndex(DeleteRequest deleteRequest) throws IngestException {
+    nonNull(deleteRequest);
+
+    IndexDeleteResponse response = new IndexDeleteResponseImpl(deleteRequest);
+    String attributeName = deleteRequest.getAttributeName();
+    if (StringUtils.isBlank(attributeName)) {
+      throw new IngestException(
+          "Attribute name cannot be empty. Please provide the name of the attribute.");
+    }
+
+    @SuppressWarnings("unchecked")
+    List<? extends Serializable> identifiers = deleteRequest.getAttributeValues();
+    if (CollectionUtils.isEmpty(identifiers)) {
+      return response;
+    }
+
+    if (identifiers.size() <= MAX_BOOLEAN_CLAUSES) {
+      deleteIndex(response, identifiers, attributeName);
+    } else {
+      List<? extends Serializable> identifierPaged;
+      int currPagingSize;
+
+      for (currPagingSize = MAX_BOOLEAN_CLAUSES;
+          currPagingSize < identifiers.size();
+          currPagingSize += MAX_BOOLEAN_CLAUSES) {
+        identifierPaged = identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, currPagingSize);
+        deleteIndex(response, identifierPaged, attributeName);
+      }
+      identifierPaged =
+          identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, identifiers.size());
+      deleteIndex(response, identifierPaged, attributeName);
+    }
+
+    return response;
+  }
+
   @Override
   public CreateResponse create(CreateRequest request) throws IngestException {
     nonNull(request);
@@ -337,6 +389,10 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return new UpdateResponseImpl(updateRequest, updateRequest.getProperties(), updateList);
   }
 
+  public DeleteResponse deleteByIds(Set<String> ids) throws IngestException {
+    return delete(new DeleteRequestImpl(ids.toArray(new String[0])));
+  }
+
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
     nonNull(deleteRequest);
@@ -449,6 +505,31 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
       LOGGER.info("Unable to create metacard(s) from Solr responses during update.", e);
       throw new IngestException("Could not create metacard(s).");
     }
+  }
+
+  private IndexDeleteResponse deleteIndex(
+      IndexDeleteResponse response, List<? extends Serializable> identifiers, String attributeName)
+      throws IngestException {
+    String fieldName = attributeName + SchemaFields.TEXT_SUFFIX;
+
+    // TODO: do not need to get a full metacard, just id and its tags
+    List<Metacard> metacards = getMetacards(identifiers, fieldName);
+
+    for (Metacard metacard : metacards) {
+      response.addTaggedId(metacard.getTags(), metacard.getId());
+    }
+
+    try {
+      // the assumption is if something was deleted, it should be gone
+      // right away, such as expired data, etc.
+      // so we force the commit
+      client.deleteByIds(fieldName, identifiers, true);
+    } catch (SolrServerException | SolrException | IOException e) {
+      LOGGER.info("Failed to delete metacards by ID(s).", e);
+      throw new IngestException(COULD_NOT_COMPLETE_DELETE_REQUEST_MESSAGE);
+    }
+
+    return response;
   }
 
   private void deleteListOfMetacards(

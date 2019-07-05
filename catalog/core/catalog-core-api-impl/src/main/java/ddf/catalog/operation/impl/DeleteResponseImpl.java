@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** The DeleteResponseImpl represents a default implementation of the {@link DefaultResponse}. */
+/** The DeleteResponseImpl represents a default implementation of the {@link DeleteResponse}. */
 public class DeleteResponseImpl extends ResponseImpl<DeleteRequest> implements DeleteResponse {
 
   private List<Metacard> deletedMetacards;
@@ -77,5 +77,19 @@ public class DeleteResponseImpl extends ResponseImpl<DeleteRequest> implements D
   @Override
   public List<Metacard> getDeletedMetacards() {
     return deletedMetacards;
+  }
+
+  @Override
+  public void mergeResponse(DeleteResponse toMergeResponse) {
+    if (toMergeResponse == null) {
+      return;
+    }
+    this.deletedMetacards.addAll(toMergeResponse.getDeletedMetacards());
+
+    if (this.processingErrors != null) {
+      processingErrors.addAll(toMergeResponse.getProcessingErrors());
+    } else {
+      this.processingErrors = toMergeResponse.getProcessingErrors();
+    }
   }
 }

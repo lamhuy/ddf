@@ -16,6 +16,7 @@ package ddf.catalog.source.solr;
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardCreationException;
+import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.source.UnsupportedQueryException;
@@ -29,6 +30,17 @@ import org.apache.solr.common.SolrInputDocument;
 
 /** Interface that defines the different metacard operations performed on Solr. */
 public interface SolrMetacardClient {
+
+  /**
+   * Converts a {@link QueryRequest} into a Solr query and returns the result as a {@link
+   * IndexQueryResponse}.
+   *
+   * @param request query request to execute against Solr
+   * @return converted Solr response
+   * @throws UnsupportedQueryException if the query is not supported
+   */
+  IndexQueryResponse queryIndex(QueryRequest request) throws UnsupportedQueryException;
+
   /**
    * Converts a {@link QueryRequest} into a Solr query and returns the result as a {@link
    * SourceResponse}.

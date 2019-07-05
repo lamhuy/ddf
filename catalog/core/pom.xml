@@ -105,6 +105,7 @@
         <module>catalog-core-attachment</module>
         <module>catalog-core-attachment-impl</module>
         <module>catalog-core-provider</module>
-        <module>catalog-core-solr-provider</module>
+        <module>catalog-core-solr-indexprovider</module>
+        <module>catalog-core-solr-storageprovider</module>
     </modules>
 </project>

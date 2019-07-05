@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpHead;
@@ -56,6 +58,9 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpSolrClientFactory.class);
 
   private final org.codice.solr.factory.impl.HttpClientBuilder httpClientBuilder;
+
+  private final Map<String, org.codice.solr.client.solrj.SolrClient> solrClientMap =
+      new HashMap<>();
 
   public HttpSolrClientFactory(org.codice.solr.factory.impl.HttpClientBuilder httpClientBuilder) {
     this.httpClientBuilder = httpClientBuilder;
@@ -118,6 +123,11 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
       throws IOException, SolrServerException {
     CoreAdminResponse response = CoreAdminRequest.getStatus(coreName, client);
     return response.getCoreStatus(coreName).get("instanceDir") != null;
+  }
+
+  @Override
+  public org.codice.solr.client.solrj.SolrClient getClient(String core) {
+    return solrClientMap.computeIfAbsent(core, this::newClient);
   }
 
   @Override

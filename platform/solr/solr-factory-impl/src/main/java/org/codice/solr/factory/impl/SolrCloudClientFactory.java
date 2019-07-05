@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +63,39 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
   private final int maximumShardsPerNode =
       NumberUtils.toInt(System.getProperty("solr.cloud.maxShardPerNode"), 2);
+
+  private final Map<String, org.codice.solr.client.solrj.SolrClient> solrClientMap =
+      new HashMap<>();
+  private final Map<String, Integer> shardCountMap = new HashMap<>();
+  private final Map<String, Integer> replicationFactorMap = new HashMap<>();
+  private final Map<String, Integer> maximumShardsPerNodeMap = new HashMap<>();
+
+  public SolrCloudClientFactory() {
+    String collectionList = System.getProperty("solr.cloud.collections");
+    if (StringUtils.isBlank(collectionList)) {
+      LOGGER.warn(
+          "No solr.cloud.collections configuration found. Using default cloud configuration settings");
+    } else {
+      for (String collection : collectionList.split(",")) {
+        shardCountMap.put(
+            collection,
+            NumberUtils.toInt(System.getProperty("solr.cloud." + collection + ".shardCount"), 2));
+        replicationFactorMap.put(
+            collection,
+            NumberUtils.toInt(
+                System.getProperty("solr.cloud." + collection + ".replicationFactor"), 2));
+        maximumShardsPerNodeMap.put(
+            collection,
+            NumberUtils.toInt(
+                System.getProperty("solr.cloud." + collection + ".maxShardPerNode"), 2));
+      }
+    }
+  }
+
+  @Override
+  public org.codice.solr.client.solrj.SolrClient getClient(String core) {
+    return solrClientMap.computeIfAbsent(core, this::newClient);
+  }
 
   @Override
   public org.codice.solr.client.solrj.SolrClient newClient(String core) {
@@ -124,12 +158,16 @@ public class SolrCloudClientFactory implements SolrClientFactory {
         return;
       }
 
-      if (!collectionExists(collection, client)) {
-        CollectionAdminResponse response =
-            CollectionAdminRequest.createCollection(collection, collection, shardCount, shardCount)
-                .setMaxShardsPerNode(maximumShardsPerNode)
-                .setReplicationFactor(replicationFactor)
-                .process(client);
+    if (!collectionExists(collection, client)) {
+        response =
+                CollectionAdminRequest.createCollection(
+                        collection,
+                        collection,
+                        shardCountMap.getOrDefault(collection, shardCount),
+                        replicationFactorMap.getOrDefault(collection, replicationFactor))
+                        .setMaxShardsPerNode(
+                                maximumShardsPerNodeMap.getOrDefault(collection, maximumShardsPerNode))
+                        .process(client);
         if (!response.isSuccess()) {
           throw new SolrFactoryException(
               "Failed to create collection [" + collection + "]: " + response.getErrorMessages());
@@ -264,7 +302,7 @@ public class SolrCloudClientFactory implements SolrClientFactory {
                               .getCollection(collection)
                               .getSlices()
                               .size()
-                          == shardCount);
+                          == shardCountMap.getOrDefault(collection, shardCount));
 
       if (!shardsStarted) {
         LOGGER.debug("Solr({}): Timeout while waiting for collection shards to start", collection);

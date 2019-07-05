@@ -15,14 +15,13 @@ package ddf.catalog.source.solr;
 
 import static ddf.catalog.source.solr.DynamicSchemaResolver.FIVE_MEGABYTES;
 
-import ddf.catalog.filter.proxy.adapter.GeotoolsFilterAdapterImpl;
+import ddf.catalog.source.IndexProvider;
+import ddf.catalog.source.StorageProvider;
 import java.nio.file.Paths;
 import org.apache.solr.client.solrj.embedded.JettyConfig;
 import org.apache.solr.cloud.MiniSolrCloudCluster;
 import org.codice.solr.factory.impl.SolrCloudClientFactory;
-import org.hamcrest.Matchers;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -52,8 +51,8 @@ public class AbstractCatalogProviderTest {
 
   @Rule @ClassRule public static TemporaryFolder baseDir = new TemporaryFolder();
 
-  private static SolrIndexProvider indexProvider = null;
-  private static SolrStorageProvider storageProvider = null;
+  private static IndexProvider indexProvider = null;
+  private static StorageProvider storageProvider = null;
 
   private static MiniSolrCloudCluster miniSolrCloud;
 
@@ -80,23 +79,23 @@ public class AbstractCatalogProviderTest {
 
     SolrCloudClientFactory solrClientFactory = new SolrCloudClientFactory();
 
-    indexProvider =
-        new SolrIndexProvider(
-            solrClientFactory,
-            new GeotoolsFilterAdapterImpl(),
-            new SolrFilterDelegateFactoryImpl());
-    storageProvider =
-        new SolrStorageProvider(
-            solrClientFactory,
-            new GeotoolsFilterAdapterImpl(),
-            new SolrFilterDelegateFactoryImpl());
-
-    // Mask the id, this is something that the CatalogFramework would usually do
-    indexProvider.maskId(MASKED_ID);
-    storageProvider.maskId(MASKED_ID);
-
-    Assert.assertThat(indexProvider.isAvailable(), Matchers.equalTo(true));
-    Assert.assertThat(storageProvider.isAvailable(), Matchers.equalTo(true));
+    //    indexProvider =
+    //        new SolrIndexProvider(
+    //            solrClientFactory,
+    //            new GeotoolsFilterAdapterImpl(),
+    //            new SolrFilterDelegateFactoryImpl());
+    //    storageProvider =
+    //        new SolrStorageProvider(
+    //            solrClientFactory,
+    //            new GeotoolsFilterAdapterImpl(),
+    //            new SolrFilterDelegateFactoryImpl());
+    //
+    //    // Mask the id, this is something that the CatalogFramework would usually do
+    //    indexProvider.maskId(MASKED_ID);
+    //    storageProvider.maskId(MASKED_ID);
+    //
+    //    Assert.assertThat(indexProvider.isAvailable(), Matchers.equalTo(true));
+    //    Assert.assertThat(storageProvider.isAvailable(), Matchers.equalTo(true));
   }
 
   @AfterClass

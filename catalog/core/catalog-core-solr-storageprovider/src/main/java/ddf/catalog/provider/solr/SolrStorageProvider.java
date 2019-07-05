@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.core.solr.provider;
+package ddf.catalog.provider.solr;
 
 import ddf.catalog.data.ContentType;
 import ddf.catalog.filter.FilterAdapter;
@@ -20,11 +20,15 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
+import ddf.catalog.operation.impl.CreateResponseImpl;
+import ddf.catalog.operation.impl.DeleteResponseImpl;
+import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.SourceMonitor;
@@ -34,10 +38,12 @@ import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.util.impl.DescribableImpl;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.Validate;
@@ -86,13 +92,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
     this.resolver = resolver;
 
     /** Create storage collection to provider map */
-    catalogProviders.put(
-        DEFAULT_SOLR_CATALOG_CORE,
-        new BaseSolrCatalogProvider(
-            clientFactory.newClient(DEFAULT_SOLR_CATALOG_CORE),
-            filterAdapter,
-            solrFilterDelegateFactory,
-            resolver));
+    catalogProviders.put(DEFAULT_SOLR_CATALOG_CORE, newProvider(DEFAULT_SOLR_CATALOG_CORE));
   }
 
   /**
@@ -108,33 +108,75 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
     this(clientFactory, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
   }
 
+  private BaseSolrCatalogProvider newProvider(String core) {
+    return new BaseSolrCatalogProvider(
+        clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
+  }
+
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
-    return getCatalogProvider(createRequest).create(createRequest);
+    CatalogProvider cat = getCatalogProvider(createRequest);
+    if (cat == null) {
+      LOGGER.warn("Create request not executed");
+      return new CreateResponseImpl(createRequest, null, new ArrayList<>());
+    } else {
+      return cat.create(createRequest);
+    }
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
-    return getCatalogProvider(updateRequest).update(updateRequest);
+    CatalogProvider cat = getCatalogProvider(updateRequest);
+    if (cat == null) {
+      LOGGER.warn("Update request not executed");
+      return new UpdateResponseImpl(updateRequest, null, new ArrayList<>());
+    } else {
+      return cat.update(updateRequest);
+    }
   }
 
   @Override
-  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    return getCatalogProvider(deleteRequest).delete(deleteRequest);
+  public DeleteResponse delete(IndexDeleteResponse deleteRequest) throws IngestException {
+    DeleteResponse response =
+        new DeleteResponseImpl((DeleteRequest) deleteRequest.getRequest(), null, new ArrayList<>());
+    // deleted indexes could spread across multiple storage collection
+    for (Set<String> tags : deleteRequest.getTags()) {
+      Optional<String> core = getCore(tags);
+      if (core.isPresent()) {
+        BaseSolrCatalogProvider cat = catalogProviders.get(core.get());
+        if (cat == null) {
+          LOGGER.warn(
+              "Unable to find catalog provider for core: {}. Delete query not executed",
+              core.get());
+        } else {
+          response.mergeResponse(cat.deleteByIds(deleteRequest.getIds(tags)));
+        }
+      } else {
+        LOGGER.warn("Unable to find core mapping for these tags {}", tags.toString());
+        return response;
+      }
+    }
+    return response;
   }
 
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
-    return getCatalogProvider(queryRequest).query(queryRequest);
+    CatalogProvider cat = getCatalogProvider(queryRequest);
+    if (cat == null) {
+      LOGGER.warn("Update request not executed");
+      return null;
+    } else {
+      return cat.query(queryRequest);
+    }
   }
 
   /**
    * for a solr storage provider quering by IDs might not be optimal. hence handling as a normal
-   * query *
+   * query . alias is used to query against all collection....*
    */
   public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
       throws UnsupportedQueryException {
-    return getCatalogProvider(queryRequest).query(queryRequest);
+    return this.query(queryRequest);
   }
 
   public void shutdown() {
@@ -196,13 +238,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
       String[] tagCorePair = parameter.split("=");
       String core = tagCorePair[1];
       tagToCore.put(tagCorePair[0], core);
-      if (!catalogProviders.containsKey(core)) {
-        LOGGER.debug("Adding a new Catalog Provider for {} collection", core);
-        catalogProviders.put(
-            core,
-            new BaseSolrCatalogProvider(
-                clientFactory.newClient(core), filterAdapter, solrFilterDelegateFactory, resolver));
-      }
+      catalogProviders.computeIfAbsent(core, this::newProvider);
     }
   }
 
@@ -227,8 +263,6 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
               .map(m -> m.getValue())
               .map(c -> c.getTags())
               .get());
-    } else if (request instanceof DeleteRequest) {
-      // TODO: how to get tags ?
     } else if (request instanceof QueryRequest) {
       try {
         for (String tag : tagToCore.keySet()) {
@@ -239,12 +273,17 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
           }
         }
       } catch (UnsupportedQueryException e) {
-        LOGGER.warn(
-            "Unable to find tab for the query request. Using default core {}",
-            DEFAULT_SOLR_CATALOG_CORE);
+        LOGGER.warn("Unable to find tab for the query request", DEFAULT_SOLR_CATALOG_CORE);
       }
     }
-    return catalogProviders.get(getCore(tags));
+
+    Optional<String> core = getCore(tags);
+    if (core.isPresent()) {
+      return catalogProviders.get(core.get());
+    } else {
+      LOGGER.warn("Unable to find core for the request");
+      return null;
+    }
   }
 
   /**
@@ -253,7 +292,9 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
    * @param tags all tags from a metacard
    * @return the first associate solr core for those given tags
    */
-  private String getCore(Set<String> tags) {
-    return tags.stream().map(t -> tagToCore.get(t)).findFirst().orElse(DEFAULT_SOLR_CATALOG_CORE);
+  private Optional<String> getCore(Set<String> tags) {
+    return tags.stream().map(t -> tagToCore.get(t)).findFirst();
+    // .orElseGet(() -> { LOGGER.warn("Unable to find core for the given tags, using default core
+    // {}", DEFAULT_SOLR_CATALOG_CORE); return DEFAULT_SOLR_CATALOG_CORE;});
   }
 }

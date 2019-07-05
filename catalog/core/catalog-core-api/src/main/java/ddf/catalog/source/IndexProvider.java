@@ -16,7 +16,9 @@ package ddf.catalog.source;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
-import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexDeleteResponse;
+import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.util.Maskable;
@@ -29,7 +31,7 @@ import ddf.catalog.util.Maskable;
  * <p>The provider performs a look up of the collection to maintain the index data. The key
  * functions of the CatalogProvider can be found in the {@link Source}.
  */
-public interface IndexProvider extends Source, Maskable {
+public interface IndexProvider extends Maskable {
 
   /** Publishes a list of id into the catalog. */
   public CreateResponse create(CreateRequest createRequest) throws IngestException;
@@ -37,8 +39,16 @@ public interface IndexProvider extends Source, Maskable {
   /** Updates a list of ids. Ids that are not in the Catalog will not be created. * */
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
 
-  /** Deletes records specified by a list id */
-  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
+  /**
+   * Delete the indexes for a given list if metacard ids
+   *
+   * @param deleteRequest
+   * @return a mapping of metacard type with the list of associate ids
+   * @throws IngestException
+   */
+  public IndexDeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
+
+  public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException;
 
   public void shutdown();
 }

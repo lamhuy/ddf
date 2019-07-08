@@ -34,6 +34,24 @@
       <artifactId>catalog-core-solr</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>ddf.platform.util</groupId>
+      <artifactId>platform-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
+      <artifactId>catalog-core-api-impl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codice</groupId>
+      <artifactId>lux</artifactId>
+      <version>${lux.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.saxon</groupId>
+      <artifactId>Saxon-HE</artifactId>
+      <version>${lux.saxon.version}</version>
+    </dependency>
   </dependencies>
   <build>
     <resources>
@@ -50,7 +68,11 @@
           <instructions>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Embed-Dependency>
-              catalog-core-solr
+              platform-util,
+              catalog-core-solr,
+              catalog-core-api-impl,
+              lux,
+              Saxon-HE
             </Embed-Dependency>
             <Include-Resource>
               {maven-resources},
@@ -58,10 +80,33 @@
             </Include-Resource>
             <Export-Package/>
             <Import-Package>
+              <!--excluded javax.xml.xquery package coming from lux -->
+              !javax.xml.xquery,
               *
             </Import-Package>
           </instructions>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-artifact-size</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <ArtifactSizeEnforcerRule
+                  implementation="org.codice.maven.artifactsize.ArtifactSizeEnforcerRule">
+                  <maxArtifactSize>4_MB</maxArtifactSize>
+                </ArtifactSizeEnforcerRule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>

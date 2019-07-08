@@ -126,6 +126,9 @@ public class IndexDeleteResponseImpl extends ResponseImpl<Request> implements In
   }
 
   /**
+   * Build a list of metacard id of the same tag. Note: a metacard could have multiple tags, tag
+   * order does matter
+   *
    * @param tags
    * @param id
    */
@@ -156,7 +159,7 @@ public class IndexDeleteResponseImpl extends ResponseImpl<Request> implements In
    */
   public void setWarnings(List<String> warnings) {
     if (warnings != null && !warnings.isEmpty()) {
-      sourceProcessingDetails = new HashSet<SourceProcessingDetails>();
+      sourceProcessingDetails = new HashSet<>();
       sourceProcessingDetails.add(new SourceProcessingDetailsImpl(warnings));
     }
   }

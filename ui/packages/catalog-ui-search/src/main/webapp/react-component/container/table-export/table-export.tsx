@@ -175,8 +175,8 @@ export default hot(module)(
         const hiddenFields = getHiddenFields()
         const columnOrder = getColumnOrder()
         const payload = {
-          arguments: {
-            hiddenFields: hiddenFields.length > 0 ? hiddenFields : {},
+          args: {
+            hiddenFields: hiddenFields.length > 0 ? hiddenFields : [],
             columnOrder: columnOrder.length > 0 ? columnOrder : {},
             columnAliasMap: properties.attributeAliases,
           },

@@ -32,6 +32,7 @@ import ddf.catalog.data.Result;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
+import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.QueryImpl;
@@ -39,9 +40,9 @@ import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import ddf.catalog.source.solr.ConfigurationStore;
 import ddf.catalog.source.solr.SolrMetacardClientImpl;
-import ddf.catalog.source.solr.SolrProviderTest;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,9 +61,73 @@ public class SolrProviderDelete {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
   /** Testing that if records are properly deleted. */
+  @Test
+  public void testDeleteIndex() throws IngestException, UnsupportedQueryException {
+    // Single Deletion
+
+    deleteAll(provider);
+
+    MockMetacard metacard = new MockMetacard(Library.getFlagstaffRecord());
+
+    CreateResponse createResponse = create(metacard, provider);
+
+    IndexDeleteResponse deleteResponse =
+        provider.deleteIndex(
+            new DeleteRequestImpl(createResponse.getCreatedMetacards().get(0).getId()));
+
+    assertThat(deleteResponse.getHits(), is(1L));
+    Set<String> tags = deleteResponse.getTags().iterator().next();
+    assertThat(tags.iterator().next(), is(MockMetacard.DEFAULT_TAG));
+    assertThat(
+        deleteResponse.getIds(tags).iterator().next(),
+        is(createResponse.getCreatedMetacards().get(0).getId()));
+  }
+
+  /** Tests what happens when the whole request is null. */
+  @Test(expected = IngestException.class)
+  public void testDeleteIndexNull() throws IngestException, UnsupportedQueryException {
+
+    deleteAll(provider);
+
+    provider.deleteIndex(null);
+
+    fail();
+  }
+
+  /** Tests the provider will allow you to delete nothing. */
+  @Test
+  public void testDeleteIndexNothing() throws IngestException, UnsupportedQueryException {
+
+    // Single Deletion
+
+    deleteAll(provider);
+
+    IndexDeleteResponse deleteResponse =
+        provider.deleteIndex(new DeleteRequestImpl(new String[] {"no_such_record"}));
+
+    assertThat(deleteResponse.getHits(), equalTo(0L));
+  }
+
+  @Test
+  public void testDeleteById() throws IngestException, UnsupportedQueryException {
+    deleteAll(provider);
+
+    MockMetacard metacard = new MockMetacard(Library.getFlagstaffRecord());
+
+    CreateResponse createResponse = create(metacard, provider);
+
+    DeleteResponse deleteResponse =
+        provider.deleteByIds(
+            Collections.singleton(createResponse.getCreatedMetacards().get(0).getId()));
+
+    Metacard deletedMetacard = deleteResponse.getDeletedMetacards().get(0);
+
+    verifyDeletedRecord(metacard, createResponse, deleteResponse, deletedMetacard);
+  }
+
   @Test
   public void testDeleteOperation() throws IngestException, UnsupportedQueryException {
 

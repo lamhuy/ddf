@@ -23,7 +23,7 @@ import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.ContentTypeImpl;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
-import ddf.catalog.source.solr.SolrProviderTest;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,7 +54,7 @@ public class SolrProviderContentTypes {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
 
   @Test

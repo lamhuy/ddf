@@ -170,8 +170,17 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       return new IndexQueryResponseImpl(request, new HashMap<>(), new ArrayList<>(), 0L);
     }
     // TODO: build just index response without full metacard
-
-    return null;
+    SourceResponse response = query(request);
+    IndexQueryResponse indexResponse =
+        new IndexQueryResponseImpl(
+            request,
+            response
+                .getResults()
+                .stream()
+                .map(r -> r.getMetacard().getId())
+                .collect(Collectors.toList()),
+            response.getHits());
+    return indexResponse;
   }
 
   @Override

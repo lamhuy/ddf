@@ -54,7 +54,6 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -153,10 +152,6 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
   @Override
   public Set<ContentType> getContentTypes() {
     return client.getContentTypes();
-  }
-
-  public boolean isAvailable(long timeout, TimeUnit unit) throws InterruptedException {
-    return solr.isAvailable(timeout, unit);
   }
 
   @Override
@@ -518,6 +513,8 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     for (Metacard metacard : metacards) {
       response.addTaggedId(metacard.getTags(), metacard.getId());
     }
+
+    ((IndexDeleteResponseImpl) response).setHits(response.getHits() + metacards.size());
 
     try {
       // the assumption is if something was deleted, it should be gone

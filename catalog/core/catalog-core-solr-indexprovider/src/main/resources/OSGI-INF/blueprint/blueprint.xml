@@ -18,7 +18,7 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
-	<bean id="solrIndexProvider" class="ddf.catalog.provider.solr.SolrIndexProvider">
+	<bean id="solrIndexProvider" class="ddf.catalog.provider.solr.SolrIndexProvider.SolrIndexProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.solr.provider.SolrIndexProvider"
 			update-strategy="container-managed"/>
 		<argument ref="filterAdapter"/>

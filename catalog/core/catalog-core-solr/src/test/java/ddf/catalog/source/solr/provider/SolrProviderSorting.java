@@ -34,7 +34,7 @@ import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
-import ddf.catalog.source.solr.SolrProviderTest;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -83,7 +83,7 @@ public class SolrProviderSorting {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
 
   /** Test for a specific IRAD problem. */

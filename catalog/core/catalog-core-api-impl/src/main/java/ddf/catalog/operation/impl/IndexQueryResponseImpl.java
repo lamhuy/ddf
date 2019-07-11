@@ -34,17 +34,6 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
   private List<String> ids;
 
   /**
-   * Instantiates a new SourceResponseImpl with the original query request and results from the
-   * query being executed.
-   *
-   * @param request the original request
-   * @param ids the results associated with the query
-   */
-  public IndexQueryResponseImpl(Request request, List<String> ids) {
-    this(request, null, ids, ids != null ? ids.size() : 0);
-  }
-
-  /**
    * Instantiates a new SourceResponseImpl. Use when the total amount of hits is known.
    *
    * @param request the original request

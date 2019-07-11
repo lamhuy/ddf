@@ -19,7 +19,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
-import ddf.catalog.source.solr.SolrProviderTest;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ public class SolrProviderSource {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
 
   @Test

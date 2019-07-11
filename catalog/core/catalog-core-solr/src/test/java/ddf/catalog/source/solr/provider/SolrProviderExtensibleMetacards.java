@@ -36,7 +36,7 @@ import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
-import ddf.catalog.source.solr.SolrProviderTest;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import java.beans.XMLEncoder;
 import java.io.BufferedOutputStream;
 import java.util.Date;
@@ -93,7 +93,7 @@ public class SolrProviderExtensibleMetacards {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
 
   @Before

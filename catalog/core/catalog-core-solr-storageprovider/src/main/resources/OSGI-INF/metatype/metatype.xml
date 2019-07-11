@@ -24,7 +24,8 @@
           description="List of metacard tags to solr collection mapping"/>
     </OCD>
 
-    <Designate pid="ddf.catalog.provider.solr.SolrStorageProvider">
+    <Designate pid="ddf.catalog.provider.solr.SolrStorageProvider"
+      factoryPid="ddf.catalog.provider.solr.SolrStorageProvider">
         <Object ocdref="ddf.catalog.provider.solr.SolrStorageProvider"/>
     </Designate>
 

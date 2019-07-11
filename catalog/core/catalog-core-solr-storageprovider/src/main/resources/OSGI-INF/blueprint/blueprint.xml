@@ -19,13 +19,20 @@
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
 	<bean id="solrStorageProvider" class="ddf.catalog.provider.solr.SolrStorageProvider">
-		<cm:managed-properties persistent-id="ddf.core.solr.SolrStorageProvider"
+		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.SolrStorageProvider"
 			update-strategy="container-managed"/>
 		<argument ref="filterAdapter"/>
 		<argument ref="solrClientFactory" />
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
+		<property name="parameters">
+			<list>
+				<value>resource=catalog</value>
+				<value>aoi=catalog</value>
+				<value>aoi-collection=catalog</value>
+			</list>
+		</property>
 	</bean>
 
 	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />

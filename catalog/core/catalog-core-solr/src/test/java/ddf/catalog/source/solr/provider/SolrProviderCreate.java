@@ -13,7 +13,7 @@
  */
 package ddf.catalog.source.solr.provider;
 
-import static ddf.catalog.source.solr.SolrProviderTest.MASKED_ID;
+import static ddf.catalog.source.solr.BaseSolrProviderTest.MASKED_ID;
 import static ddf.catalog.source.solr.provider.SolrProviderTestUtil.DEFAULT_TEST_ESCAPE;
 import static ddf.catalog.source.solr.provider.SolrProviderTestUtil.DEFAULT_TEST_SINGLE_WILDCARD;
 import static ddf.catalog.source.solr.provider.SolrProviderTestUtil.DEFAULT_TEST_WILDCARD;
@@ -43,8 +43,8 @@ import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
+import ddf.catalog.source.solr.BaseSolrProviderTest;
 import ddf.catalog.source.solr.ConfigurationStore;
-import ddf.catalog.source.solr.SolrProviderTest;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,7 +67,7 @@ public class SolrProviderCreate {
 
   @BeforeClass
   public static void setUp() {
-    provider = SolrProviderTest.getProvider();
+    provider = BaseSolrProviderTest.getProvider();
   }
 
   @Test

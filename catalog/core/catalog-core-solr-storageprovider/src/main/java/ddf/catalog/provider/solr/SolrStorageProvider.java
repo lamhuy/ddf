@@ -39,13 +39,13 @@ import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.util.impl.DescribableImpl;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
 import org.slf4j.Logger;
@@ -163,7 +163,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
     CatalogProvider cat = getCatalogProvider(queryRequest);
     if (cat == null) {
-      LOGGER.warn("Update request not executed");
+      LOGGER.warn("Query request not executed");
       return null;
     } else {
       return cat.query(queryRequest);
@@ -189,14 +189,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
     return catalogProviders
         .values()
         .stream()
-        .map(
-            c -> {
-              try {
-                return c.isAvailable(30L, TimeUnit.SECONDS);
-              } catch (InterruptedException e) {
-                return false;
-              }
-            })
+        .map(c -> c.isAvailable())
         .reduce(true, (a, b) -> a && b);
   }
 
@@ -267,7 +260,8 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
       try {
         for (String tag : tagToCore.keySet()) {
           if (filterAdapter.adapt(
-              ((QueryRequest) request).getQuery(), new TagsFilterDelegate(tag))) {
+              ((QueryRequest) request).getQuery(),
+              new TagsFilterDelegate(Collections.singleton(tag), true))) {
             tags.add(tag);
             break;
           }

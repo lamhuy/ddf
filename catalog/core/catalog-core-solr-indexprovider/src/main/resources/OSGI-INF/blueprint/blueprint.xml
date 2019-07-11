@@ -26,6 +26,13 @@
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
+		<property name="parameters">
+			<list>
+				<value>resource=catalogIndex</value>
+				<value>aoi=catalogIndex</value>
+				<value>aoi-collection=catalogIndex</value>
+			</list>
+		</property>
 	</bean>
 
 	<service ref="solrIndexProvider" interface="ddf.catalog.source.IndexProvider" />

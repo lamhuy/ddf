@@ -51,6 +51,11 @@
       <artifactId>Saxon-HE</artifactId>
       <version>${lux.saxon.version}</version>
     </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
+      <artifactId>filter-proxy</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <resources>

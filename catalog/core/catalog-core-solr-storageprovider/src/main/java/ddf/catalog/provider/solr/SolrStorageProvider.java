@@ -153,7 +153,6 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
         }
       } else {
         LOGGER.warn("Unable to find core mapping for these tags {}", tags.toString());
-        return response;
       }
     }
     return response;

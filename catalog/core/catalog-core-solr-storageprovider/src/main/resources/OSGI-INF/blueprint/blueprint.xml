@@ -26,13 +26,6 @@
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
-		<property name="parameters">
-			<list>
-				<value>resource=catalog</value>
-				<value>aoi=catalog</value>
-				<value>aoi-collection=catalog</value>
-			</list>
-		</property>
 	</bean>
 
 	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />

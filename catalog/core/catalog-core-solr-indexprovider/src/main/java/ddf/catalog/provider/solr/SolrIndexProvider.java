@@ -18,14 +18,12 @@ import ddf.catalog.filter.delegate.TagsFilterDelegate;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateResponseImpl;
-import ddf.catalog.operation.impl.IndexDeleteResponseImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
@@ -87,19 +85,6 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     this.resolver = resolver;
   }
 
-  /**
-   * Convenience constructor that creates a new ddf.catalog.source.solr.DynamicSchemaResolver
-   *
-   * @param clientFactory Solr client factory
-   * @param adapter injected implementation of FilterAdapter
-   */
-  public SolrIndexProvider(
-      SolrClientFactory clientFactory,
-      FilterAdapter adapter,
-      SolrFilterDelegateFactory solrFilterDelegateFactory) {
-    this(clientFactory, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
-  }
-
   private BaseSolrCatalogProvider newProvider(String core) {
     return new BaseSolrCatalogProvider(
         clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
@@ -128,13 +113,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   }
 
   @Override
-  public IndexDeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    IndexDeleteResponse response = new IndexDeleteResponseImpl(deleteRequest);
-    /** TODO: delete request has no metacard tags, Ids can't tell which collection to delete from */
-    BaseSolrCatalogProvider cat = catalogProviders.get("catalogIndex");
-    response = cat.deleteIndex(deleteRequest);
-
-    return response;
+  public void delete(DeleteRequest deleteRequest) throws IngestException {
+    /** Delete across all collections Assuming id uniqueness is preserved across all collection */
+    for (String core : catalogProviders.keySet()) {
+      catalogProviders.get(core).deleteIndex(deleteRequest);
+      LOGGER.debug(
+          "Deleting {} items from core: {}", deleteRequest.getAttributeValues().size(), core);
+    }
   }
 
   @Override
@@ -225,7 +210,5 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
    */
   private Optional<String> getCore(Set<String> tags) {
     return tags.stream().map(t -> tagToCore.get(t)).findFirst();
-    // .orElseGet(() -> { LOGGER.warn("Unable to find core for the given tags, using default core
-    // {}", DEFAULT_SOLR_CATALOG_CORE); return DEFAULT_SOLR_CATALOG_CORE;});
   }
 }

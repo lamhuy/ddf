@@ -25,13 +25,10 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
-import ddf.catalog.operation.IndexQueryResponse;
-import ddf.catalog.operation.Query;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.impl.CreateRequestImpl;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
@@ -68,7 +65,7 @@ public class SolrIndexProviderTest {
 
   @Test
   public void testCreate() throws Exception {
-    CreateResponse response =  createRecord(indexProvider);
+    CreateResponse response = createRecord(indexProvider);
 
     assertThat(response.getCreatedMetacards().size(), equalTo(2));
   }
@@ -78,13 +75,14 @@ public class SolrIndexProviderTest {
     createRecord(indexProvider);
     Filter filter = filterBuilder.attribute(Metacard.ANY_TEXT).is().like().text("*");
     QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
-    //IndexQueryResponse response = indexProvider.query(request);
+    // TODO: won't work till https://github.com/codice/ddf/pull/5089
+    // IndexQueryResponse response = indexProvider.query(request);
 
-    //assertThat(response.getHits(), equalTo(2));
+    // assertThat(response.getHits(), equalTo(2));
 
   }
 
-  private CreateResponse createRecord(IndexProvider provider) throws Exception{
+  private CreateResponse createRecord(IndexProvider provider) throws Exception {
     when(solrClient.add(anyList(), anyInt())).thenReturn(mock(UpdateResponse.class));
     when(solrClient.add(anyList())).thenReturn(mock(UpdateResponse.class));
 
@@ -96,5 +94,4 @@ public class SolrIndexProviderTest {
     CreateRequest request = new CreateRequestImpl(list);
     return provider.create(request);
   }
-
 }

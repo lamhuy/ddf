@@ -169,18 +169,46 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     if (request == null || request.getQuery() == null) {
       return new IndexQueryResponseImpl(request, new HashMap<>(), new ArrayList<>(), 0L);
     }
-    // TODO: build just index response without full metacard
-    SourceResponse response = query(request);
-    IndexQueryResponse indexResponse =
-        new IndexQueryResponseImpl(
-            request,
-            response
-                .getResults()
-                .stream()
-                .map(r -> r.getMetacard().getId())
-                .collect(Collectors.toList()),
-            response.getHits());
-    return indexResponse;
+
+    long totalHits = 0;
+    Map<String, Serializable> responseProps = new HashMap<>();
+    List<String> results = new ArrayList<>();
+
+    SolrFilterDelegate solrFilterDelegate =
+        filterDelegateFactory.newInstance(resolver, request.getProperties());
+    SolrQuery query = getSolrQuery(request, solrFilterDelegate);
+
+    boolean isFacetedQuery = handleFacetRequest(query, request);
+    query = handleSuggestionQuery(query, request);
+    boolean userSpellcheckIsOn = userSpellcheckIsOn(request);
+
+    try {
+      QueryResponse solrResponse;
+      Boolean doRealTimeGet = filterAdapter.adapt(request.getQuery(), new RealTimeGetDelegate());
+
+      if (doRealTimeGet) {
+        LOGGER.debug("Performing real time query");
+        SolrQuery realTimeQuery = getRealTimeQuery(query, solrFilterDelegate.getIds());
+        solrResponse = client.query(realTimeQuery, METHOD.POST);
+      } else {
+        query.setParam("spellcheck", userSpellcheckIsOn);
+        solrResponse = client.query(query, METHOD.POST);
+      }
+
+      handleFacetResponse(solrResponse, responseProps, isFacetedQuery);
+      handleSuggestionResponse(solrResponse, responseProps);
+
+      SolrDocumentList docs = solrResponse.getResults();
+      docs = handleSpellcheck(solrResponse, responseProps, query, docs, userSpellcheckIsOn);
+      if (docs != null) {
+        processDocsToIds(docs, results);
+        totalHits = docs.getNumFound();
+      }
+    } catch (SolrServerException | IOException | SolrException e) {
+      throw new UnsupportedQueryException("Could not complete solr query.", e);
+    }
+
+    return new IndexQueryResponseImpl(request, results, totalHits);
   }
 
   @Override
@@ -189,15 +217,50 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       return new QueryResponseImpl(request, new ArrayList<>(), true, 0L);
     }
 
+    long totalHits = 0;
+    Map<String, Serializable> responseProps = new HashMap<>();
+    List<Result> results = new ArrayList<>();
+
     SolrFilterDelegate solrFilterDelegate =
         filterDelegateFactory.newInstance(resolver, request.getProperties());
     SolrQuery query = getSolrQuery(request, solrFilterDelegate);
 
-    Map<String, Serializable> responseProps = new HashMap<>();
+    boolean isFacetedQuery = handleFacetRequest(query, request);
+    query = handleSuggestionQuery(query, request);
+    boolean userSpellcheckIsOn = userSpellcheckIsOn(request);
 
+    try {
+      QueryResponse solrResponse;
+      Boolean doRealTimeGet = filterAdapter.adapt(request.getQuery(), new RealTimeGetDelegate());
+
+      if (doRealTimeGet) {
+        LOGGER.debug("Performing real time query");
+        SolrQuery realTimeQuery = getRealTimeQuery(query, solrFilterDelegate.getIds());
+        solrResponse = client.query(realTimeQuery, METHOD.POST);
+      } else {
+        query.setParam("spellcheck", userSpellcheckIsOn);
+        solrResponse = client.query(query, METHOD.POST);
+      }
+
+      handleFacetResponse(solrResponse, responseProps, isFacetedQuery);
+      handleSuggestionResponse(solrResponse, responseProps);
+
+      SolrDocumentList docs = solrResponse.getResults();
+      docs = handleSpellcheck(solrResponse, responseProps, query, docs, userSpellcheckIsOn);
+      if (docs != null) {
+        addDocsToResults(docs, results);
+        totalHits = docs.getNumFound();
+      }
+    } catch (SolrServerException | IOException | SolrException e) {
+      throw new UnsupportedQueryException("Could not complete solr query.", e);
+    }
+
+    return new SourceResponseImpl(request, responseProps, results, totalHits);
+  }
+
+  private boolean handleFacetRequest(SolrQuery query, QueryRequest request) {
     boolean isFacetedQuery = false;
     Serializable textFacetPropRaw = request.getPropertyValue(EXPERIMENTAL_FACET_PROPERTIES_KEY);
-
     if (textFacetPropRaw instanceof TermFacetProperties) {
       TermFacetProperties textFacetProp = (TermFacetProperties) textFacetPropRaw;
       isFacetedQuery = true;
@@ -216,7 +279,10 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       query.setFacetLimit(textFacetProp.getFacetLimit());
       query.setFacetMinCount(textFacetProp.getMinFacetCount());
     }
+    return isFacetedQuery;
+  }
 
+  private SolrQuery handleSuggestionQuery(SolrQuery query, QueryRequest request) {
     Serializable suggestQuery = request.getPropertyValue(SUGGESTION_QUERY_KEY);
     Serializable suggestContext = request.getPropertyValue(SUGGESTION_CONTEXT_KEY);
     Serializable suggestDict = request.getPropertyValue(SUGGESTION_DICT_KEY);
@@ -236,83 +302,65 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       }
     }
 
-    long totalHits = 0;
-    List<Result> results = new ArrayList<>();
+    return query;
+  }
 
-    Boolean userSpellcheckIsOn = userSpellcheckIsOn(request);
-
-    try {
-      QueryResponse solrResponse;
-      Boolean doRealTimeGet = filterAdapter.adapt(request.getQuery(), new RealTimeGetDelegate());
-
-      if (doRealTimeGet) {
-        LOGGER.debug("Performing real time query");
-        SolrQuery realTimeQuery = getRealTimeQuery(query, solrFilterDelegate.getIds());
-        solrResponse = client.query(realTimeQuery, METHOD.POST);
-      } else {
-        query.setParam("spellcheck", userSpellcheckIsOn);
-        solrResponse = client.query(query, METHOD.POST);
+  private void handleFacetResponse(
+      QueryResponse solrResponse, Map<String, Serializable> responseProps, boolean isFacetedQuery) {
+    if (isFacetedQuery) {
+      List<FacetField> facetFields = solrResponse.getFacetFields();
+      if (CollectionUtils.isNotEmpty(facetFields)) {
+        List<FacetAttributeResult> facetedAttributeResults =
+            facetFields.stream().map(this::convertFacetField).collect(Collectors.toList());
+        responseProps.put(EXPERIMENTAL_FACET_RESULTS_KEY, (Serializable) facetedAttributeResults);
       }
+    }
+  }
 
-      SuggesterResponse suggesterResponse = solrResponse.getSuggesterResponse();
+  private void handleSuggestionResponse(
+      QueryResponse solrResponse, Map<String, Serializable> responseProps) {
+    SuggesterResponse suggesterResponse = solrResponse.getSuggesterResponse();
+    if (suggesterResponse != null) {
+      List<Map.Entry<String, String>> suggestionResults =
+          suggesterResponse
+              .getSuggestions()
+              .entrySet()
+              .stream()
+              .map(Map.Entry::getValue)
+              .flatMap(List::stream)
+              .map(
+                  suggestion ->
+                      new AbstractMap.SimpleImmutableEntry<>(
+                          suggestion.getPayload(), suggestion.getTerm()))
+              .collect(Collectors.toList());
 
-      if (suggesterResponse != null) {
-        List<Map.Entry<String, String>> suggestionResults =
-            suggesterResponse
-                .getSuggestions()
-                .entrySet()
-                .stream()
-                .map(Map.Entry::getValue)
-                .flatMap(List::stream)
-                .map(
-                    suggestion ->
-                        new AbstractMap.SimpleImmutableEntry<>(
-                            suggestion.getPayload(), suggestion.getTerm()))
-                .collect(Collectors.toList());
+      responseProps.put(SUGGESTION_RESULT_KEY, (Serializable) suggestionResults);
+    }
+  }
 
-        responseProps.put(SUGGESTION_RESULT_KEY, (Serializable) suggestionResults);
+  private SolrDocumentList handleSpellcheck(
+      QueryResponse solrResponse,
+      Map<String, Serializable> responseProps,
+      SolrQuery query,
+      SolrDocumentList originalDocs,
+      boolean userSpellcheckIsOn)
+      throws IOException, SolrServerException {
+
+    SolrDocumentList resultDocs = originalDocs;
+    responseProps.put(SPELLCHECK_KEY, userSpellcheckIsOn);
+    if (userSpellcheckIsOn && solrSpellcheckHasResults(solrResponse)) {
+      query.set("q", findQueryToResend(query, solrResponse));
+      QueryResponse solrResponseRequery = client.query(query, METHOD.POST);
+      SolrDocumentList docs = solrResponseRequery.getResults();
+      if (docs != null && originalDocs != null && docs.size() > originalDocs.size()) {
+        resultDocs = docs;
+        responseProps.put(DID_YOU_MEAN_KEY, (Serializable) getSearchTermFieldValues(solrResponse));
+        responseProps.put(
+            SHOWING_RESULTS_FOR_KEY, (Serializable) getSearchTermFieldValues(solrResponseRequery));
       }
-
-      SolrDocumentList docs = solrResponse.getResults();
-      int originalQueryResultsSize = 0;
-      if (docs != null) {
-        originalQueryResultsSize = docs.size();
-        totalHits = docs.getNumFound();
-        addDocsToResults(docs, results);
-
-        if (userSpellcheckIsOn && solrSpellcheckHasResults(solrResponse)) {
-          query.set("q", findQueryToResend(query, solrResponse));
-          QueryResponse solrResponseRequery = client.query(query, METHOD.POST);
-          docs = solrResponseRequery.getResults();
-          if (docs != null && docs.size() > originalQueryResultsSize) {
-            results = new ArrayList<>();
-            totalHits = docs.getNumFound();
-            addDocsToResults(docs, results);
-
-            responseProps.put(
-                DID_YOU_MEAN_KEY, (Serializable) getSearchTermFieldValues(solrResponse));
-            responseProps.put(
-                SHOWING_RESULTS_FOR_KEY,
-                (Serializable) getSearchTermFieldValues(solrResponseRequery));
-          }
-        }
-      }
-
-      if (isFacetedQuery) {
-        List<FacetField> facetFields = solrResponse.getFacetFields();
-        if (CollectionUtils.isNotEmpty(facetFields)) {
-          List<FacetAttributeResult> facetedAttributeResults =
-              facetFields.stream().map(this::convertFacetField).collect(Collectors.toList());
-          responseProps.put(EXPERIMENTAL_FACET_RESULTS_KEY, (Serializable) facetedAttributeResults);
-        }
-      }
-
-    } catch (SolrServerException | IOException | SolrException e) {
-      throw new UnsupportedQueryException("Could not complete solr query.", e);
     }
 
-    responseProps.put(SPELLCHECK_KEY, userSpellcheckIsOn);
-    return new SourceResponseImpl(request, responseProps, results, totalHits);
+    return resultDocs;
   }
 
   private List<String> getSearchTermFieldValues(QueryResponse solrResponse) {
@@ -364,6 +412,23 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       }
 
       results.add(tmpResult);
+    }
+  }
+
+  private void processDocsToIds(SolrDocumentList docs, List<String> ids) {
+    String solrFieldName = Metacard.ID + SchemaFields.TEXT_SUFFIX;
+    for (SolrDocument doc : docs) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("SOLR DOC: {}", doc.getFieldValue(solrFieldName));
+      }
+      Collection<Object> fieldValues = doc.getFieldValues(solrFieldName);
+      List<String> values =
+          resolver
+              .getDocValues(solrFieldName, fieldValues)
+              .stream()
+              .map(v -> v.toString())
+              .collect(Collectors.toList());
+      ids.addAll(values);
     }
   }
 

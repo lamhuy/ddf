@@ -23,7 +23,6 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
@@ -34,7 +33,6 @@ import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateResponseImpl;
 import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.DeleteResponseImpl;
-import ddf.catalog.operation.impl.IndexDeleteResponseImpl;
 import ddf.catalog.operation.impl.UpdateImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
@@ -227,10 +225,9 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return response;
   }
 
-  public IndexDeleteResponse deleteIndex(DeleteRequest deleteRequest) throws IngestException {
+  public void deleteIndex(DeleteRequest deleteRequest) throws IngestException {
     nonNull(deleteRequest);
 
-    IndexDeleteResponse response = new IndexDeleteResponseImpl(deleteRequest);
     String attributeName = deleteRequest.getAttributeName();
     if (StringUtils.isBlank(attributeName)) {
       throw new IngestException(
@@ -240,11 +237,11 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     @SuppressWarnings("unchecked")
     List<? extends Serializable> identifiers = deleteRequest.getAttributeValues();
     if (CollectionUtils.isEmpty(identifiers)) {
-      return response;
+      return;
     }
 
     if (identifiers.size() <= MAX_BOOLEAN_CLAUSES) {
-      deleteIndex(response, identifiers, attributeName);
+      deleteIndex(identifiers, attributeName);
     } else {
       List<? extends Serializable> identifierPaged;
       int currPagingSize;
@@ -253,14 +250,12 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
           currPagingSize < identifiers.size();
           currPagingSize += MAX_BOOLEAN_CLAUSES) {
         identifierPaged = identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, currPagingSize);
-        deleteIndex(response, identifierPaged, attributeName);
+        deleteIndex(identifierPaged, attributeName);
       }
       identifierPaged =
           identifiers.subList(currPagingSize - MAX_BOOLEAN_CLAUSES, identifiers.size());
-      deleteIndex(response, identifierPaged, attributeName);
+      deleteIndex(identifierPaged, attributeName);
     }
-
-    return response;
   }
 
   @Override
@@ -502,19 +497,9 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     }
   }
 
-  private IndexDeleteResponse deleteIndex(
-      IndexDeleteResponse response, List<? extends Serializable> identifiers, String attributeName)
+  private void deleteIndex(List<? extends Serializable> identifiers, String attributeName)
       throws IngestException {
     String fieldName = attributeName + SchemaFields.TEXT_SUFFIX;
-
-    // TODO: do not need to get a full metacard, just id and its tags
-    List<Metacard> metacards = getMetacards(identifiers, fieldName);
-
-    for (Metacard metacard : metacards) {
-      response.addTaggedId(metacard.getTags(), metacard.getId());
-    }
-
-    ((IndexDeleteResponseImpl) response).setHits(response.getHits() + metacards.size());
 
     try {
       // the assumption is if something was deleted, it should be gone
@@ -525,8 +510,6 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
       LOGGER.info("Failed to delete metacards by ID(s).", e);
       throw new IngestException(COULD_NOT_COMPLETE_DELETE_REQUEST_MESSAGE);
     }
-
-    return response;
   }
 
   private void deleteListOfMetacards(

@@ -25,6 +25,4 @@ public interface DeleteResponse extends Response<DeleteRequest> {
    * @return the deleted metacards
    */
   public List<Metacard> getDeletedMetacards();
-
-  public void mergeResponse(DeleteResponse toMergeResponse);
 }

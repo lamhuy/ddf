@@ -32,7 +32,6 @@ import ddf.catalog.data.Result;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.QueryImpl;
@@ -74,16 +73,8 @@ public class SolrProviderDelete {
 
     CreateResponse createResponse = create(metacard, provider);
 
-    IndexDeleteResponse deleteResponse =
-        provider.deleteIndex(
-            new DeleteRequestImpl(createResponse.getCreatedMetacards().get(0).getId()));
-
-    assertThat(deleteResponse.getHits(), is(1L));
-    Set<String> tags = deleteResponse.getTags().iterator().next();
-    assertThat(tags.iterator().next(), is(MockMetacard.DEFAULT_TAG));
-    assertThat(
-        deleteResponse.getIds(tags).iterator().next(),
-        is(createResponse.getCreatedMetacards().get(0).getId()));
+    provider.deleteIndex(
+        new DeleteRequestImpl(createResponse.getCreatedMetacards().get(0).getId()));
   }
 
   /** Tests what happens when the whole request is null. */
@@ -102,13 +93,8 @@ public class SolrProviderDelete {
   public void testDeleteIndexNothing() throws IngestException, UnsupportedQueryException {
 
     // Single Deletion
-
     deleteAll(provider);
-
-    IndexDeleteResponse deleteResponse =
-        provider.deleteIndex(new DeleteRequestImpl(new String[] {"no_such_record"}));
-
-    assertThat(deleteResponse.getHits(), equalTo(0L));
+    provider.deleteIndex(new DeleteRequestImpl(new String[] {"no_such_record"}));
   }
 
   @Test

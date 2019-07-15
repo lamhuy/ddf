@@ -16,7 +16,6 @@ package ddf.catalog.source;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.UpdateRequest;
@@ -46,7 +45,7 @@ public interface IndexProvider extends Maskable {
    * @return a mapping of metacard type with the list of associate ids
    * @throws IngestException
    */
-  public IndexDeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
+  public void delete(DeleteRequest deleteRequest) throws IngestException;
 
   public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException;
 

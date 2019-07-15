@@ -18,7 +18,6 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
@@ -118,6 +117,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
     IndexQueryResponse indexQueryResponse = indexProvider.query(queryRequest);
+    // TODO: if suggestion or facet query, can omit query storage provider?
     SourceResponse queryResponse =
         storageProvider.queryByIds(
             queryRequest,
@@ -158,8 +158,8 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
-    IndexDeleteResponse indexDeleteResponse = indexProvider.delete(deleteRequest);
-    DeleteResponse deleteResponse = storageProvider.delete(indexDeleteResponse);
+    indexProvider.delete(deleteRequest);
+    DeleteResponse deleteResponse = storageProvider.delete(deleteRequest);
     return deleteResponse;
   }
 

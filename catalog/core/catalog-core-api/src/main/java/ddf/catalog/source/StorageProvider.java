@@ -15,8 +15,8 @@ package ddf.catalog.source;
 
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
+import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
-import ddf.catalog.operation.IndexDeleteResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
@@ -81,7 +81,7 @@ public interface StorageProvider extends Source, Maskable {
    * @param deleteRequest
    * @throws IngestException
    */
-  public DeleteResponse delete(IndexDeleteResponse deleteRequest) throws IngestException;
+  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
 
   public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
       throws UnsupportedQueryException;

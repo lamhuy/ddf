@@ -78,18 +78,4 @@ public class DeleteResponseImpl extends ResponseImpl<DeleteRequest> implements D
   public List<Metacard> getDeletedMetacards() {
     return deletedMetacards;
   }
-
-  @Override
-  public void mergeResponse(DeleteResponse toMergeResponse) {
-    if (toMergeResponse == null) {
-      return;
-    }
-    this.deletedMetacards.addAll(toMergeResponse.getDeletedMetacards());
-
-    if (this.processingErrors != null) {
-      processingErrors.addAll(toMergeResponse.getProcessingErrors());
-    } else {
-      this.processingErrors = toMergeResponse.getProcessingErrors();
-    }
-  }
 }

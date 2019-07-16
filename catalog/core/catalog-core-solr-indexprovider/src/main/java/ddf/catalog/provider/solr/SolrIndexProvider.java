@@ -85,6 +85,19 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     this.resolver = resolver;
   }
 
+  /**
+   * Convenience constructor that creates a new ddf.catalog.source.solr.DynamicSchemaResolver
+   *
+   * @param clientFactory Solr client factory
+   * @param adapter injected implementation of FilterAdapter
+   */
+  public SolrIndexProvider(
+      SolrClientFactory clientFactory,
+      FilterAdapter adapter,
+      SolrFilterDelegateFactory solrFilterDelegateFactory) {
+    this(clientFactory, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
+  }
+
   private BaseSolrCatalogProvider newProvider(String core) {
     return new BaseSolrCatalogProvider(
         clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);

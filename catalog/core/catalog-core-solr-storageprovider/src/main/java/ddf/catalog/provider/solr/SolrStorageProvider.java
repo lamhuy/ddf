@@ -74,6 +74,19 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
             resolver);
   }
 
+  /**
+   * Convenience constructor that creates a new ddf.catalog.source.solr.DynamicSchemaResolver
+   *
+   * @param clientFactory Solr client factory
+   * @param adapter injected implementation of FilterAdapter
+   */
+  public SolrStorageProvider(
+      SolrClientFactory clientFactory,
+      FilterAdapter adapter,
+      SolrFilterDelegateFactory solrFilterDelegateFactory) {
+    this(clientFactory, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
+  }
+
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
     return provider.create(createRequest);

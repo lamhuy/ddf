@@ -13,7 +13,9 @@
  */
 package org.codice.ddf.spatial.ogc.wfs.featuretransformer.impl;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Matchers.any;
@@ -22,28 +24,39 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.impl.MetacardImpl;
 import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import javax.xml.namespace.QName;
+import javax.xml.transform.stream.StreamSource;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
 import org.apache.camel.builder.NoErrorHandlerBuilder;
 import org.apache.camel.component.bean.ProxyHelper;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.SimpleRegistry;
+import org.apache.ws.commons.schema.XmlSchema;
+import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.codice.ddf.spatial.ogc.wfs.catalog.common.FeatureMetacardType;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.FeatureTransformer;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.WfsMetadata;
+import org.hamcrest.CustomTypeSafeMatcher;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 public class FeatureTransformationServiceTest {
+
   private static final int FEATURE_MEMBER_COUNT = 10;
 
   private CamelContext camelContext;
@@ -106,6 +119,7 @@ public class FeatureTransformationServiceTest {
     }
 
     assertThat(metacards, hasSize(10));
+    assertThat(metacards, everyItem(hasNoExternalWfsAttributes()));
   }
 
   @Test
@@ -129,12 +143,48 @@ public class FeatureTransformationServiceTest {
     assertThat(metacards, hasSize(0));
   }
 
-  private void setupTransformers() {
+  private void setupTransformers() throws Exception {
     transformerList = new ArrayList<>();
     FeatureTransformer mockTransformer = mock(FeatureTransformer.class);
-    Optional optional = Optional.of(mock(Metacard.class));
+    Optional optional = Optional.of(new MetacardImpl(getFeatureMetacardType()));
     when(mockTransformer.apply(any(InputStream.class), any(WfsMetadata.class)))
         .thenReturn(optional);
     transformerList.add(mockTransformer);
+  }
+
+  private FeatureMetacardType getFeatureMetacardType() throws Exception {
+    final XmlSchema schema = loadSchema("Neverland.xsd");
+    return new FeatureMetacardType(
+        schema,
+        new QName("http://www.neverland.org/peter/pan", "PeterPan", "neverland"),
+        emptyList(),
+        "http://opengis.net/gml");
+  }
+
+  private XmlSchema loadSchema(final String schemaFile) throws Exception {
+    final XmlSchemaCollection schemaCollection = new XmlSchemaCollection();
+    try (final InputStream schemaStream = new FileInputStream("src/test/resources/" + schemaFile)) {
+      return schemaCollection.read(new StreamSource(schemaStream));
+    }
+  }
+
+  private static Matcher<Metacard> hasNoExternalWfsAttributes() {
+    return new HasNoExternalWfsAttributesMatcher("a metacard with no 'ext.PeterPan.*' attributes");
+  }
+
+  private static class HasNoExternalWfsAttributesMatcher extends CustomTypeSafeMatcher<Metacard> {
+
+    private HasNoExternalWfsAttributesMatcher(final String description) {
+      super(description);
+    }
+
+    @Override
+    protected boolean matchesSafely(final Metacard item) {
+      return item.getMetacardType()
+          .getAttributeDescriptors()
+          .stream()
+          .map(AttributeDescriptor::getName)
+          .noneMatch(name -> name.startsWith("ext.PeterPan."));
+    }
   }
 }

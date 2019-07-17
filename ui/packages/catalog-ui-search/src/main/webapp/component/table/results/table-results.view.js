@@ -30,12 +30,14 @@ module.exports = TableView.extend({
   getHeaderView: function() {
     return new HeaderView({
       selectionInterface: this.options.selectionInterface,
+      filteredAttributes: this.options.filteredAttributes,
     })
   },
   getBodyView: function() {
     return new BodyView({
       selectionInterface: this.options.selectionInterface,
       collection: this.options.selectionInterface.getActiveSearchResults(),
+      filteredAttributes: this.options.filteredAttributes,
     })
   },
   events: {

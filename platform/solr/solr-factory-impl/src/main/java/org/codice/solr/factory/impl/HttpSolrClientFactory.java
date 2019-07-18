@@ -149,6 +149,11 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
     return new SolrClientAdapter(core, () -> createSolrHttpClient(solrUrl, core, coreUrl));
   }
 
+  @Override
+  public boolean isSolrCloud() {
+    return false;
+  }
+
   @VisibleForTesting
   SolrClient createSolrHttpClient(String url, String coreName, String coreUrl)
       throws IOException, SolrServerException {

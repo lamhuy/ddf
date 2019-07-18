@@ -169,6 +169,18 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     return indexProvider.update(updateRequest);
   }
 
+  public void setStorageProvider(StorageProvider storageProvider) {
+    LOGGER.warn("Setting storage provider: {}", storageProvider.getClass().getName());
+    storageProvider.maskId(getId());
+    this.storageProvider = storageProvider;
+  }
+
+  public void setIndexProvider(IndexProvider indexProvider) {
+    LOGGER.warn("Setting index provider: {}", indexProvider.getClass().getName());
+    indexProvider.maskId(getId());
+    this.indexProvider = indexProvider;
+  }
+
   /** Shuts down the connection to Solr and releases resources. */
   public void shutdown() {
     indexProvider.shutdown();

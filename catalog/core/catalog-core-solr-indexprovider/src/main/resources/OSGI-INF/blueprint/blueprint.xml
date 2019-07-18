@@ -28,9 +28,11 @@
 		</argument>
 		<property name="parameters">
 			<list>
-				<value>resource=catalogIndex</value>
-				<value>aoi=catalogIndex</value>
-				<value>aoi-collection=catalogIndex</value>
+				<value>resource=catalog_index</value>
+				<value>aoi=catalog_aoi</value>
+				<value>aoi-collection=catalog_aoi</value>
+				<value>workspace=catalog_ui</value>
+				<value>query=catalog_ui</value>
 			</list>
 		</property>
 	</bean>

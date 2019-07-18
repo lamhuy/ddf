@@ -111,6 +111,11 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     return new SolrClientAdapter(core, () -> createSolrCloudClient(zookeeperHosts, core));
   }
 
+  @Override
+  public boolean isSolrCloud() {
+    return true;
+  }
+
   @VisibleForTesting
   SolrClient createSolrCloudClient(String zookeeperHosts, String collection) {
     try (final Closer closer = new Closer()) {

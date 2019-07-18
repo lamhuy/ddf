@@ -18,9 +18,9 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
-	<reference id="indexProvider" interface="ddf.catalog.source.IndexProvider" />
+	<reference id="indexProvider" interface="ddf.catalog.source.IndexProvider" availability="mandatory"/>
 
-	<reference id="storageProvider" interface="ddf.catalog.source.StorageProvider" />
+	<reference id="storageProvider" interface="ddf.catalog.source.StorageProvider" availability="mandatory" />
 
 	<bean id="muxCatalogProvider" class="ddf.catalog.provider.MuxCatalogProvider"
 		destroy-method="shutdown">
@@ -32,6 +32,6 @@
 		<argument ref="storageProvider" />
 	</bean>
 
-	<service ref="muxCatalogProvider" interface="ddf.catalog.source.CatalogProvider"/>
+	<service ref="muxCatalogProvider" interface="ddf.catalog.source.CatalogProvider" ranking="10"/>
 
 </blueprint>

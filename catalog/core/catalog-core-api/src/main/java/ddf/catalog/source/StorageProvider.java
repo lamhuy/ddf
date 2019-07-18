@@ -48,7 +48,7 @@ public interface StorageProvider extends Source, Maskable {
    *     populated.
    * @throws IngestException if any problem occurs when storing the metacards
    */
-  public CreateResponse create(CreateRequest createRequest) throws IngestException;
+  CreateResponse create(CreateRequest createRequest) throws IngestException;
 
   /**
    * Updates a list of {@link ddf.catalog.data.Metacard} records. {@link ddf.catalog.data.Metacard}
@@ -65,7 +65,7 @@ public interface StorageProvider extends Source, Maskable {
    * @throws IngestException if an issue occurs during the update such as multiple records were
    *     matched for a single update entry
    */
-  public UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
+  UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
 
   /**
    * Deletes records specified by a list of attribute values such as an id attribute.
@@ -81,10 +81,10 @@ public interface StorageProvider extends Source, Maskable {
    * @param deleteRequest
    * @throws IngestException
    */
-  public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
+  DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
 
-  public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
+  SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
       throws UnsupportedQueryException;
 
-  public void shutdown();
+  void shutdown();
 }

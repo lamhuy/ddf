@@ -44,7 +44,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrStorageProvider.class);
 
-  protected static final String DEFAULT_SOLR_CATALOG_CORE = "catalog";
+  protected static final String DEFAULT_SOLR_CATALOG_STORE = "catalog_store";
 
   BaseSolrCatalogProvider provider;
 
@@ -68,7 +68,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
     /** Create storage collection to provider map */
     provider =
         new BaseSolrCatalogProvider(
-            clientFactory.getClient(DEFAULT_SOLR_CATALOG_CORE),
+            clientFactory.getClient(DEFAULT_SOLR_CATALOG_STORE),
             adapter,
             solrFilterDelegateFactory,
             resolver);

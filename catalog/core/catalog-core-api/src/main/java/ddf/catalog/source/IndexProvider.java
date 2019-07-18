@@ -33,10 +33,10 @@ import ddf.catalog.util.Maskable;
 public interface IndexProvider extends Maskable {
 
   /** Publishes a list of id into the catalog. */
-  public CreateResponse create(CreateRequest createRequest) throws IngestException;
+  CreateResponse create(CreateRequest createRequest) throws IngestException;
 
   /** Updates a list of ids. Ids that are not in the Catalog will not be created. * */
-  public UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
+  UpdateResponse update(UpdateRequest updateRequest) throws IngestException;
 
   /**
    * Delete the indexes for a given list if metacard ids
@@ -45,9 +45,9 @@ public interface IndexProvider extends Maskable {
    * @return a mapping of metacard type with the list of associate ids
    * @throws IngestException
    */
-  public void delete(DeleteRequest deleteRequest) throws IngestException;
+  void delete(DeleteRequest deleteRequest) throws IngestException;
 
-  public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException;
+  IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException;
 
-  public void shutdown();
+  void shutdown();
 }

@@ -31,7 +31,16 @@ public interface SolrClientFactory {
    * @throws IllegalArgumentException if <code>core</code> is <code>null</code>
    */
   @Deprecated
-  public SolrClient newClient(String core);
+  SolrClient newClient(String core);
 
-  public SolrClient getClient(String core);
+  SolrClient getClient(String core);
+
+  /**
+   * Returns whether or not the provider connects to SolrCloud instance or Standalone. Solr Cloud
+   * provides different capabilities that upstream Index and Storage providers need knowledged of
+   * (e.g. Collection Aliases in SolrCloud).
+   *
+   * @return Provider is a SolrCloud provider.
+   */
+  boolean isSolrCloud();
 }

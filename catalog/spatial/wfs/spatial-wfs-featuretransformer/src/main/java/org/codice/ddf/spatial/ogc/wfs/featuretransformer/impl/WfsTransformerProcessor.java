@@ -13,13 +13,21 @@
  */
 package org.codice.ddf.spatial.ogc.wfs.featuretransformer.impl;
 
+import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang.StringUtils.startsWith;
+
+import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.MetacardType;
+import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.data.impl.MetacardTypeImpl;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.FeatureTransformer;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.WfsMetadata;
@@ -52,7 +60,7 @@ public final class WfsTransformerProcessor {
             featureTransformer.apply(featureMemberInputStream, metadata);
 
         if (metacardOptional.isPresent()) {
-          return metacardOptional;
+          return metacardOptional.map(this::removeExternalWfsAttributes);
         }
       } catch (IOException e) {
         LOGGER.error(
@@ -63,5 +71,20 @@ public final class WfsTransformerProcessor {
     }
 
     return Optional.empty();
+  }
+
+  private Metacard removeExternalWfsAttributes(final Metacard metacard) {
+    final MetacardType metacardType = metacard.getMetacardType();
+    final String typeName = metacardType.getName();
+    final String externalWfsAttributePrefix = "ext." + typeName;
+    final Set<AttributeDescriptor> attributeDescriptorsWithoutExternalWfs =
+        metacardType
+            .getAttributeDescriptors()
+            .stream()
+            .filter(descriptor -> !startsWith(descriptor.getName(), externalWfsAttributePrefix))
+            .collect(toSet());
+    final MetacardType metacardTypeWithoutExternalWfsAttributes =
+        new MetacardTypeImpl(typeName, attributeDescriptorsWithoutExternalWfs);
+    return new MetacardImpl(metacard, metacardTypeWithoutExternalWfsAttributes);
   }
 }

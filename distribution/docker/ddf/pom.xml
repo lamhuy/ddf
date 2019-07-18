@@ -27,6 +27,18 @@
     <properties>
         <!-- Set the version of the codice/ddf-base docker image to build on top of here -->
         <docker.ddf.base.version>2.14-alpine</docker.ddf.base.version>
+
+        <docker.zookeeper.version>3.4.13</docker.zookeeper.version>
+        <docker.zookeeper.port.1>7771</docker.zookeeper.port.1>
+        <docker.zookeeper.port.2>7772</docker.zookeeper.port.2>
+        <docker.zookeeper.port.3>7773</docker.zookeeper.port.3>
+
+        <docker.solr.port.1>7781</docker.solr.port.1>
+        <docker.solr.port.2>7782</docker.solr.port.2>
+        <docker.solr.port.3>7783</docker.solr.port.3>
+
+        <docker.solr.backup.directory.local>${project.basedir}/src/main/resources/backups</docker.solr.backup.directory.local>
+        <docker.solr.backup.directory.target>/backups</docker.solr.backup.directory.target>
     </properties>
 
     <dependencies>
@@ -61,6 +73,27 @@
             </activation>
             <build>
                 <plugins>
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-resources</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/main/resources</directory>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>

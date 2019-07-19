@@ -46,7 +46,9 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
 
   protected static final String DEFAULT_SOLR_CATALOG_STORE = "catalog_store";
 
-  BaseSolrCatalogProvider provider;
+  protected BaseSolrCatalogProvider provider;
+
+  protected SolrClientFactory clientFactory;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -60,15 +62,17 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
       DynamicSchemaResolver resolver) {
-    Validate.notNull(clientFactory, "SolrClient cannot be null.");
+    Validate.notNull(clientFactory, "SolrClientFactory cannot be null.");
     Validate.notNull(adapter, "FilterAdapter cannot be null");
     Validate.notNull(solrFilterDelegateFactory, "SolrFilterDelegateFactory cannot be null");
     Validate.notNull(resolver, "DynamicSchemaResolver cannot be null");
 
+    this.clientFactory = clientFactory;
+
     /** Create storage collection to provider map */
     provider =
         new BaseSolrCatalogProvider(
-            clientFactory.getClient(DEFAULT_SOLR_CATALOG_STORE),
+            this.clientFactory.getClient(DEFAULT_SOLR_CATALOG_STORE),
             adapter,
             solrFilterDelegateFactory,
             resolver);

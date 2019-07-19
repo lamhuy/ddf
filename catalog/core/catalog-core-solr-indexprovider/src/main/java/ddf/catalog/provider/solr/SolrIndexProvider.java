@@ -22,8 +22,6 @@ import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
-import ddf.catalog.operation.impl.CreateResponseImpl;
-import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -32,12 +30,11 @@ import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.util.impl.DescribableImpl;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
@@ -49,13 +46,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrIndexProvider.class);
 
-  private static final String DEFAULT_INDEX_CORE = "catalog_index";
+  protected static final String DEFAULT_INDEX_CORE = "catalog_index";
 
-  private List<String> parameters;
+  protected List<String> parameters;
 
-  private Map<String, String> tagToCore = new HashMap<>();
+  protected Map<String, String> tagToCore = new HashMap<>();
 
-  private Map<String, BaseSolrCatalogProvider> catalogProviders = new HashMap<>();
+  protected Map<String, BaseSolrCatalogProvider> catalogProviders = new HashMap<>();
 
   protected final SolrClientFactory clientFactory;
   protected final FilterAdapter filterAdapter;
@@ -74,7 +71,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
       DynamicSchemaResolver resolver) {
-    Validate.notNull(clientFactory, "SolrClient cannot be null.");
+    Validate.notNull(clientFactory, "SolrClientFactory cannot be null.");
     Validate.notNull(adapter, "FilterAdapter cannot be null");
     Validate.notNull(solrFilterDelegateFactory, "SolrFilterDelegateFactory cannot be null");
     Validate.notNull(resolver, "DynamicSchemaResolver cannot be null");
@@ -83,6 +80,11 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     this.filterAdapter = adapter;
     this.solrFilterDelegateFactory = solrFilterDelegateFactory;
     this.resolver = resolver;
+
+    // Always add default provider. Solr Cloud this will be an aggregate Alias,
+    // and standalone it will be the only index core
+    LOGGER.debug("Adding provider for core: {}", DEFAULT_INDEX_CORE);
+    catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
   }
 
   /**
@@ -98,7 +100,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     this(clientFactory, adapter, solrFilterDelegateFactory, new DynamicSchemaResolver());
   }
 
-  private BaseSolrCatalogProvider newProvider(String core) {
+  protected BaseSolrCatalogProvider newProvider(String core) {
     return new BaseSolrCatalogProvider(
         clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
   }
@@ -106,25 +108,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
     LOGGER.trace("Create request received");
-    CatalogProvider cat = getCatalogProvider(createRequest);
-    if (cat == null) {
-      LOGGER.warn("Create request not executed");
-      return new CreateResponseImpl(createRequest, null, new ArrayList<>());
-    } else {
-      return cat.create(createRequest);
-    }
+    return getCatalogProvider(createRequest).create(createRequest);
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
     LOGGER.trace("Update request received");
-    CatalogProvider cat = getCatalogProvider(updateRequest);
-    if (cat == null) {
-      LOGGER.warn("Update request not executed");
-      return new UpdateResponseImpl(updateRequest, null, new ArrayList<>());
-    } else {
-      return cat.update(updateRequest);
-    }
+    return getCatalogProvider(updateRequest).update(updateRequest);
   }
 
   @Override
@@ -139,13 +129,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   @Override
   public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
-    BaseSolrCatalogProvider cat = getCatalogProvider(queryRequest);
-    if (cat == null) {
-      LOGGER.warn("Query request not executed");
-      return null;
-    } else {
-      return cat.queryIndex(queryRequest);
-    }
+    return getCatalogProvider(queryRequest).queryIndex(queryRequest);
   }
 
   public void shutdown() {
@@ -174,14 +158,10 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
         catalogProviders.computeIfAbsent(core, this::newProvider);
       }
     }
-    // Always add default provider. Solr Cloud this will be an aggregate Alias,
-    // and standalone it will be the only index core
-    LOGGER.debug("Adding provider for core: {}", DEFAULT_INDEX_CORE);
-    catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
   }
 
   /** TODO: assuming all metacards are of the same type /tag for each request * */
-  private BaseSolrCatalogProvider getCatalogProvider(Request request) {
+  protected BaseSolrCatalogProvider getCatalogProvider(Request request) {
     if (!clientFactory.isSolrCloud()) {
       LOGGER.trace("Non SolrCloud instance using index core: {}", DEFAULT_INDEX_CORE);
       return catalogProviders.get(DEFAULT_INDEX_CORE);
@@ -211,14 +191,9 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       return catalogProviders.get(DEFAULT_INDEX_CORE);
     }
 
-    Optional<String> core = getCore(tags);
-    if (core.isPresent()) {
-      LOGGER.trace("Returning provider for core: {}", core.get());
-      return catalogProviders.get(core.get());
-    } else {
-      LOGGER.warn("Unable to find core for the request, returning: {}", DEFAULT_INDEX_CORE);
-      return catalogProviders.get(DEFAULT_INDEX_CORE);
-    }
+    String core = getCore(tags);
+    LOGGER.warn("Using {} core for the request", core);
+    return catalogProviders.get(core);
   }
 
   /**
@@ -227,8 +202,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
    * @param tags all tags from a metacard
    * @return the first associate solr core for those given tags
    */
-  private Optional<String> getCore(Set<String> tags) {
+  private String getCore(Set<String> tags) {
     LOGGER.trace("Getting core for tags: {}", tags);
-    return tags.stream().map(t -> tagToCore.get(t)).findFirst();
+    return tags.stream()
+        .map(t -> tagToCore.get(t))
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(DEFAULT_INDEX_CORE);
+    // return tagToCore.getOrDefault(tags, DEFAULT_INDEX_CORE);
   }
 }

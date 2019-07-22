@@ -39,6 +39,7 @@ import ddf.catalog.operation.impl.UpdateRequestImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.StorageProvider;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
+import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +59,8 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
     super(
         new HttpSolrClientFactory(mock(HttpClientBuilder.class)),
         mock(FilterAdapter.class),
-        mock(SolrFilterDelegateFactory.class));
+        mock(SolrFilterDelegateFactory.class),
+        mock(DynamicSchemaResolver.class));
 
     provider = mock(BaseSolrCatalogProvider.class);
   }

@@ -39,10 +39,8 @@ import ddf.catalog.operation.impl.UpdateRequestImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
+import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
-import ddf.catalog.source.solr.provider.Library;
-import ddf.catalog.source.solr.provider.MockMetacard;
-import ddf.catalog.source.solr.provider.SolrFilterBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +61,8 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
     super(
         mock(SolrClientFactory.class),
         mock(FilterAdapter.class),
-        mock(SolrFilterDelegateFactory.class));
+        mock(SolrFilterDelegateFactory.class),
+        mock(DynamicSchemaResolver.class));
   }
 
   @Before

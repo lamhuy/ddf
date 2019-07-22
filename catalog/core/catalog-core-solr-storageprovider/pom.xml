@@ -63,13 +63,6 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>ddf.catalog.core</groupId>
-      <artifactId>catalog-core-solr</artifactId>
-      <version>${project.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <resources>
@@ -119,7 +112,7 @@
               <rules>
                 <ArtifactSizeEnforcerRule
                   implementation="org.codice.maven.artifactsize.ArtifactSizeEnforcerRule">
-                  <maxArtifactSize>4_MB</maxArtifactSize>
+                  <maxArtifactSize>5_MB</maxArtifactSize>
                 </ArtifactSizeEnforcerRule>
               </rules>
             </configuration>
@@ -144,7 +137,7 @@
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>INSTRUCTION</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>1.00</minimum>
+                      <minimum>0.90</minimum>
                     </limit>
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>BRANCH</counter>
@@ -154,7 +147,7 @@
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>COMPLEXITY</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>1.00</minimum>
+                      <minimum>0.92</minimum>
                     </limit>
                   </limits>
                 </rule>

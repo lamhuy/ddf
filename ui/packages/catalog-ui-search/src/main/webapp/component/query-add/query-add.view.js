@@ -55,15 +55,13 @@ module.exports = Marionette.LayoutView.extend({
     this.listenTo(this.model, 'closeDropdown', this.closeDropdown)
     this.listenForSave()
   },
-  updateCurrentQuery: function(currentQuerySettings) {
-    if (currentQuerySettings.get('type') === 'custom') {
-      const searchForm = new SearchForm(currentQuerySettings.get('template'))
-      const sharedAttributes = searchForm.transformToQueryStructure()
-      this.model.set({
-        type: 'custom',
-        ...sharedAttributes,
-      })
-    }
+  updateCurrentQuery(currentQuerySettings) {
+    const searchForm = new SearchForm(currentQuerySettings.get('template'))
+    const sharedAttributes = searchForm.transformToQueryStructure()
+    this.model.set({
+      type: currentQuerySettings.get('type'),
+      ...sharedAttributes,
+    })
   },
   reshow: function() {
     this.$el.toggleClass(

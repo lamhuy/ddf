@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrInputDocument;
 
 /** Interface that defines the different metacard operations performed on Solr. */
@@ -99,4 +100,30 @@ public interface SolrMetacardClient {
    * @throws SolrServerException if there is an error on the server
    */
   void deleteByQuery(String query) throws IOException, SolrServerException;
+
+  /**
+   * Returns whether or not the metacard should be committed in Near Real Time
+   *
+   * @param metacard
+   * @return True if metacard is a type that requires Near Real Time commit
+   */
+  boolean isNrtType(Metacard metacard);
+
+  /**
+   * Commits a set of documents to Solr
+   *
+   * @param docs - Documents to commit to Solr
+   * @param forceAutoCommit - Whether or not to force a commit
+   * @param isNrtCommit - Whether or not a document contains NRT data
+   */
+  void commit(List<SolrInputDocument> docs, boolean forceAutoCommit, boolean isNrtCommit)
+      throws IOException, SolrServerException;
+
+  /**
+   * Returns a list of SolrDocuments
+   *
+   * @param ids - Document IDs to retrieve
+   * @return - List of Solr docs for provided IDs
+   */
+  List<SolrDocument> getSolrDocs(Set<String> ids) throws UnsupportedQueryException;
 }

@@ -18,14 +18,19 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
+	<reference id="geoJsonInputTransformer"
+               interface="ddf.catalog.transform.InputTransformer"
+			   filter="(id=geojson)"/>
+
 	<bean id="solrStorageProvider" class="ddf.catalog.provider.solr.SolrStorageProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.SolrStorageProvider"
 			update-strategy="container-managed"/>
-		<argument ref="filterAdapter"/>
 		<argument ref="solrClientFactory" />
+		<argument ref="filterAdapter"/>
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
+		<argument ref="geoJsonInputTransformer"/>
 	</bean>
 
 	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />

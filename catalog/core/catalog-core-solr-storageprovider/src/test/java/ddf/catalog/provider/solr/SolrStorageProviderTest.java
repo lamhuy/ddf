@@ -19,7 +19,10 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import ddf.catalog.data.AttributeRegistry;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.impl.AttributeRegistryImpl;
+import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
@@ -36,38 +39,49 @@ import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
-import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.StorageProvider;
+import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
+import ddf.catalog.source.solr.SolrMetacardClient;
+import ddf.catalog.transformer.input.geojson.GeoJsonInputTransformer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.solr.common.SolrDocument;
 import org.codice.solr.factory.impl.HttpClientBuilder;
 import org.codice.solr.factory.impl.HttpSolrClientFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.filter.Filter;
 
-public class SolrStorageProviderTest extends SolrStorageProvider {
+public class SolrStorageProviderTest {
 
   private static SolrFilterBuilder filterBuilder = new SolrFilterBuilder();
   private SolrStorageProvider storageProvider;
+  private GeoJsonInputTransformer transformer = new GeoJsonInputTransformer();
+  private BaseSolrCatalogProvider provider = mock(BaseSolrCatalogProvider.class);
 
   public SolrStorageProviderTest() {
-    super(
-        new HttpSolrClientFactory(mock(HttpClientBuilder.class)),
-        mock(FilterAdapter.class),
-        mock(SolrFilterDelegateFactory.class),
-        mock(DynamicSchemaResolver.class));
-
-    provider = mock(BaseSolrCatalogProvider.class);
+    transformer.setMetacardTypes(Arrays.asList(MetacardImpl.BASIC_METACARD));
+    AttributeRegistry attributeRegistry = new AttributeRegistryImpl();
+    transformer.setAttributeRegistry(attributeRegistry);
+    storageProvider =
+        new SolrStorageProvider(
+            new HttpSolrClientFactory(mock(HttpClientBuilder.class)),
+            mock(FilterAdapter.class),
+            mock(SolrFilterDelegateFactory.class),
+            mock(DynamicSchemaResolver.class),
+            transformer);
   }
 
   @Before
   public void setup() {
-    storageProvider = this;
+    SolrMetacardClient mockClient = mock(SolrMetacardClient.class);
+    when(provider.getSolrMetacardClient()).thenReturn(mockClient);
+    storageProvider.provider = provider;
   }
 
   @Test
@@ -76,9 +90,8 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
     assertThat(response.getCreatedMetacards().size(), equalTo(2));
   }
 
-  @Test
+  @Test(expected = UnsupportedQueryException.class)
   public void testQuery() throws Exception {
-
     CreateResponse records = createRecord(storageProvider);
     Filter filter = filterBuilder.attribute(Metacard.ANY_TEXT).is().like().text("*");
     QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
@@ -94,27 +107,19 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
                     .collect(Collectors.toList()),
                 2L));
 
-    SourceResponse response = storageProvider.query(request);
-    assertThat(response.getHits(), equalTo(2L));
+    storageProvider.query(request);
   }
 
   @Test
   public void testQueryById() throws Exception {
-
     CreateResponse records = createRecord(storageProvider);
     Filter filter = filterBuilder.attribute(Metacard.ANY_TEXT).is().like().text("*");
-    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
+    SolrMetacardClient mockClient = mock(SolrMetacardClient.class);
+    List<SolrDocument> docs = getSolrDocs(records.getCreatedMetacards());
+    when(mockClient.getSolrDocs(any())).thenReturn(docs);
+    when(provider.getSolrMetacardClient()).thenReturn(mockClient);
 
-    when(provider.query(request))
-        .thenReturn(
-            new SourceResponseImpl(
-                request,
-                records
-                    .getCreatedMetacards()
-                    .stream()
-                    .map(c -> new ResultImpl(c))
-                    .collect(Collectors.toList()),
-                2L));
+    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
 
     SourceResponse response =
         storageProvider.queryByIds(
@@ -122,7 +127,7 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
             records
                 .getCreatedMetacards()
                 .stream()
-                .map(m -> m.getId())
+                .map(Metacard::getId)
                 .collect(Collectors.toList()));
     assertThat(response.getHits(), equalTo(2L));
   }
@@ -130,17 +135,15 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
   @Test
   public void testUpdate() throws Exception {
     CreateResponse records = createRecord(storageProvider);
+    SolrMetacardClient mockClient = mock(SolrMetacardClient.class);
+    List<SolrDocument> docs = getSolrDocs(records.getCreatedMetacards());
+    when(mockClient.getSolrDocs(any())).thenReturn(docs);
+    when(provider.getSolrMetacardClient()).thenReturn(mockClient);
+
     UpdateRequest request =
         new UpdateRequestImpl(
-            records.getCreatedMetacards().stream().map(m -> m.getId()).toArray(String[]::new),
+            records.getCreatedMetacards().stream().map(Metacard::getId).toArray(String[]::new),
             records.getCreatedMetacards());
-    when(provider.update(request))
-        .thenReturn(
-            new UpdateResponseImpl(
-                request,
-                request.getProperties(),
-                records.getCreatedMetacards(),
-                records.getCreatedMetacards()));
     UpdateResponse response = storageProvider.update(request);
     assertThat(response.getUpdatedMetacards().size(), equalTo(2));
   }
@@ -161,7 +164,7 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
             new MockMetacard(Library.getTampaRecord()));
 
     CreateRequest request = new CreateRequestImpl(list);
-    when(this.provider.create(request))
+    when(this.storageProvider.provider.create(request))
         .thenReturn(new CreateResponseImpl(request, request.getProperties(), list));
 
     return storageProvider.create(request);
@@ -188,5 +191,16 @@ public class SolrStorageProviderTest extends SolrStorageProvider {
   @Test
   public void testMaskId() {
     storageProvider.maskId("id");
+  }
+
+  private List<SolrDocument> getSolrDocs(List<Metacard> metacards) throws Exception {
+    List<SolrDocument> solrDocs = new ArrayList<>();
+    for (Metacard metacard : metacards) {
+      SolrDocument doc = new SolrDocument();
+      doc.addField(SolrStorageProvider.ID_FIELD, metacard.getId());
+      doc.addField(SolrStorageProvider.DATA_FIELD, storageProvider.getMetacardJson(metacard));
+      solrDocs.add(doc);
+    }
+    return solrDocs;
   }
 }

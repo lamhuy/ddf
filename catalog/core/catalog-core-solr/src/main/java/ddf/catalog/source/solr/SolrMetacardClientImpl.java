@@ -258,6 +258,21 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     return new SourceResponseImpl(request, responseProps, results, totalHits);
   }
 
+  @Override
+  public List<SolrDocument> getSolrDocs(Set<String> ids) throws UnsupportedQueryException {
+    List<SolrDocument> solrDocs = new ArrayList<>(ids.size());
+    List<List<String>> partitions = Lists.partition(new ArrayList<>(ids), GET_BY_ID_LIMIT);
+    for (List<String> partition : partitions) {
+      try {
+        SolrDocumentList page = client.getById(partition);
+        page.iterator().forEachRemaining(solrDocs::add);
+      } catch (SolrServerException | SolrException | IOException e) {
+        throw new UnsupportedQueryException("Could not complete solr query.", e);
+      }
+    }
+    return solrDocs;
+  }
+
   private boolean handleFacetRequest(SolrQuery query, QueryRequest request) {
     boolean isFacetedQuery = false;
     Serializable textFacetPropRaw = request.getPropertyValue(EXPERIMENTAL_FACET_PROPERTIES_KEY);
@@ -459,7 +474,6 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     try {
       QueryResponse solrResponse = client.query(query, METHOD.POST);
       SolrDocumentList docs = solrResponse.getResults();
-
       return createMetacards(docs);
     } catch (SolrServerException | SolrException | IOException e) {
       throw new UnsupportedQueryException("Could not complete solr query.", e);
@@ -469,19 +483,11 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
   @Override
   public List<Metacard> getIds(Set<String> ids) throws UnsupportedQueryException {
     List<Metacard> metacards = new ArrayList<>(ids.size());
-    List<List<String>> partitions = Lists.partition(new ArrayList<>(ids), GET_BY_ID_LIMIT);
-    for (List<String> partition : partitions) {
-      try {
-        SolrDocumentList page = client.getById(partition);
-        metacards.addAll(createMetacards(page));
-      } catch (SolrServerException | SolrException | IOException e) {
-        throw new UnsupportedQueryException("Could not complete solr query.", e);
-      }
-    }
-    return metacards;
+    List<SolrDocument> solrDocs = getSolrDocs(ids);
+    return createMetacards(solrDocs);
   }
 
-  private List<Metacard> createMetacards(SolrDocumentList docs) throws UnsupportedQueryException {
+  private List<Metacard> createMetacards(List<SolrDocument> docs) throws UnsupportedQueryException {
     List<Metacard> results = new ArrayList<>(docs.size());
     for (SolrDocument doc : docs) {
       try {
@@ -880,11 +886,28 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     List<SolrInputDocument> docs = new ArrayList<>();
     for (Metacard metacard : metacards) {
       docs.add(getSolrInputDocument(metacard));
-      if (commitNrtMetacardType.contains(metacard.getMetacardType().getName())) {
-        isNrtCommit = true;
+      if (!isNrtCommit) {
+        isNrtCommit = isNrtType(metacard);
       }
     }
 
+    commit(docs, forceAutoCommit, isNrtCommit);
+
+    return docs;
+  }
+
+  @Override
+  public boolean isNrtType(Metacard metacard) {
+    boolean nrtCommit = false;
+    if (commitNrtMetacardType.contains(metacard.getMetacardType().getName())) {
+      nrtCommit = true;
+    }
+    return nrtCommit;
+  }
+
+  @Override
+  public void commit(List<SolrInputDocument> docs, boolean forceAutoCommit, boolean isNrtCommit)
+      throws IOException, SolrServerException {
     if (!forceAutoCommit) {
       if (isNrtCommit) {
         client.add(docs, commitNrtCommitWithinMs);
@@ -894,8 +917,6 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     } else {
       softCommit(docs);
     }
-
-    return docs;
   }
 
   protected SolrInputDocument getSolrInputDocument(Metacard metacard)

@@ -21,6 +21,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 public class MockMetacard extends MetacardImpl {
 
@@ -40,7 +41,7 @@ public class MockMetacard extends MetacardImpl {
 
   public MockMetacard(String metadata, MetacardType type, Calendar calendar) {
     super(type);
-    // make a simple metacard
+    this.setId(UUID.randomUUID().toString().replaceAll("-", ""));
     this.setCreatedDate(calendar.getTime());
     this.setEffectiveDate(calendar.getTime());
     this.setExpirationDate(calendar.getTime());

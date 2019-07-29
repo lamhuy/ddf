@@ -147,6 +147,10 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return solr;
   }
 
+  public SolrMetacardClient getSolrMetacardClient() {
+    return client;
+  }
+
   @Override
   public Set<ContentType> getContentTypes() {
     return client.getContentTypes();
@@ -576,7 +580,7 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return query;
   }
 
-  private String generatePrimaryKey() {
+  public String generatePrimaryKey() {
     return UUID.randomUUID().toString().replaceAll("-", "");
   }
 

@@ -1,5 +1,5 @@
 :title: Solr Catalog Provider
-:id: SolrCatalogProvider
+:id: ddf.catalog.solr.provider.SolrCatalogProvider
 :type: table
 :status: published
 :application: ${ddf-solr}

@@ -18,9 +18,13 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
-	<reference id="geoJsonInputTransformer"
+	<reference id="xmlInputTransformer"
                interface="ddf.catalog.transform.InputTransformer"
-			   filter="(id=geojson)"/>
+			   filter="(id=appxml)"/>
+
+    <reference id="metacardTransformer"
+               interface="ddf.catalog.transform.MetacardTransformer"
+               filter="(id=xml)"/>
 
 	<bean id="solrStorageProvider" class="ddf.catalog.provider.solr.SolrStorageProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.SolrStorageProvider"
@@ -30,7 +34,8 @@
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
-		<argument ref="geoJsonInputTransformer"/>
+		<argument ref="xmlInputTransformer"/>
+        <argument ref="metacardTransformer"/>
 	</bean>
 
 	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />

@@ -13,6 +13,7 @@
  */
 package ddf.catalog.provider.solr;
 
+import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
@@ -43,7 +44,7 @@ import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.SolrMetacardClient;
 import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.InputTransformer;
-import ddf.catalog.transformer.metacard.geojson.GeoJsonMetacardTransformer;
+import ddf.catalog.transform.MetacardTransformer;
 import ddf.catalog.util.impl.DescribableImpl;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -62,8 +63,6 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrInputDocument;
 import org.codice.solr.factory.SolrClientFactory;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +81,9 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
 
   protected SolrClientFactory clientFactory;
 
-  protected InputTransformer geoJsonInputTransformer;
+  protected InputTransformer metacardDecodeTransformer;
+
+  protected MetacardTransformer metacardEncodeTransformer;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -96,15 +97,18 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
       DynamicSchemaResolver resolver,
-      InputTransformer geoJsonInputTransformer) {
+      InputTransformer metacardDecodeTransformer,
+      MetacardTransformer metacardEncodeTransformer) {
     Validate.notNull(clientFactory, "SolrClientFactory cannot be null.");
     Validate.notNull(adapter, "FilterAdapter cannot be null");
     Validate.notNull(solrFilterDelegateFactory, "SolrFilterDelegateFactory cannot be null");
     Validate.notNull(resolver, "DynamicSchemaResolver cannot be null");
-    Validate.notNull(geoJsonInputTransformer, "GeoJsonInputTransformer cannot be null.");
+    Validate.notNull(metacardDecodeTransformer, "MetacardDecodeTransformer cannot be null.");
+    Validate.notNull(metacardEncodeTransformer, "MetacardEncodeTransformer cannot be null.");
 
     this.clientFactory = clientFactory;
-    this.geoJsonInputTransformer = geoJsonInputTransformer;
+    this.metacardDecodeTransformer = metacardDecodeTransformer;
+    this.metacardEncodeTransformer = metacardEncodeTransformer;
 
     /** Create storage collection to provider map */
     provider =
@@ -125,13 +129,15 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
       SolrClientFactory clientFactory,
       FilterAdapter adapter,
       SolrFilterDelegateFactory solrFilterDelegateFactory,
-      InputTransformer geoJsonInputTransformer) {
+      InputTransformer metacardDecodeTransformer,
+      MetacardTransformer metacardEncodeTransformer) {
     this(
         clientFactory,
         adapter,
         solrFilterDelegateFactory,
         new DynamicSchemaResolver(),
-        geoJsonInputTransformer);
+        metacardDecodeTransformer,
+        metacardEncodeTransformer);
   }
 
   @Override
@@ -254,7 +260,11 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
 
       try {
         SolrInputDocument solrDoc = getSolrDoc(metacard);
-        client.commit(Collections.singletonList(solrDoc), false, client.isNrtType(metacard));
+        if (solrDoc != null) {
+          client.commit(Collections.singletonList(solrDoc), true, client.isNrtType(metacard));
+        } else {
+          LOGGER.debug("Could not get Solr Doc for metacard: {}", metacard);
+        }
       } catch (CatalogTransformerException | IOException | SolrServerException e) {
         throw new IngestException(e);
       }
@@ -264,14 +274,26 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
   private SolrInputDocument getSolrDoc(Metacard metacard) throws CatalogTransformerException {
     SolrInputDocument solrInputDocument = new SolrInputDocument();
     solrInputDocument.addField(ID_FIELD, metacard.getId());
-    String metacardJson = getMetacardJson(metacard);
-    solrInputDocument.addField(DATA_FIELD, metacardJson);
+    String encodedMetacard = encodeMetacard(metacard);
+    if (encodedMetacard == null) {
+      LOGGER.debug("Unable to encode metacard: {}, returning null SolrDoc", metacard);
+      return null;
+    }
+    solrInputDocument.addField(DATA_FIELD, encodedMetacard);
     return solrInputDocument;
   }
 
-  protected String getMetacardJson(Metacard metacard) throws CatalogTransformerException {
-    JSONObject json = GeoJsonMetacardTransformer.convertToJSON(metacard);
-    return JSONValue.toJSONString(json);
+  protected String encodeMetacard(Metacard metacard) throws CatalogTransformerException {
+    BinaryContent binaryContent = metacardEncodeTransformer.transform(metacard, null);
+    String encodedMetacard = null;
+    if (binaryContent.getMimeType().getPrimaryType().equals("text")) {
+      try {
+        encodedMetacard = new String(binaryContent.getByteArray());
+      } catch (IOException e) {
+        LOGGER.debug("Unable to get metacard data", e);
+      }
+    }
+    return encodedMetacard;
   }
 
   private Metacard getMetacard(SolrDocument solrDoc) {
@@ -281,12 +303,11 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
 
       Object dataField = solrDoc.getFirstValue(DATA_FIELD);
       if (dataField != null) {
-        String jsonStr = dataField.toString();
+        String data = dataField.toString();
         try {
-          return geoJsonInputTransformer.transform(
-              new ByteArrayInputStream(jsonStr.getBytes()), id);
+          return metacardDecodeTransformer.transform(new ByteArrayInputStream(data.getBytes()), id);
         } catch (IOException | CatalogTransformerException e) {
-          LOGGER.trace("Unable to transform {} to metacard", jsonStr, e);
+          LOGGER.debug("Unable to transform {} to metacard", data, e);
         }
       }
     }

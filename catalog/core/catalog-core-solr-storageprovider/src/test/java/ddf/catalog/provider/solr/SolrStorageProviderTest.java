@@ -19,9 +19,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import ddf.catalog.data.AttributeRegistry;
 import ddf.catalog.data.Metacard;
-import ddf.catalog.data.impl.AttributeRegistryImpl;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
@@ -45,12 +43,18 @@ import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.SolrMetacardClient;
-import ddf.catalog.transformer.input.geojson.GeoJsonInputTransformer;
+import ddf.catalog.transformer.api.MetacardMarshaller;
+import ddf.catalog.transformer.xml.MetacardMarshallerImpl;
+import ddf.catalog.transformer.xml.PrintWriterProviderImpl;
+import ddf.catalog.transformer.xml.XmlInputTransformer;
+import ddf.catalog.transformer.xml.XmlMetacardTransformer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.solr.common.SolrDocument;
+import org.codice.ddf.parser.Parser;
+import org.codice.ddf.parser.xml.XmlParser;
 import org.codice.solr.factory.impl.HttpClientBuilder;
 import org.codice.solr.factory.impl.HttpSolrClientFactory;
 import org.junit.Before;
@@ -61,20 +65,25 @@ public class SolrStorageProviderTest {
 
   private static SolrFilterBuilder filterBuilder = new SolrFilterBuilder();
   private SolrStorageProvider storageProvider;
-  private GeoJsonInputTransformer transformer = new GeoJsonInputTransformer();
+  private XmlInputTransformer encoderTransformer;
+  private XmlMetacardTransformer decoderTransformer;
   private BaseSolrCatalogProvider provider = mock(BaseSolrCatalogProvider.class);
 
   public SolrStorageProviderTest() {
-    transformer.setMetacardTypes(Arrays.asList(MetacardImpl.BASIC_METACARD));
-    AttributeRegistry attributeRegistry = new AttributeRegistryImpl();
-    transformer.setAttributeRegistry(attributeRegistry);
+    Parser parser = new XmlParser();
+    encoderTransformer = new XmlInputTransformer(parser);
+    encoderTransformer.setMetacardTypes(Arrays.asList(MetacardImpl.BASIC_METACARD));
+    MetacardMarshaller metacardMarshaller =
+        new MetacardMarshallerImpl(parser, new PrintWriterProviderImpl());
+    decoderTransformer = new XmlMetacardTransformer(metacardMarshaller);
     storageProvider =
         new SolrStorageProvider(
             new HttpSolrClientFactory(mock(HttpClientBuilder.class)),
             mock(FilterAdapter.class),
             mock(SolrFilterDelegateFactory.class),
             mock(DynamicSchemaResolver.class),
-            transformer);
+            encoderTransformer,
+            decoderTransformer);
   }
 
   @Before
@@ -198,7 +207,7 @@ public class SolrStorageProviderTest {
     for (Metacard metacard : metacards) {
       SolrDocument doc = new SolrDocument();
       doc.addField(SolrStorageProvider.ID_FIELD, metacard.getId());
-      doc.addField(SolrStorageProvider.DATA_FIELD, storageProvider.getMetacardJson(metacard));
+      doc.addField(SolrStorageProvider.DATA_FIELD, storageProvider.encodeMetacard(metacard));
       solrDocs.add(doc);
     }
     return solrDocs;

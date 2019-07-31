@@ -13,6 +13,8 @@
  */
 package ddf.test.itests.catalog;
 
+import java.util.Arrays;
+import org.codice.ddf.itests.common.SystemStateManager;
 import org.codice.ddf.test.common.LoggingUtils;
 import org.codice.ddf.test.common.annotations.BeforeExam;
 import org.junit.runner.RunWith;
@@ -25,15 +27,44 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 @ExamReactorStrategy(PerSuite.class)
 public class TestMuxCatalog extends TestCatalog {
 
+  protected static final String[] DEFAULT_REQUIRED_MUX_APPS = {
+    "catalog-app", "solr-mux-app", "spatial-app"
+  };
+
   @BeforeExam
   @Override
   public void beforeExam() {
     try {
-      waitForSystemReady();
-      getServiceManager().startFeature(true, "catalog-mux-solr-provider");
-      getServiceManager().waitForAllBundles();
+      SystemStateManager manager =
+          SystemStateManager.getManager(getServiceManager(), features, adminConfig, console);
+      manager.setSystemBaseState(this::waitForBaseSystemFeatures, false);
+      manager.waitForSystemBaseState();
     } catch (Exception e) {
       LoggingUtils.failWithThrowableStacktrace(e, "Failed in @BeforeExam: ");
+    }
+  }
+
+  @SuppressWarnings({
+    "squid:S2696" /* writing to static basePort to share state between test methods */
+  })
+  @Override
+  public void waitForBaseSystemFeatures() {
+    try {
+      basePort = getBasePort();
+      getServiceManager()
+          .startFeature(
+              true, Arrays.copyOf(DEFAULT_REQUIRED_MUX_APPS, DEFAULT_REQUIRED_MUX_APPS.length));
+      getServiceManager().waitForAllBundles();
+      getCatalogBundle().waitForCatalogProvider();
+
+      getServiceManager().waitForHttpEndpoint(SERVICE_ROOT + "/catalog/query?_wadl");
+      getServiceManager().waitForHttpEndpoint(SERVICE_ROOT + "/csw?_wadl");
+      getServiceManager().waitForHttpEndpoint(SERVICE_ROOT + "/catalog?_wadl");
+
+      getServiceManager().startFeature(true, "search-ui-app", "catalog-ui");
+      getServiceManager().waitForAllBundles();
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to start up required features.", e);
     }
   }
 }

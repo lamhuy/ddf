@@ -16,7 +16,7 @@
 <metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
 
     <OCD name="Mux Catalog Provider"
-      id="ddf.catalog.solr.provider.MuxCatalogProvider">
+      id="ddf.catalog.provider.MuxCatalogProvider">
         <AD
           description="WARNING: Performance Impact. Only in special cases should auto-commit be forced. Forcing auto-commit makes the search results visible immediately."
           name="Force Auto Commit" id="forceAutoCommit" required="true" type="Boolean"
@@ -27,8 +27,8 @@
           type="Boolean" default="false"/>
     </OCD>
 
-    <Designate pid="ddf.catalog.solr.provider.MuxCatalogProvider">
-        <Object ocdref="ddf.catalog.solr.provider.MuxCatalogProvider"/>
+    <Designate pid="ddf.catalog.provider.MuxCatalogProvider">
+        <Object ocdref="ddf.catalog.provider.MuxCatalogProvider"/>
     </Designate>
 
 </metatype:MetaData>

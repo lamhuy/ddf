@@ -209,6 +209,5 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(DEFAULT_INDEX_CORE);
-    // return tagToCore.getOrDefault(tags, DEFAULT_INDEX_CORE);
   }
 }

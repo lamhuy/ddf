@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ **/
+
+ -->
+<metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
+
+    <OCD name="JDBC Storage Provider"
+         id="ddf.catalog.provider.jdbc.JdbcStorageProvider">
+        <AD
+                description="JDBC Connection String."
+                name="DB URL" id="dbUrl"
+                type="String" default="jdbc:postgresql://localhost:5432/ddf"/>
+
+        <AD
+                description="JDBC Connection Pool size."
+                name="DB Pool Size" id="poolSize"
+                type="Integer" default="100"/>
+
+        <AD description="Username" name="Username" id="user" type="String" default="ddf"/>
+
+        <AD description="Password" name="Password" id="password" type="Password" default="ddf-password"/>
+
+    </OCD>
+
+    <Designate pid="ddf.catalog.provider.jdbc.JdbcStorageProvider">
+
+        <Object ocdref="ddf.catalog.provider.jdbc.JdbcStorageProvider"/>
+    </Designate>
+
+</metatype:MetaData>

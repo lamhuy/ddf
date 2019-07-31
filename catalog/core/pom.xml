@@ -107,5 +107,6 @@
         <module>catalog-core-provider</module>
         <module>catalog-core-solr-indexprovider</module>
         <module>catalog-core-solr-storageprovider</module>
+        <module>catalog-core-jdbc-storageprovider</module>
     </modules>
 </project>

@@ -78,6 +78,20 @@ services:
     - type: bind
       source: ${docker.solr.backup.directory.local}
       target: ${docker.solr.backup.directory.target}
+  postgres_db:
+    networks:
+      - db_network
+    image: postgres:9.5.4
+    restart: always
+    command: -c ssl=off
+    environment:
+      POSTGRES_ROOT_PASSWORD: admin
+      POSTGRES_DB: '${DBName:-ddf}'
+      POSTGRES_USER: ddf
+      POSTGRES_PASSWORD: ddf-password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
 
   ddf:
     container_name: ddf
@@ -89,7 +103,7 @@ services:
     - "8101:8101"                         # can connect to the client via "ssh admin@localhost -p 8101"
     - "8181:8181"
     environment:
-      INSTALL_PROFILE: standard
+      INSTALL_PROFILE: scaled
       SSH_ENABLED: 'true'                   # Keep the karaf ssh port active (supports using client during runtime)
       SOLR_ZK_HOSTS: "zk1:2181,zk2:2181,zk3:2181"
       JAVA_MAX_MEM: 4

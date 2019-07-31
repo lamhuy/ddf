@@ -97,5 +97,10 @@
             <artifactId>catalog-core-solr-storageprovider</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>catalog-core-jdbc-storageprovider</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

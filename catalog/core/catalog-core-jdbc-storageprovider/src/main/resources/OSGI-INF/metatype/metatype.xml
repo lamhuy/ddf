@@ -34,7 +34,6 @@
     </OCD>
 
     <Designate pid="ddf.catalog.provider.jdbc.JdbcStorageProvider">
-
         <Object ocdref="ddf.catalog.provider.jdbc.JdbcStorageProvider"/>
     </Designate>
 

@@ -163,16 +163,16 @@ public class SolrCloudClientFactory implements SolrClientFactory {
         return;
       }
 
-    if (!collectionExists(collection, client)) {
-        response =
-                CollectionAdminRequest.createCollection(
-                        collection,
-                        collection,
-                        shardCountMap.getOrDefault(collection, shardCount),
-                        replicationFactorMap.getOrDefault(collection, replicationFactor))
-                        .setMaxShardsPerNode(
-                                maximumShardsPerNodeMap.getOrDefault(collection, maximumShardsPerNode))
-                        .process(client);
+      if (!collectionExists(collection, client)) {
+        CollectionAdminResponse response =
+            CollectionAdminRequest.createCollection(
+                    collection,
+                    collection,
+                    shardCountMap.getOrDefault(collection, shardCount),
+                    replicationFactorMap.getOrDefault(collection, replicationFactor))
+                .setMaxShardsPerNode(
+                    maximumShardsPerNodeMap.getOrDefault(collection, maximumShardsPerNode))
+                .process(client);
         if (!response.isSuccess()) {
           throw new SolrFactoryException(
               "Failed to create collection [" + collection + "]: " + response.getErrorMessages());

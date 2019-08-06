@@ -50,6 +50,7 @@ import ddf.catalog.transformer.xml.XmlInputTransformer;
 import ddf.catalog.transformer.xml.XmlMetacardTransformer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.solr.common.SolrDocument;
@@ -133,6 +134,7 @@ public class SolrStorageProviderTest {
     SourceResponse response =
         storageProvider.queryByIds(
             request,
+            Collections.emptyMap(),
             records
                 .getCreatedMetacards()
                 .stream()

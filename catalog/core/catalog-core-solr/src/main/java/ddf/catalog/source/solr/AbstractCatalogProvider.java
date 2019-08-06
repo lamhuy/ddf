@@ -24,6 +24,7 @@ import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -33,9 +34,9 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,11 +118,17 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
     IndexQueryResponse indexQueryResponse = indexProvider.query(queryRequest);
-    // TODO: if suggestion or facet query, can omit query storage provider?
-    SourceResponse queryResponse =
-        storageProvider.queryByIds(
-            queryRequest,
-            indexQueryResponse == null ? Collections.emptyList() : indexQueryResponse.getIds());
+    SourceResponse queryResponse = null;
+    if (indexQueryResponse != null) {
+      if (CollectionUtils.isNotEmpty(indexQueryResponse.getIds())) {
+        queryResponse =
+            storageProvider.queryByIds(
+                queryRequest, indexQueryResponse.getProperties(), indexQueryResponse.getIds());
+      } else {
+        queryResponse = new QueryResponseImpl(queryRequest, indexQueryResponse.getProperties());
+      }
+    }
+
     return queryResponse;
   }
 

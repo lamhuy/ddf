@@ -22,7 +22,9 @@ import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.util.Maskable;
+import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * External facing (outside of {@link ddf.catalog.CatalogFramework}) API used to interact with
@@ -83,7 +85,8 @@ public interface StorageProvider extends Source, Maskable {
    */
   DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException;
 
-  SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
+  SourceResponse queryByIds(
+      QueryRequest queryRequest, Map<String, Serializable> properties, List<String> ids)
       throws UnsupportedQueryException;
 
   void shutdown();

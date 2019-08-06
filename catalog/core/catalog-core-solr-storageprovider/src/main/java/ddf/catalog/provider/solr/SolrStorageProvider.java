@@ -208,11 +208,12 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
    * for a solr storage provider quering by IDs might not be optimal. hence handling as a normal
    * query
    */
-  public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
+  public SourceResponse queryByIds(
+      QueryRequest queryRequest, Map<String, Serializable> properties, List<String> ids)
       throws UnsupportedQueryException {
     List<Metacard> metacards = getMetacards(new HashSet<>(ids));
     List<Result> results = metacards.stream().map(ResultImpl::new).collect(Collectors.toList());
-    return new SourceResponseImpl(queryRequest, results);
+    return new SourceResponseImpl(queryRequest, properties, results);
   }
 
   public void shutdown() {

@@ -208,7 +208,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       throw new UnsupportedQueryException("Could not complete solr query.", e);
     }
 
-    return new IndexQueryResponseImpl(request, results, totalHits);
+    return new IndexQueryResponseImpl(request, responseProps, results, totalHits);
   }
 
   @Override

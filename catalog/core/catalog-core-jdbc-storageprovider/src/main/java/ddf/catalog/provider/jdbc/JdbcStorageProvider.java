@@ -48,6 +48,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -72,7 +73,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   private static final String URL_KEY = "dbUrl";
 
-  private static final String USERNAME_KEY = "username";
+  private static final String USERNAME_KEY = "user";
 
   @SuppressWarnings("squid:S2068" /* Referring to the key, not a value */)
   private static final String PASSWORD_KEY = "password";
@@ -80,6 +81,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private static final String POOLSIZE_KEY = "poolSize";
 
   private static final String INSERT_SQL = "insert into METACARD_STORE values(?,?,?)";
+
+  private static final String UPDATE_SQL =
+      "update METACARD_STORE set update_dt=?, metacard_data=? where id=?";
 
   private static final String DELETE_SQL = "delete from METACARD_STORE where ID=?";
 
@@ -116,7 +120,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
     List<Metacard> metacards = createRequest.getMetacards();
-    putMetacards(metacards);
+    insertMetacards(metacards);
     return new CreateResponseImpl(createRequest, createRequest.getProperties(), metacards);
   }
 
@@ -147,7 +151,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
               .map(Map.Entry::getValue)
               .peek(mc -> mc.setSourceId(getId()))
               .collect(Collectors.toList());
-      putMetacards(updatedCards);
+      updateMetacards(updatedCards);
       List<Update> updates =
           updatedCards
               .stream()
@@ -175,16 +179,16 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
             .collect(Collectors.toSet());
     try {
       List<Metacard> deletedMetacards = getMetacards(ids);
-
-      for (String id : ids) {
-        try (Connection conn = ds.getConnection()) {
-          PreparedStatement ps = conn.prepareStatement(DELETE_SQL);
-          ps.setString(1, id);
-          int numRecords = ps.executeUpdate();
-          LOGGER.trace("Deleted {} records", numRecords);
-        } catch (SQLException e) {
-          throw new IngestException("Unable to get DB connection: " + dbUrl, e);
+      try (Connection conn = ds.getConnection()) {
+        for (String id : ids) {
+          try (PreparedStatement ps = conn.prepareStatement(DELETE_SQL)) {
+            ps.setString(1, id);
+            int numRecords = ps.executeUpdate();
+            LOGGER.trace("Deleted {} records", numRecords);
+          }
         }
+      } catch (SQLException e) {
+        throw new IngestException("Unable to get DB connection: " + dbUrl, e);
       }
 
       return new DeleteResponseImpl(deleteRequest, deleteRequest.getProperties(), deletedMetacards);
@@ -202,11 +206,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
    * for a solr storage provider quering by IDs might not be optimal. hence handling as a normal
    * query
    */
-  public SourceResponse queryByIds(QueryRequest queryRequest, List<String> ids)
+  public SourceResponse queryByIds(
+      QueryRequest queryRequest, Map<String, Serializable> properties, List<String> ids)
       throws UnsupportedQueryException {
     List<Metacard> metacards = getMetacards(new HashSet<>(ids));
     List<Result> results = metacards.stream().map(ResultImpl::new).collect(Collectors.toList());
-    return new SourceResponseImpl(queryRequest, results);
+    return new SourceResponseImpl(queryRequest, properties, results);
   }
 
   public void shutdown() {}
@@ -273,8 +278,15 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   public void init() {
     if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(dbUrl)) {
-      createDB();
-      initDataSource();
+      try {
+        createDB();
+        initDataSource();
+      } catch (Exception e) {
+        LOGGER.warn(
+            "Unable to initialize storage to: {}. Please view DEBUG log for more information.",
+            dbUrl);
+        LOGGER.debug("JDBC storage {} not initialized", dbUrl, e);
+      }
     }
   }
 
@@ -303,39 +315,74 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     ds.setMaxOpenPreparedStatements(poolSize);
   }
 
-  private void putMetacards(List<Metacard> metacards) throws IngestException {
+  private void insertMetacards(List<Metacard> metacards) throws IngestException {
     long insertTime = System.currentTimeMillis();
 
-    for (Metacard metacard : metacards) {
-      boolean isSourceIdSet =
-          (metacard.getSourceId() != null && !"".equals(metacard.getSourceId()));
-
-      if (StringUtils.isBlank(metacard.getId())) {
-        throw new IngestException(
-            "Metacards should have an ID by the time they are stored in the storage provider.");
+    try (Connection conn = ds.getConnection()) {
+      for (Metacard metacard : metacards) {
+        String encodedMetacard = getEncodedMetacard(metacard);
+        try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+          ps.setString(1, metacard.getId());
+          ps.setLong(2, insertTime);
+          ps.setString(3, encodedMetacard);
+          try {
+            int numRecords = ps.executeUpdate();
+            LOGGER.trace("Inserted {} records", numRecords);
+          } catch (SQLIntegrityConstraintViolationException e) {
+            LOGGER.trace("Integrity constraint, attempting to update", e);
+            updateMetacards(Collections.singletonList(metacard));
+          }
+        }
       }
-
-      if (!isSourceIdSet) {
-        metacard.setSourceId(getId());
+      if (LOGGER.isTraceEnabled()) {
+        long totalTime = System.currentTimeMillis() - insertTime;
+        LOGGER.trace("Total time to insert records: {} ms", totalTime);
       }
+    } catch (SQLException e) {
+      LOGGER.debug("SQL Exception encountered while storing data", e);
+      throw new IngestException("Unable to insert metadata to: " + dbUrl, e);
+    }
+  }
 
-      String encodedMetacard = null;
-      try {
-        encodedMetacard = encodeMetacard(metacard);
-      } catch (CatalogTransformerException e) {
-        throw new IngestException("Unable to encode metacard to XML: " + metacard, e);
-      }
+  private void updateMetacards(List<Metacard> metacards) throws IngestException {
+    long insertTime = System.currentTimeMillis();
 
-      try (Connection conn = ds.getConnection()) {
-        PreparedStatement ps = conn.prepareStatement(INSERT_SQL);
-        ps.setString(1, metacard.getId());
-        ps.setLong(2, insertTime);
-        ps.setString(3, encodedMetacard);
-        int numRecords = ps.executeUpdate();
-        LOGGER.trace("Inserted {} records", numRecords);
-      } catch (SQLException e) {
-        throw new IngestException("Unable to get DB connection: " + dbUrl, e);
+    try (Connection conn = ds.getConnection()) {
+      for (Metacard metacard : metacards) {
+        String encodedMetacard = getEncodedMetacard(metacard);
+        try (PreparedStatement ps = conn.prepareStatement(UPDATE_SQL)) {
+          ps.setLong(1, insertTime);
+          ps.setString(2, encodedMetacard);
+          ps.setString(3, metacard.getId());
+          int numRecords = ps.executeUpdate();
+          if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Updated: {} with {} records", metacard.getId(), numRecords);
+          }
+        }
       }
+    } catch (SQLException e) {
+      throw new IngestException("Unable to get DB connection: " + dbUrl, e);
+    }
+  }
+
+  protected String getEncodedMetacard(Metacard metacard) throws IngestException {
+    boolean isSourceIdSet = (metacard.getSourceId() != null && !"".equals(metacard.getSourceId()));
+
+    if (StringUtils.isBlank(metacard.getId())) {
+      throw new IngestException(
+          "Metacards should have an ID by the time they are stored in the storage provider.");
+    }
+
+    if (!isSourceIdSet) {
+      metacard.setSourceId(getId());
+    }
+
+    String encodedMetacard = null;
+    try {
+      encodedMetacard = encodeMetacard(metacard);
+      return encodedMetacard;
+    } catch (CatalogTransformerException e) {
+      throw new IngestException("Unable to encode metacard to XML: " + metacard, e);
     }
   }
 

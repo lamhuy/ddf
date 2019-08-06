@@ -13,6 +13,7 @@
  */
 package ddf.catalog.provider.solr;
 
+import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
@@ -174,7 +175,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
               .getMetacards()
               .stream()
               .findFirst()
-              .map(c -> c.getTags())
+              .map(Metacard::getTags)
               .get());
 
     } else if (request instanceof UpdateRequest) {
@@ -183,8 +184,8 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
               .getUpdates()
               .stream()
               .findFirst()
-              .map(m -> m.getValue())
-              .map(c -> c.getTags())
+              .map(Map.Entry::getValue)
+              .map(Metacard::getTags)
               .get());
     } else if (request instanceof QueryRequest) {
       LOGGER.trace("Query requests using core: {}", DEFAULT_INDEX_CORE);

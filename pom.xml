@@ -324,6 +324,7 @@
         <tink.version>1.2.2</tink.version>
         <org.json.version>20170516</org.json.version>
         <ehcache.version>2.10.6</ehcache.version>
+        <postgres.version>42.2.5</postgres.version>
     </properties>
     <!--
     NOTE: The properties ddf.scm.connection.url, snapshots.repository.url and releases.repository.url should be defined

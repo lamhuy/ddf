@@ -39,6 +39,7 @@
     <feature name="catalog-mux-solr-provider" version="${project.version}"
       description="Multiplexed Catalog Provider to interface with Solr ${solr.version}">
         <feature>catalog-transformer-xml</feature>
+        <bundle>mvn:org.postgresql/postgresql/${postgres.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-provider/${project.version}</bundle>

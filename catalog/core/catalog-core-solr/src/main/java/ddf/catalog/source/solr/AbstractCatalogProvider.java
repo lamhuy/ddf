@@ -34,6 +34,7 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
@@ -125,7 +126,9 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
             storageProvider.queryByIds(
                 queryRequest, indexQueryResponse.getProperties(), indexQueryResponse.getIds());
       } else {
-        queryResponse = new QueryResponseImpl(queryRequest, indexQueryResponse.getProperties());
+        queryResponse =
+            new QueryResponseImpl(
+                queryRequest, Collections.emptyList(), true, 0, indexQueryResponse.getProperties());
       }
     }
 

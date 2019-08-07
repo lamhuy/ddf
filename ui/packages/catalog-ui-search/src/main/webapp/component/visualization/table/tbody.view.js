@@ -37,6 +37,7 @@ module.exports = Marionette.CollectionView.extend({
   childViewOptions: function() {
     return {
       selectionInterface: this.options.selectionInterface,
+      filteredAttributes: this.options.filteredAttributes,
     }
   },
   initialize: function(options) {

@@ -54,7 +54,9 @@ module.exports = Marionette.ItemView.extend({
       .get('user')
       .get('preferences')
       .get('columnHide')
-    var availableAttributes = this.options.selectionInterface.getActiveSearchResultsAttributes()
+    const availableAttributes = this.options.filteredAttributes.get(
+      'filteredAttributes'
+    )
 
     return preferredHeader.map(function(property) {
       return {

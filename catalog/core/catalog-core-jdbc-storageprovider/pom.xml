@@ -95,11 +95,11 @@
               platform-util,
               catalog-core-solr,
               catalog-core-api-impl,
-              postgresql,
               commons-dbcp2,
               commons-pool2,
               cglib,
               asm,
+              postgresql,
               flyway-core
             </Embed-Dependency>
             <Include-Resource>

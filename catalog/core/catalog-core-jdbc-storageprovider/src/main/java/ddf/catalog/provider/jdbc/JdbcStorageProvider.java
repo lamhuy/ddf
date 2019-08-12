@@ -48,7 +48,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -328,9 +327,13 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
           try {
             int numRecords = ps.executeUpdate();
             LOGGER.trace("Inserted {} records", numRecords);
-          } catch (SQLIntegrityConstraintViolationException e) {
-            LOGGER.trace("Integrity constraint, attempting to update", e);
-            updateMetacards(Collections.singletonList(metacard));
+          } catch (SQLException e) {
+            if (e.getSQLState().contains("23000") || e.getSQLState().contains("23505")) {
+              LOGGER.trace("Integrity constraint, attempting to update");
+              updateMetacards(Collections.singletonList(metacard));
+            } else {
+              throw e;
+            }
           }
         }
       }

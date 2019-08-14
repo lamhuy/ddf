@@ -424,7 +424,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
         PreparedStatement ps = conn.prepareStatement(getQuery(ids.size()))) {
       int index = 1;
       for (String id : ids) {
+        LOGGER.trace("Setting query index[{}]: {}", index, id);
         ps.setString(index, id);
+        index++;
       }
       rs = ps.executeQuery();
       while (rs.next()) {

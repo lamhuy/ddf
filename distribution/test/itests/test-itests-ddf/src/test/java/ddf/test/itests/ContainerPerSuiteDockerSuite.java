@@ -13,13 +13,10 @@
  */
 package ddf.test.itests;
 
+import ddf.test.itests.catalog.TestMuxCatalog;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
-/**
- * This suite is for test classes that need their own container The test classes are run in the same
- * order as they appear in the array.
- */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({})
-public class ContainerPerClassItestSuite {}
+@Suite.SuiteClasses({TestMuxCatalog.class})
+public class ContainerPerSuiteDockerSuite {}

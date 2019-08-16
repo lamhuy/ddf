@@ -10,13 +10,24 @@
  *
  **/
 
+const url = require('url')
+const qs = require('querystring')
+
 type Param2 = {
   headers?: object
   [key: string]: unknown
 }
 
+const cacheBust = (urlString: string) => {
+  const { query, ...rest } = url.parse(urlString)
+  return url.format({
+    ...rest,
+    search: '?' + qs.stringify({ ...qs.parse(query), _: Date.now() }),
+  })
+}
+
 export default function(url: string, { headers, ...opts }: Param2 = {}) {
-  return window.fetch(url, {
+  return window.fetch(cacheBust(url), {
     credentials: 'same-origin',
     ...opts,
     headers: {

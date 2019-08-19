@@ -1,0 +1,1 @@
+This folder serves as a directory to store solr cloud backups when running `docker-compose`.

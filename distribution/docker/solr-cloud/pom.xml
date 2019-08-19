@@ -28,6 +28,8 @@
   <properties>
     <docker.zookeeper.version>3.4.13</docker.zookeeper.version>
     <docker.zookeeper.port.1>7771</docker.zookeeper.port.1>
+    <docker.zookeeper.port.2>7728</docker.zookeeper.port.2>
+    <docker.zookeeper.port.3>7738</docker.zookeeper.port.3>
     <docker.solr.port.1>7781</docker.solr.port.1>
 
     <docker.solr.backup.directory.local>${project.basedir}/src/main/resources/backups

@@ -108,5 +108,8 @@
         <module>catalog-core-solr-indexprovider</module>
         <module>catalog-core-solr-storageprovider</module>
         <module>catalog-core-jdbc-storageprovider</module>
+        <module>catalog-core-solr-api</module>
+        <module>catalog-core-solr-api-impl</module>
+        <module>catalog-core-solr-indexcollectionprovider</module>
     </modules>
 </project>

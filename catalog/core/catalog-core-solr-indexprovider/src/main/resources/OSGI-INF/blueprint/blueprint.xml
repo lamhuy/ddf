@@ -18,6 +18,24 @@
 
 	<reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
+	<bean id="indexCollectionProviderList" class="org.codice.ddf.platform.util.SortedServiceList"/>
+
+	<reference-list id="indexCollectionProviders"
+		interface="ddf.catalog.source.solr.api.IndexCollectionProvider"
+		availability="mandatory">
+		<reference-listener bind-method="bindPlugin"
+			unbind-method="unbindPlugin" ref="indexCollectionProviderList"/>
+	</reference-list>
+
+	<bean id="collectionCreationPluginsList" class="org.codice.ddf.platform.util.SortedServiceList"/>
+
+	<reference-list id="collectionCreationPlugins"
+		interface="ddf.catalog.source.solr.api.SolrCollectionCreationPlugin"
+		availability="mandatory">
+		<reference-listener bind-method="bindPlugin"
+			unbind-method="unbindPlugin" ref="collectionCreationPluginsList"/>
+	</reference-list>
+
 	<bean id="solrIndexProvider" class="ddf.catalog.provider.solr.SolrIndexProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.SolrIndexProvider"
 			update-strategy="container-managed"/>
@@ -26,15 +44,8 @@
 		<argument>
 			<bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
 		</argument>
-		<property name="parameters">
-			<list>
-				<value>resource=catalog_index</value>
-				<value>aoi=catalog_aoi</value>
-				<value>aoi-collection=catalog_aoi</value>
-				<value>workspace=catalog_ui</value>
-				<value>query=catalog_ui</value>
-			</list>
-		</property>
+		<argument ref="indexCollectionProviderList"/>
+		<argument ref="collectionCreationPluginsList"/>
 	</bean>
 
 	<service ref="solrIndexProvider" interface="ddf.catalog.source.IndexProvider" />

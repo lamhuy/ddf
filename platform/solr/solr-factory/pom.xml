@@ -32,6 +32,11 @@
             <artifactId>org.apache.servicemix.bundles.jsr305</artifactId>
             <scope>provided</scope>
         </dependency>
+      <dependency>
+        <groupId>ddf.catalog.core</groupId>
+        <artifactId>catalog-core-solr-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -41,9 +46,12 @@
                 <configuration>
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Embed-Dependency>
+                            catalog-core-solr-api
+                        </Embed-Dependency>
                         <Export-Package>
                             org.codice.solr.client.solrj,
-                            org.codice.solr.factory
+                            org.codice.solr.factory,
                         </Export-Package>
                     </instructions>
                 </configuration>

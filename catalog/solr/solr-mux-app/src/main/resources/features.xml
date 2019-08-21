@@ -33,6 +33,7 @@
         <feature>catalog-app</feature>
         <bundle>mvn:org.codice.thirdparty/jts/${jts.bundle.version}</bundle>
         <bundle>mvn:ddf.catalog.solr/catalog-solr-solrclient/${project.version}</bundle>
+        <bundle>mvn:ddf.catalog.core/catalog-core-solr-api/${project.version}</bundle>
         <feature>catalog-mux-solr-provider</feature>
     </feature>
 
@@ -40,6 +41,7 @@
       description="Multiplexed Catalog Provider to interface with Solr ${solr.version}">
         <feature>catalog-transformer-xml</feature>
         <bundle>mvn:org.postgresql/postgresql/${postgres.version}</bundle>
+        <bundle>mvn:ddf.catalog.core/catalog-core-solr-defaultindexcollectionprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-provider/${project.version}</bundle>

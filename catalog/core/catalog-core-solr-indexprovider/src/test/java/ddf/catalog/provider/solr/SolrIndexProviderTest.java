@@ -41,8 +41,8 @@ import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.codice.solr.client.solrj.SolrClient;
@@ -62,7 +62,9 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
         mock(SolrClientFactory.class),
         mock(FilterAdapter.class),
         mock(SolrFilterDelegateFactory.class),
-        mock(DynamicSchemaResolver.class));
+        mock(DynamicSchemaResolver.class),
+        Collections.emptyList(),
+        Collections.emptyList());
   }
 
   @Before
@@ -143,19 +145,6 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
         .thenReturn(new CreateResponseImpl(request, request.getProperties(), list));
 
     return provider.create(request);
-  }
-
-  @Test
-  public void testSetParameter() {
-    when(clientFactory.isSolrCloud()).thenReturn(true);
-    List<String> parameters = new ArrayList<>();
-    parameters.add("resource=catalog_index");
-    indexProvider.setParameters(parameters);
-
-    when(clientFactory.isSolrCloud()).thenReturn(false);
-    indexProvider.setParameters(parameters);
-    assertThat(getParameters(), is(parameters));
-    assertThat(this.tagToCore.size(), equalTo(1));
   }
 
   @Test

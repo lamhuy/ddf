@@ -13,6 +13,8 @@
  */
 package org.codice.solr.factory;
 
+import ddf.catalog.source.solr.api.SolrConfigurationData;
+import java.util.List;
 import org.codice.solr.client.solrj.SolrClient;
 
 /** Interface implemented by factory classes used to create new {@link SolrClient} instances. */
@@ -34,6 +36,12 @@ public interface SolrClientFactory {
   SolrClient newClient(String core);
 
   SolrClient getClient(String core);
+
+  boolean collectionExists(String collection);
+
+  void addConfiguration(String configurationName, List<SolrConfigurationData> configurationData);
+
+  void addCollection(String collection, Integer shardCountRequested, String configurationName);
 
   /**
    * Returns whether or not the provider connects to SolrCloud instance or Standalone. Solr Cloud

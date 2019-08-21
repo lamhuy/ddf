@@ -16,8 +16,10 @@ package org.codice.solr.factory.impl;
 import static org.apache.commons.lang.Validate.notNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.List;
 import org.codice.solr.client.solrj.SolrClient;
 import org.codice.solr.factory.SolrClientFactory;
 
@@ -56,6 +58,23 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   @Override
   public boolean isSolrCloud() {
     return false;
+  }
+
+  @Override
+  public boolean collectionExists(String collection) {
+    return factory.collectionExists(collection);
+  }
+
+  @Override
+  public void addConfiguration(
+      String configurationName, List<SolrConfigurationData> configurationData) {
+    factory.addConfiguration(configurationName, configurationData);
+  }
+
+  @Override
+  public void addCollection(
+      String collection, Integer shardCountRequested, String configurationName) {
+    factory.addCollection(collection, shardCountRequested, configurationName);
   }
 
   @VisibleForTesting

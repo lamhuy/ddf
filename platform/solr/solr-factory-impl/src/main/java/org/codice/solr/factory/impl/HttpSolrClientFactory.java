@@ -14,11 +14,13 @@
 package org.codice.solr.factory.impl;
 
 import com.google.common.annotations.VisibleForTesting;
+import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
@@ -152,6 +154,25 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   @Override
   public boolean isSolrCloud() {
     return false;
+  }
+
+  @Override
+  public boolean collectionExists(String collection) {
+    // Force the configuration to be created, so the core exists and return true
+    getClient(collection);
+    return true;
+  }
+
+  @Override
+  public void addConfiguration(
+      String configurationName, List<SolrConfigurationData> configurationData) {
+    throw new IllegalStateException("addConfiguration should never be called");
+  }
+
+  @Override
+  public void addCollection(
+      String collection, Integer shardCountRequested, String configurationName) {
+    throw new IllegalStateException("addConfiguration should never be called");
   }
 
   @VisibleForTesting

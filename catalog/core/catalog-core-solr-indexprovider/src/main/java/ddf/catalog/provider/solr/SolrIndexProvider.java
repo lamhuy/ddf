@@ -248,7 +248,9 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   private void createCollection(String collection, IndexCollectionProvider provider) {
     SolrCollectionConfiguration configuration = provider.getConfiguration();
-    clientFactory.addConfiguration(configuration.getConfigurationName(), configuration.getSolrConfigurationData());
-    clientFactory.addCollection(collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
+    clientFactory.addConfiguration(
+        configuration.getConfigurationName(), configuration.getSolrConfigurationData());
+    clientFactory.addCollection(
+        collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
   }
 }

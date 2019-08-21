@@ -311,7 +311,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     ds.setPassword(password);
     ds.setMinIdle(5);
     ds.setMaxIdle(10);
-    ds.setMaxOpenPreparedStatements(poolSize);
+    ds.setMaxOpenPreparedStatements(poolSize * 200);
   }
 
   private void insertMetacards(List<Metacard> metacards) throws IngestException {

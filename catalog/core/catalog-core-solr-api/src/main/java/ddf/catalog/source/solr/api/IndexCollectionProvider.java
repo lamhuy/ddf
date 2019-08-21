@@ -14,8 +14,6 @@
 package ddf.catalog.source.solr.api;
 
 import ddf.catalog.data.Metacard;
-import java.io.File;
-import java.util.List;
 
 /** Provider to get a index collection name for a given request. */
 public interface IndexCollectionProvider {

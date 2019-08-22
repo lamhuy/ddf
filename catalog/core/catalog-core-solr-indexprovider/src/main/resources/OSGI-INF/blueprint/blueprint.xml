@@ -31,7 +31,7 @@
 
 	<reference-list id="collectionCreationPlugins"
 		interface="ddf.catalog.source.solr.api.SolrCollectionCreationPlugin"
-		availability="mandatory">
+		availability="optional">
 		<reference-listener bind-method="bindPlugin"
 			unbind-method="unbindPlugin" ref="collectionCreationPluginsList"/>
 	</reference-list>

@@ -198,7 +198,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       handleFacetResponse(solrResponse, responseProps, isFacetedQuery);
       handleSuggestionResponse(solrResponse, responseProps);
 
-      if(!isFacetedQuery) {
+      if (!isFacetedQuery) {
         SolrDocumentList docs = solrResponse.getResults();
         docs = handleSpellcheck(solrResponse, responseProps, query, docs, userSpellcheckIsOn);
         if (docs != null) {

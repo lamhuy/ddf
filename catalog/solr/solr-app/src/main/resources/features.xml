@@ -30,6 +30,7 @@
 
     <feature name="catalog-solr-provider" version="${project.version}"
              description="Catalog Provider to interface with Solr ${solr.version}">
+        <bundle>mvn:ddf.catalog.core/catalog-core-solr-api/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.solr/catalog-solr-provider/${project.version}</bundle>
     </feature>
 

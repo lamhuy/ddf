@@ -13,16 +13,24 @@
  */
 package ddf.catalog.provider.solr;
 
+import com.google.common.collect.Sets;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.ProcessingDetails;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
+import ddf.catalog.operation.Response;
+import ddf.catalog.operation.Update;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
+import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.CreateResponseImpl;
+import ddf.catalog.operation.impl.UpdateRequestImpl;
+import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -31,18 +39,21 @@ import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
-import ddf.catalog.source.solr.api.SolrCollectionConfiguration;
 import ddf.catalog.source.solr.api.SolrCollectionCreationPlugin;
 import ddf.catalog.util.impl.DescribableImpl;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
-import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.codice.solr.factory.SolrCollectionConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +63,8 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrIndexProvider.class);
 
   protected static final String DEFAULT_INDEX_CORE = "catalog_index";
+
+  protected static final String QUERY_ALIAS = "catalog";
 
   protected final Map<String, BaseSolrCatalogProvider> catalogProviders = new ConcurrentHashMap<>();
 
@@ -67,7 +80,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   protected final List<SolrCollectionCreationPlugin> collectionCreationPlugins;
 
-  protected static final Set<String> COLLECTIONS = new ConcurrentHashSet<>();
+  protected static final Set<String> COLLECTIONS = Sets.newConcurrentHashSet();
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -132,28 +145,37 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
     LOGGER.trace("Create request received");
-    return getCatalogProvider(createRequest).create(createRequest);
+    return (CreateResponse) executeRequest(createRequest);
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
     LOGGER.trace("Update request received");
-    return getCatalogProvider(updateRequest).update(updateRequest);
+    return (UpdateResponse) executeRequest(updateRequest);
   }
 
   @Override
   public void delete(DeleteRequest deleteRequest) throws IngestException {
     /** Delete across all collections Assuming id uniqueness is preserved across all collection */
-    for (String core : catalogProviders.keySet()) {
-      catalogProviders.get(core).deleteIndex(deleteRequest);
+    int numItems = deleteRequest.getAttributeValues().size();
+    for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
+      entry.getValue().deleteIndex(deleteRequest);
       LOGGER.debug(
-          "Deleting {} items from core: {}", deleteRequest.getAttributeValues().size(), core);
+          "Sending delete request for {} items to collection: {}", numItems, entry.getKey());
     }
   }
 
   @Override
   public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
-    return getCatalogProvider(queryRequest).queryIndex(queryRequest);
+    if (!clientFactory.isSolrCloud()) {
+      return catalogProviders
+          .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+          .queryIndex(queryRequest);
+    }
+    // Always query against the common index core
+    return catalogProviders
+        .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+        .queryIndex(queryRequest);
   }
 
   public void shutdown() {
@@ -166,40 +188,60 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     catalogProviders.forEach((k, p) -> p.maskId(id));
   }
 
-  /** TODO: assuming all metacards are of the same type /tag for each request * */
-  protected BaseSolrCatalogProvider getCatalogProvider(Request request) {
+  protected Response executeRequest(Request request) throws IngestException {
     if (!clientFactory.isSolrCloud()) {
       LOGGER.trace("Non SolrCloud instance using index core: {}", DEFAULT_INDEX_CORE);
-      return catalogProviders.get(DEFAULT_INDEX_CORE);
+      if (request instanceof CreateRequest) {
+        return catalogProviders
+            .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+            .create((CreateRequest) request);
+      } else if (request instanceof UpdateRequest) {
+        return catalogProviders
+            .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+            .update((UpdateRequest) request);
+      }
+      return null;
     }
 
-    Set<String> tags = new HashSet<>();
     if (request instanceof CreateRequest) {
-      tags.addAll(
-          ((CreateRequest) request)
-              .getMetacards()
-              .stream()
-              .findFirst()
-              .map(Metacard::getTags)
-              .get());
+      Map<String, Serializable> props = new HashMap<>();
+      List<Metacard> createdMetacards = new ArrayList<>();
+      Set<ProcessingDetails> errors = new HashSet<>();
+      Map<String, CreateRequest> requests = getCreateRequests((CreateRequest) request);
+      for (Map.Entry<String, CreateRequest> entry : requests.entrySet()) {
+        CreateResponse response =
+            catalogProviders
+                .computeIfAbsent(entry.getKey(), this::newProvider)
+                .create(entry.getValue());
+        props.putAll(response.getProperties());
+        createdMetacards.addAll(response.getCreatedMetacards());
+        errors.addAll(response.getProcessingErrors());
+      }
 
+      return new CreateResponseImpl((CreateRequest) request, props, createdMetacards, errors);
     } else if (request instanceof UpdateRequest) {
-      tags.addAll(
-          ((UpdateRequest) request)
-              .getUpdates()
-              .stream()
-              .findFirst()
-              .map(Map.Entry::getValue)
-              .map(Metacard::getTags)
-              .get());
-    } else if (request instanceof QueryRequest) {
-      LOGGER.trace("Query requests using core: {}", DEFAULT_INDEX_CORE);
-      return catalogProviders.get(DEFAULT_INDEX_CORE);
+      Map<String, UpdateRequest> requests = getUpdateRequests((UpdateRequest) request);
+      Map<String, Serializable> props = new HashMap<>();
+      List<Metacard> updatedMetacards = new ArrayList<>();
+      List<Metacard> oldMetacards = new ArrayList<>();
+      Set<ProcessingDetails> errors = new HashSet<>();
+      for (Map.Entry<String, UpdateRequest> entry : requests.entrySet()) {
+        UpdateResponse response =
+            catalogProviders
+                .computeIfAbsent(entry.getKey(), this::newProvider)
+                .update(entry.getValue());
+        props.putAll(response.getProperties());
+        for (Update update : response.getUpdatedMetacards()) {
+          updatedMetacards.add(update.getNewMetacard());
+          oldMetacards.add(update.getOldMetacard());
+        }
+        errors.addAll(response.getProcessingErrors());
+      }
+
+      return new UpdateResponseImpl(
+          (UpdateRequest) request, props, updatedMetacards, oldMetacards, errors);
     }
 
-    //    LOGGER.warn("Using {} core for the request", core);
-    //    return catalogProviders.get(core);
-    // TODO TROY -- update this to keep a map of collection + providers
     return null;
   }
 
@@ -209,7 +251,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
    * @param metacard The metacard used to determine collection
    * @return the first associate solr core for those given tags
    */
-  private String getCore(Metacard metacard) {
+  private String getCollection(Metacard metacard) {
     LOGGER.trace("Getting core for metacard: {}", metacard);
 
     for (IndexCollectionProvider provider : indexCollectionProviders) {
@@ -252,5 +294,59 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
         configuration.getConfigurationName(), configuration.getSolrConfigurationData());
     clientFactory.addCollection(
         collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
+    clientFactory.addCollectionToAlias(QUERY_ALIAS, collection);
+  }
+
+  private Map<String, CreateRequest> getCreateRequests(CreateRequest createRequest) {
+    Map<String, CreateRequest> createRequests = new HashMap<>();
+    Map<String, List<Metacard>> collectionMetacardMap = new HashMap<>();
+    for (Metacard metacard : createRequest.getMetacards()) {
+      String collection = getCollection(metacard);
+      if (collectionMetacardMap.containsKey(collection)) {
+        List<Metacard> metacards = collectionMetacardMap.get(collection);
+        metacards.add(metacard);
+      } else {
+        List<Metacard> metacards = new ArrayList<>();
+        metacards.add(metacard);
+        collectionMetacardMap.put(collection, metacards);
+      }
+    }
+    for (Map.Entry<String, List<Metacard>> entry : collectionMetacardMap.entrySet()) {
+      CreateRequest request =
+          new CreateRequestImpl(
+              entry.getValue(), createRequest.getProperties(), createRequest.getStoreIds());
+      createRequests.put(entry.getKey(), request);
+    }
+
+    return createRequests;
+  }
+
+  private Map<String, UpdateRequest> getUpdateRequests(UpdateRequest updateRequest) {
+    Map<String, UpdateRequest> updateRequests = new HashMap<>();
+    Map<String, List<Entry<Serializable, Metacard>>> collectionMetacardMap = new HashMap<>();
+    for (Entry<Serializable, Metacard> entry : updateRequest.getUpdates()) {
+      String collection = getCollection(entry.getValue());
+      if (collectionMetacardMap.containsKey(collection)) {
+        List<Entry<Serializable, Metacard>> collectionEntries =
+            collectionMetacardMap.get(collection);
+        collectionEntries.add(entry);
+      } else {
+        List<Entry<Serializable, Metacard>> collectionEntries = new ArrayList<>();
+        collectionEntries.add(entry);
+        collectionMetacardMap.put(collection, collectionEntries);
+      }
+    }
+    for (Map.Entry<String, List<Entry<Serializable, Metacard>>> entry :
+        collectionMetacardMap.entrySet()) {
+      UpdateRequest request =
+          new UpdateRequestImpl(
+              entry.getValue(),
+              updateRequest.getAttributeName(),
+              updateRequest.getProperties(),
+              updateRequest.getStoreIds());
+      updateRequests.put(entry.getKey(), request);
+    }
+
+    return updateRequests;
   }
 }

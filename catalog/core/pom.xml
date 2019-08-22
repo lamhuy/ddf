@@ -110,6 +110,6 @@
         <module>catalog-core-jdbc-storageprovider</module>
         <module>catalog-core-solr-api</module>
         <module>catalog-core-solr-api-impl</module>
-        <module>catalog-core-solr-indexcollectionprovider</module>
+        <module>catalog-core-solr-defaultindexcollectionprovider</module>
     </modules>
 </project>

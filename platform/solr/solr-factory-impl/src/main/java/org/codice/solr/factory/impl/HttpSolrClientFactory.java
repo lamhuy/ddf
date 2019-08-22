@@ -14,7 +14,6 @@
 package org.codice.solr.factory.impl;
 
 import com.google.common.annotations.VisibleForTesting;
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.AccessController;
@@ -33,6 +32,7 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.request.CoreAdminRequest;
 import org.apache.solr.client.solrj.response.CoreAdminResponse;
 import org.codice.solr.factory.SolrClientFactory;
+import org.codice.solr.factory.SolrConfigurationData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -166,13 +166,18 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
-    throw new IllegalStateException("addConfiguration should never be called");
+    throw new IllegalStateException("addConfiguration not supported.");
   }
 
   @Override
   public void addCollection(
       String collection, Integer shardCountRequested, String configurationName) {
-    throw new IllegalStateException("addConfiguration should never be called");
+    throw new IllegalStateException("addConfiguration not supported.");
+  }
+
+  @Override
+  public void addCollectionToAlias(String alias, String collection) {
+    throw new IllegalStateException("addCollectionAlias not supported.");
   }
 
   @VisibleForTesting

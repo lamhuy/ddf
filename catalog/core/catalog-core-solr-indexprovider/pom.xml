@@ -51,6 +51,10 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.codice</groupId>
       <artifactId>lux</artifactId>
       <version>${lux.version}</version>
@@ -152,7 +156,7 @@
               <rules>
                 <ArtifactSizeEnforcerRule
                   implementation="org.codice.maven.artifactsize.ArtifactSizeEnforcerRule">
-                  <maxArtifactSize>5_MB</maxArtifactSize>
+                  <maxArtifactSize>6_MB</maxArtifactSize>
                 </ArtifactSizeEnforcerRule>
               </rules>
             </configuration>

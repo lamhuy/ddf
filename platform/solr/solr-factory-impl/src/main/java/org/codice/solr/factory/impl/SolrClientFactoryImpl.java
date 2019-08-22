@@ -16,12 +16,12 @@ package org.codice.solr.factory.impl;
 import static org.apache.commons.lang.Validate.notNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
 import org.codice.solr.client.solrj.SolrClient;
 import org.codice.solr.factory.SolrClientFactory;
+import org.codice.solr.factory.SolrConfigurationData;
 
 /**
  * Factory class used to create the proper {@link SolrClient} based on the current {@code
@@ -75,6 +75,11 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   public void addCollection(
       String collection, Integer shardCountRequested, String configurationName) {
     factory.addCollection(collection, shardCountRequested, configurationName);
+  }
+
+  @Override
+  public void addCollectionToAlias(String alias, String collection) {
+    factory.addCollectionToAlias(alias, collection);
   }
 
   @VisibleForTesting

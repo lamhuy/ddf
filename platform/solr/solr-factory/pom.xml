@@ -32,11 +32,6 @@
             <artifactId>org.apache.servicemix.bundles.jsr305</artifactId>
             <scope>provided</scope>
         </dependency>
-      <dependency>
-        <groupId>ddf.catalog.core</groupId>
-        <artifactId>catalog-core-solr-api</artifactId>
-        <version>${project.version}</version>
-      </dependency>
     </dependencies>
     <build>
         <plugins>

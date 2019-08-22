@@ -13,9 +13,9 @@
  */
 package ddf.catalog.source.solr.api.impl;
 
-import ddf.catalog.source.solr.api.SolrCollectionConfiguration;
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.util.List;
+import org.codice.solr.factory.SolrCollectionConfiguration;
+import org.codice.solr.factory.SolrConfigurationData;
 
 public class SolrCollectionConfigurationImpl implements SolrCollectionConfiguration {
   private String configurationName;
@@ -23,6 +23,15 @@ public class SolrCollectionConfigurationImpl implements SolrCollectionConfigurat
   private int defaultNumShards;
 
   private List<SolrConfigurationData> solrConfigurationData;
+
+  public SolrCollectionConfigurationImpl(
+      String configurationName,
+      int defaultNumShards,
+      List<SolrConfigurationData> configurationData) {
+    setConfigurationName(configurationName);
+    setDefaultNumShards(defaultNumShards);
+    setSolrConfigurationData(configurationData);
+  }
 
   @Override
   public String getConfigurationName() {

@@ -14,7 +14,6 @@
 package org.codice.solr.factory.impl;
 
 import com.google.common.annotations.VisibleForTesting;
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -42,6 +41,7 @@ import org.apache.solr.client.solrj.response.CollectionAdminResponse;
 import org.apache.solr.common.SolrException;
 import org.apache.zookeeper.KeeperException;
 import org.codice.solr.factory.SolrClientFactory;
+import org.codice.solr.factory.SolrConfigurationData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -202,6 +202,40 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     }
   }
 
+  @Override
+  public void addCollectionToAlias(String alias, String collection) {
+    try (final Closer closer = new Closer()) {
+      CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
+      client.connect();
+      CollectionAdminResponse aliasResponse =
+          new CollectionAdminRequest.ListAliases().process(client);
+      String newCollections = collection;
+      if (aliasResponse != null) {
+        Map<String, String> aliases = aliasResponse.getAliases();
+        if (aliases != null && aliases.containsKey(alias)) {
+          String aliasedCollections = aliases.get(alias);
+          StringBuilder sb = new StringBuilder();
+          if (StringUtils.isNotBlank(aliasedCollections)) {
+            sb.append(",");
+          }
+          sb.append(collection);
+          newCollections = sb.toString();
+        }
+      }
+      CollectionAdminResponse response =
+          CollectionAdminRequest.createAlias(alias, newCollections).process(client);
+      if (!response.isSuccess()) {
+        LOGGER.warn(
+            "Failed to update alias [{}}] with collections: [{}}], this will cause queries to be inconsistent. Error: {}",
+            alias,
+            newCollections,
+            response.getErrorMessages());
+      }
+    } catch (SolrServerException | IOException e) {
+      LOGGER.warn("Failed to update alias [{}}]", alias, e);
+    }
+  }
+
   @VisibleForTesting
   SolrClient createSolrCloudClient(String zookeeperHosts, String collection) {
     try (final Closer closer = new Closer()) {
@@ -277,15 +311,14 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     }
   }
 
-  private boolean aliasExists(String collection, CloudSolrClient client)
+  private boolean aliasExists(String aliasName, CloudSolrClient client)
       throws IOException, SolrServerException {
     CollectionAdminResponse aliasResponse =
         new CollectionAdminRequest.ListAliases().process(client);
     if (aliasResponse != null) {
       Map<String, String> aliases = aliasResponse.getAliases();
-      if (aliases != null && aliases.containsKey(collection)) {
-        LOGGER.debug(
-            "Solr({}): Collection exists as an Alias, will not create collection", collection);
+      if (aliases != null && aliases.containsKey(aliasName)) {
+        LOGGER.debug("Solr Alias name exists: {}", aliasName);
         return true;
       }
     }

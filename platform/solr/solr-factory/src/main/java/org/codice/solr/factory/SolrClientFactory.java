@@ -13,7 +13,6 @@
  */
 package org.codice.solr.factory;
 
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.util.List;
 import org.codice.solr.client.solrj.SolrClient;
 
@@ -42,6 +41,8 @@ public interface SolrClientFactory {
   void addConfiguration(String configurationName, List<SolrConfigurationData> configurationData);
 
   void addCollection(String collection, Integer shardCountRequested, String configurationName);
+
+  void addCollectionToAlias(String alias, String collection);
 
   /**
    * Returns whether or not the provider connects to SolrCloud instance or Standalone. Solr Cloud

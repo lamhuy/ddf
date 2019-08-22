@@ -15,8 +15,16 @@ package ddf.catalog.provider.solr.defaultindexcollectionprovider;
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
-import ddf.catalog.source.solr.api.SolrCollectionConfiguration;
+import ddf.catalog.source.solr.api.impl.SolrCollectionConfigurationImpl;
+import ddf.catalog.source.solr.api.impl.SolrConfigurationDataImpl;
 import ddf.catalog.util.impl.DescribableImpl;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import org.codice.solr.factory.SolrCollectionConfiguration;
+import org.codice.solr.factory.SolrConfigurationData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +32,20 @@ import org.slf4j.LoggerFactory;
 public class DefaultSolrIndexCollectionProvider extends DescribableImpl
     implements IndexCollectionProvider {
   protected static final String DEFAULT_INDEX_COLLECTION = "catalog_index";
+
+  protected static final int DEFAULT_NUM_SHARDS = 2;
+
+  protected static final List<String> SOLR_CONFIG_FILES =
+      Collections.unmodifiableList(
+          Arrays.asList(
+              "dictionary.txt",
+              "protwords.txt",
+              "schema.xml",
+              "solr.xml",
+              "solrconfig.xml",
+              "stopwords.txt",
+              "stopwords_en.txt",
+              "synonyms.txt"));
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger(DefaultSolrIndexCollectionProvider.class);
@@ -36,6 +58,18 @@ public class DefaultSolrIndexCollectionProvider extends DescribableImpl
 
   @Override
   public SolrCollectionConfiguration getConfiguration() {
+    List<SolrConfigurationData> configurationData = new ArrayList<>(SOLR_CONFIG_FILES.size());
+    for (String filename : SOLR_CONFIG_FILES) {
+      InputStream inputStream =
+          DefaultSolrIndexCollectionProvider.class
+              .getClassLoader()
+              .getResourceAsStream("solr/conf/" + filename);
+      SolrConfigurationData solrConfigurationDataFile =
+          new SolrConfigurationDataImpl(filename, inputStream);
+      configurationData.add(solrConfigurationDataFile);
+      return new SolrCollectionConfigurationImpl(
+          DEFAULT_INDEX_COLLECTION, DEFAULT_NUM_SHARDS, configurationData);
+    }
     return null;
   }
 }

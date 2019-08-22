@@ -13,14 +13,19 @@
  */
 package ddf.catalog.source.solr.api.impl;
 
-import ddf.catalog.source.solr.api.SolrConfigurationData;
 import java.io.InputStream;
+import org.codice.solr.factory.SolrConfigurationData;
 
 public class SolrConfigurationDataImpl implements SolrConfigurationData {
 
   private String fileName;
 
   private InputStream data;
+
+  public SolrConfigurationDataImpl(String fileName, InputStream data) {
+    setFileName(fileName);
+    setData(data);
+  }
 
   @Override
   public String getFileName() {

@@ -118,7 +118,9 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
+    long startTime = System.currentTimeMillis();
     IndexQueryResponse indexQueryResponse = indexProvider.query(queryRequest);
+    long indexElapsedTime = System.currentTimeMillis() - startTime;
     SourceResponse queryResponse = null;
     if (indexQueryResponse != null) {
       if (CollectionUtils.isNotEmpty(indexQueryResponse.getIds())) {
@@ -131,7 +133,11 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
                 queryRequest, Collections.emptyList(), true, 0, indexQueryResponse.getProperties());
       }
     }
-
+    long totalElapsedTime = System.currentTimeMillis() - startTime;
+    LOGGER.trace(
+        "Query Index elapsed time {} and query storage elapsed time {}",
+        indexElapsedTime,
+        totalElapsedTime - indexElapsedTime);
     return queryResponse;
   }
 
@@ -157,12 +163,19 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
+    long startTime = System.currentTimeMillis();
     CreateResponse createResponse = storageProvider.create(createRequest);
+    long indexElapsedTime = System.currentTimeMillis() - startTime;
     // create index only for those inserted metacard
     if (createResponse != null && !createResponse.getCreatedMetacards().isEmpty()) {
       CreateRequest indexRequest = new CreateRequestImpl(createResponse.getCreatedMetacards());
       indexProvider.create(indexRequest);
     }
+    long totalElapsedTime = System.currentTimeMillis() - startTime;
+    LOGGER.trace(
+        "Create Index elapsed time {} and create storage elapsed time {}",
+        indexElapsedTime,
+        totalElapsedTime - indexElapsedTime);
     return createResponse;
   }
 

@@ -113,7 +113,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     // Always add default provider. Solr Cloud this will be an aggregate Alias,
     // and standalone it will be the only index core
     LOGGER.debug("Adding provider for core: {}", DEFAULT_INDEX_CORE);
-    catalogProviders.computeIfAbsentaddCollectionToAlias(DEFAULT_INDEX_CORE, this::newProvider);
+    catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
   }
 
   /**

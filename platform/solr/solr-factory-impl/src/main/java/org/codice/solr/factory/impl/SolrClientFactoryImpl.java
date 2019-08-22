@@ -31,6 +31,7 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
 
   private String clientType;
   private SolrClientFactory factory;
+  private boolean isCloud = false;
 
   public SolrClientFactoryImpl(HttpSolrClientFactory httpSolrClientFactory) {
     this.clientType =
@@ -39,6 +40,7 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
 
     if ("CloudSolrClient".equals(clientType)) {
       factory = new SolrCloudClientFactory();
+      isCloud = true;
     } else { // Use HttpSolrClient by default
       factory = httpSolrClientFactory;
     }
@@ -57,7 +59,7 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
 
   @Override
   public boolean isSolrCloud() {
-    return false;
+    return isCloud;
   }
 
   @Override

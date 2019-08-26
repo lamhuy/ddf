@@ -14,17 +14,20 @@ import routes from './routes'
 import Navigator, { Props } from './navigator'
 import filterActions from './filter-actions'
 import { SFC } from '../react-component/hoc/utils'
+import { tableExport } from './table-export'
 
 export type ExtensionPointsType = {
   routes: {}
   navigator: SFC<Props>
   filterActions: React.ReactNode
+  tableExport: React.ReactNode
 }
 
 const ExtensionPoints: ExtensionPointsType = {
   routes: routes,
   navigator: Navigator,
   filterActions: filterActions,
+  tableExport: tableExport,
 }
 
 export default ExtensionPoints

@@ -11,11 +11,7 @@
  **/
 import * as React from 'react'
 import TableExportComponent from '../../presentation/table-export'
-import {
-  exportResultSet,
-  getExportOptions,
-  Transformer,
-} from '../../utils/export'
+import { exportResultSet } from '../../utils/export'
 import LoadingCompanion from '../loading-companion'
 import saveFile from '../../utils/save-file'
 import { hot } from 'react-hot-loader'
@@ -119,13 +115,13 @@ function getWarning(exportCountInfo: ExportCountInfo): string {
 }
 type Props = {
   selectionInterface: () => void
+  exportFormats: Option[]
 }
 type Option = {
   label: string
   value: string
 }
 type State = {
-  exportFormats: Option[]
   exportSizes: Option[]
   exportFormat: string
   exportSize: string
@@ -134,10 +130,6 @@ type State = {
 type Source = {
   id: string
   hits: number
-}
-type ExportResponse = {
-  displayName: string
-  id: string
 }
 interface ExportCountInfo {
   exportSize: string
@@ -149,7 +141,6 @@ export default hot(module)(
     constructor(props: Props) {
       super(props)
       this.state = {
-        exportFormats: [],
         exportSizes: [
           {
             label: 'Visible',
@@ -170,29 +161,6 @@ export default hot(module)(
       }
     }
     transformUrl = './internal/cql/transform/'
-    async componentDidMount() {
-      const response = await getExportOptions(Transformer.Query)
-      const exportFormats = await response.json()
-      const sortedExportFormats = exportFormats.sort(
-        (format1: ExportResponse, format2: ExportResponse) => {
-          if (format1.displayName > format2.displayName) {
-            return 1
-          }
-          if (format1.displayName < format2.displayName) {
-            return -1
-          }
-          return 0
-        }
-      )
-      this.setState({
-        exportFormats: sortedExportFormats.map(
-          (exportFormat: ExportResponse) => ({
-            label: exportFormat.displayName,
-            value: exportFormat.id,
-          })
-        ),
-      })
-    }
     handleExportFormatChange = (value: string) => {
       this.setState({
         exportFormat: value,
@@ -214,7 +182,7 @@ export default hot(module)(
         const hiddenFields = getHiddenFields()
         const columnOrder = getColumnOrder()
         const cql = getCqlForSize(exportSize, selectionInterface)
-        const sources = getSrcs(selectionInterface)
+        const srcs = getSrcs(selectionInterface)
         const sorts = getSorts(selectionInterface)
         const count = Math.min(
           getExportCount({ exportSize, selectionInterface, customExportCount }),
@@ -227,7 +195,7 @@ export default hot(module)(
         }
         const body = {
           cql,
-          srcs: sources,
+          srcs,
           count,
           sorts,
           args,
@@ -255,16 +223,21 @@ export default hot(module)(
       }
     }
     render() {
-      const { exportSize, customExportCount } = this.state
-      const { selectionInterface } = this.props
+      const {
+        exportFormat,
+        exportSizes,
+        exportSize,
+        customExportCount,
+      } = this.state
+      const { exportFormats, selectionInterface } = this.props
       return (
-        <LoadingCompanion loading={this.state.exportFormats.length === 0}>
-          {this.state.exportFormats.length > 0 ? (
+        <LoadingCompanion loading={exportFormats.length === 0}>
+          {exportFormats.length > 0 ? (
             <TableExportComponent
-              exportFormatOptions={this.state.exportFormats}
-              exportFormat={this.state.exportFormat}
-              exportSizeOptions={this.state.exportSizes}
-              exportSize={this.state.exportSize}
+              exportFormatOptions={exportFormats}
+              exportFormat={exportFormat}
+              exportSizeOptions={exportSizes}
+              exportSize={exportSize}
               handleExportFormatChange={this.handleExportFormatChange}
               handleExportSizeChange={this.handleExportSizeChange}
               handleCustomExportCountChange={this.handleCustomExportCountChange}
@@ -274,7 +247,7 @@ export default hot(module)(
                 selectionInterface,
                 customExportCount,
               })}
-              customExportCount={this.state.customExportCount}
+              customExportCount={customExportCount}
             />
           ) : null}
         </LoadingCompanion>

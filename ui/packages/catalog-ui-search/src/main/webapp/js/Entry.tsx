@@ -31,10 +31,11 @@ export type EntryParameters = {
   routes?: ExtensionPointsType['routes']
   navigator?: ExtensionPointsType['navigator']
   filterActions?: ExtensionPointsType['filterActions']
+  tableExport?: ExtensionPointsType['tableExport']
 }
 
 const entry = (extensionPoints: EntryParameters = {}) => {
-  const { routes, navigator, filterActions } = extensionPoints
+  const { routes, navigator, filterActions, tableExport } = extensionPoints
   if (routes) {
     ExtensionPoints.routes = routes
   }
@@ -43,6 +44,9 @@ const entry = (extensionPoints: EntryParameters = {}) => {
   }
   if (filterActions) {
     ExtensionPoints.filterActions = filterActions
+  }
+  if (tableExport) {
+    ExtensionPoints.tableExport = tableExport
   }
   require('../js/ApplicationStart')
 }

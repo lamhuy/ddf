@@ -633,7 +633,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       }
     }
     realTimeQuery.set(CommonParams.QT, GET_QUERY_HANDLER);
-    realTimeQuery.set(IDS_KEY, ids.toArray(new String[ids.size()]));
+    realTimeQuery.set(IDS_KEY, ids.toArray(new String[0]));
 
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug("realTimeQuery: {}", getQueryParams(realTimeQuery));

@@ -217,7 +217,18 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   @Override
   public boolean isAvailable() {
-    return ds != null && !ds.isClosed();
+    if (ds != null) {
+      if (!ds.isClosed()) {
+        return true;
+      } else {
+        try (Connection conn = ds.getConnection()) {
+          return true;
+        } catch (SQLException e) {
+          LOGGER.trace("Unable to test data source connection", e);
+        }
+      }
+    }
+    return false;
   }
 
   @Override

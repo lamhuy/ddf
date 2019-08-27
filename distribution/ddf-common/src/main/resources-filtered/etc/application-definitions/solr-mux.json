@@ -2,6 +2,8 @@
   "name": "solr-mux-app",
   "description": "The Solr Multiplexed Catalog Provider (SCP) is an implementation of the CatalogProvider interface using Apache Solr ${solr.version} as a data store.\nThe Solr Mux supports the same capabilities as the Solr Provider only allows further abilities to turn performance with split index and storage providers.",
   "bundleLocations": [
+    "mvn:ddf.catalog.core/catalog-core-solr-defaultindexcollectionprovider/${project.version}",
+    "mvn:ddf.catalog.core/catalog-core-solr-resourceindexcollectionprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-storageprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}",

@@ -257,6 +257,15 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     }
   }
 
+  @Override
+  public boolean isAvailable() {
+    try (final Closer closer = new Closer()) {
+      CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
+      client.connect();
+      return client.getIdField() != null;
+    }
+  }
+
   @VisibleForTesting
   SolrClient createSolrCloudClient(String zookeeperHosts, String collection) {
     try (final Closer closer = new Closer()) {

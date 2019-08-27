@@ -188,6 +188,14 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     catalogProviders.forEach((k, p) -> p.maskId(id));
   }
 
+  @Override
+  public boolean isAvailable() {
+    if (clientFactory != null) {
+      clientFactory.isAvailable();
+    }
+    return false;
+  }
+
   protected Response executeRequest(Request request) throws IngestException {
     if (!clientFactory.isSolrCloud()) {
       LOGGER.trace("Non SolrCloud instance using index core: {}", DEFAULT_INDEX_CORE);

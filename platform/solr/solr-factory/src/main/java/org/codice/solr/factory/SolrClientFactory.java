@@ -44,6 +44,8 @@ public interface SolrClientFactory {
 
   void addCollectionToAlias(String alias, String collection);
 
+  boolean isAvailable();
+
   /**
    * Returns whether or not the provider connects to SolrCloud instance or Standalone. Solr Cloud
    * provides different capabilities that upstream Index and Storage providers need knowledged of

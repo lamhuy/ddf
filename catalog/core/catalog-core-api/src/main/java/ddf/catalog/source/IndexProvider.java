@@ -49,5 +49,7 @@ public interface IndexProvider extends Maskable {
 
   IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException;
 
+  boolean isAvailable();
+
   void shutdown();
 }

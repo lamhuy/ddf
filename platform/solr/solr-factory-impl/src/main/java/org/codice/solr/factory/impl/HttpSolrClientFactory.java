@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -178,6 +180,25 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   @Override
   public void addCollectionToAlias(String alias, String collection) {
     throw new IllegalStateException("addCollectionAlias not supported.");
+  }
+
+  @Override
+  public boolean isAvailable() {
+    String solrUrl =
+        StringUtils.defaultIfBlank(
+            AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(SOLR_HTTP_URL)),
+            getDefaultHttpsAddress());
+    final HttpClientBuilder builder = httpClientBuilder.get();
+    try (final CloseableHttpClient client = builder.build()) {
+      HttpGet get = new HttpGet(solrUrl);
+      try (CloseableHttpResponse response = client.execute(get)) {
+        return response.getStatusLine().getStatusCode() == 200;
+      }
+    } catch (IOException e) {
+      LOGGER.debug("isAvailable testing url: {} failed", solrUrl, e);
+    }
+    return false;
   }
 
   @VisibleForTesting

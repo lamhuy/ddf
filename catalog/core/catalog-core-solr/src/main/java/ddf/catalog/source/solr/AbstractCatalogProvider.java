@@ -108,7 +108,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public boolean isAvailable() {
-    return storageProvider.isAvailable();
+    return storageProvider.isAvailable() && indexProvider.isAvailable();
   }
 
   @Override

@@ -84,6 +84,11 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
     factory.addCollectionToAlias(alias, collection);
   }
 
+  @Override
+  public boolean isAvailable() {
+    return factory.isAvailable();
+  }
+
   @VisibleForTesting
   SolrClientFactory getFactory() {
     return factory;

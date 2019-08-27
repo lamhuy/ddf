@@ -89,6 +89,11 @@
         </dependency>
         <dependency>
             <groupId>ddf.catalog.core</groupId>
+            <artifactId>catalog-core-solr-resourceindexcollectionprovider</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
             <artifactId>catalog-core-provider</artifactId>
             <version>${project.version}</version>
         </dependency>

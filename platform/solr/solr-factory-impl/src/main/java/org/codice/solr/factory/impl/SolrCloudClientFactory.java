@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -75,9 +76,13 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
   private final Map<String, org.codice.solr.client.solrj.SolrClient> solrClientMap =
       new HashMap<>();
+
   private final Map<String, Integer> shardCountMap = new HashMap<>();
+
   private final Map<String, Integer> replicationFactorMap = new HashMap<>();
+
   private final Map<String, Integer> maximumShardsPerNodeMap = new HashMap<>();
+
   private String zookeeperHosts;
 
   public SolrCloudClientFactory() {
@@ -214,22 +219,38 @@ public class SolrCloudClientFactory implements SolrClientFactory {
         Map<String, String> aliases = aliasResponse.getAliases();
         if (aliases != null && aliases.containsKey(alias)) {
           String aliasedCollections = aliases.get(alias);
-          StringBuilder sb = new StringBuilder();
-          if (StringUtils.isNotBlank(aliasedCollections)) {
-            sb.append(",");
+          String[] currentAliases = aliasedCollections.split(",");
+          boolean aliasExists = false;
+          for (String currentAlias : currentAliases) {
+            if (currentAlias.equals(collection)) {
+              aliasExists = true;
+              break;
+            }
           }
-          sb.append(collection);
-          newCollections = sb.toString();
+          if (aliasExists) {
+            return;
+          }
+
+          List<String> newAliases = new ArrayList<>(Arrays.asList(currentAliases));
+          newAliases.add(collection);
+          newCollections = String.join(",", newAliases);
         }
       }
+
       CollectionAdminResponse response =
           CollectionAdminRequest.createAlias(alias, newCollections).process(client);
-      if (!response.isSuccess()) {
+      if (response.getErrorMessages() != null && response.getErrorMessages().size() != 0) {
         LOGGER.warn(
             "Failed to update alias [{}}] with collections: [{}}], this will cause queries to be inconsistent. Error: {}",
             alias,
             newCollections,
             response.getErrorMessages());
+      }
+      if (!isAliasReady(client, alias)) {
+        LOGGER.debug(
+            "Alias [{}] was not created during collection [{}] creation", alias, collection);
+      } else {
+        LOGGER.trace("Alias [{}] updated with new list of collections: {}", alias, newCollections);
       }
     } catch (SolrServerException | IOException e) {
       LOGGER.warn("Failed to update alias [{}}]", alias, e);
@@ -243,18 +264,24 @@ public class SolrCloudClientFactory implements SolrClientFactory {
       client.connect();
 
       try {
-        uploadCoreConfiguration(collection, client);
-      } catch (SolrFactoryException e) {
-        LOGGER.debug("Solr({}): Unable to upload configuration to Solr Cloud", collection, e);
-        return null;
-      }
+        if (!aliasExists(collection, client)) {
+          try {
+            uploadCoreConfiguration(collection, client);
+          } catch (SolrFactoryException e) {
+            LOGGER.debug("Solr({}): Unable to upload configuration to Solr Cloud", collection, e);
+            return null;
+          }
 
-      try {
-        createCollection(
-            collection, shardCountMap.getOrDefault(collection, shardCount), collection, client);
-      } catch (SolrFactoryException e) {
-        LOGGER.debug("Solr({}): Unable to create collection on Solr Cloud", collection, e);
-        return null;
+          try {
+            createCollection(
+                collection, shardCountMap.getOrDefault(collection, shardCount), collection, client);
+          } catch (SolrFactoryException e) {
+            LOGGER.debug("Solr({}): Unable to create collection on Solr Cloud", collection, e);
+            return null;
+          }
+        }
+      } catch (IOException | SolrServerException e) {
+        LOGGER.debug("Unable to determine if {} is an alias", collection, e);
       }
 
       client.setDefaultCollection(collection);
@@ -272,7 +299,7 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
   @VisibleForTesting
   RetryPolicy withRetry() {
-    return new RetryPolicy().withMaxRetries(30).withDelay(1, TimeUnit.SECONDS);
+    return new RetryPolicy().withMaxRetries(120).withDelay(1, TimeUnit.SECONDS);
   }
 
   public void createCollection(
@@ -438,6 +465,23 @@ public class SolrCloudClientFactory implements SolrClientFactory {
       LOGGER.debug("Solr({}): Retry failure waiting for collection shards to start", collection, e);
       return false;
     }
+  }
+
+  private boolean isAliasReady(CloudSolrClient client, String alias) {
+    try {
+      boolean aliasReady =
+          Failsafe.with(withRetry().retryWhen(false))
+              .onFailure(
+                  failure -> LOGGER.debug("Unable to get status on alias: {}", alias, failure))
+              .get(() -> aliasExists(alias, client));
+      if (!aliasReady) {
+        LOGGER.debug("Solr ({}): Timeout while waiting for Alias to exist", alias);
+      }
+      return aliasReady;
+    } catch (FailsafeException e) {
+      LOGGER.debug("Solr({}): Failure waiting for Alias to exist", alias, e);
+    }
+    return false;
   }
 
   protected void checkConfig() {

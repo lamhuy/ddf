@@ -13,7 +13,6 @@
  */
 package ddf.catalog.provider.solr;
 
-import com.google.common.collect.Sets;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
@@ -80,8 +79,6 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   protected final List<SolrCollectionCreationPlugin> collectionCreationPlugins;
 
-  protected static final Set<String> COLLECTIONS = Sets.newConcurrentHashSet();
-
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
    *
@@ -138,6 +135,9 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   }
 
   protected BaseSolrCatalogProvider newProvider(String core) {
+    if (clientFactory.isSolrCloud() && core.equals(QUERY_ALIAS)) {
+      ensureAliasExists(QUERY_ALIAS);
+    }
     return new BaseSolrCatalogProvider(
         clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
   }
@@ -274,13 +274,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   }
 
   private boolean collectionExists(String collection) {
-    if (COLLECTIONS.contains(collection)) {
+    if (catalogProviders.containsKey(collection)) {
       return true;
     }
 
-    synchronized (COLLECTIONS) {
+    synchronized (catalogProviders) {
       if (clientFactory.collectionExists(collection)) {
-        COLLECTIONS.add(collection);
+        catalogProviders.put(collection, newProvider(collection));
         return true;
       } else {
         return false;
@@ -348,5 +348,9 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     }
 
     return updateRequests;
+  }
+
+  private void ensureAliasExists(String alias) {
+    clientFactory.addCollectionToAlias(alias, DEFAULT_INDEX_CORE);
   }
 }

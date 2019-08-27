@@ -11,14 +11,17 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.provider.solr.defaultindexcollectionprovider;
+package ddf.catalog.provider.solr.resourceindexcollectionprovider;
 
+import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.types.Core;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import ddf.catalog.source.solr.api.impl.SolrCollectionConfigurationImpl;
 import ddf.catalog.source.solr.api.impl.SolrConfigurationDataImpl;
 import ddf.catalog.util.impl.DescribableImpl;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,11 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** This is the default collection provider and will always return `catalog_index` */
-public class DefaultSolrIndexCollectionProvider extends DescribableImpl
+public class SolrResourceIndexCollectionProvider extends DescribableImpl
     implements IndexCollectionProvider {
-  static final String DEFAULT_INDEX_COLLECTION = "catalog_index";
-
-  private int initialNumShards = 2;
+  static final String INDEX_COLLECTION = "catalog_resource";
 
   private static final List<String> SOLR_CONFIG_FILES =
       Collections.unmodifiableList(
@@ -47,13 +48,26 @@ public class DefaultSolrIndexCollectionProvider extends DescribableImpl
               "stopwords_en.txt",
               "synonyms.txt"));
 
+  private int initialShardCount;
+
   private static final Logger LOGGER =
-      LoggerFactory.getLogger(DefaultSolrIndexCollectionProvider.class);
+      LoggerFactory.getLogger(SolrResourceIndexCollectionProvider.class);
 
   @Override
   public String getCollection(Metacard metacard) {
-    LOGGER.trace("Returning Index Collection: {}", DEFAULT_INDEX_COLLECTION);
-    return DEFAULT_INDEX_COLLECTION;
+    Attribute tagAttr = metacard.getAttribute(Core.METACARD_TAGS);
+    if (tagAttr != null) {
+      for (Serializable attr : tagAttr.getValues()) {
+        if (attr instanceof String) {
+          String tag = (String) attr;
+          if (tag.equalsIgnoreCase("resource")) {
+            LOGGER.trace("Returning Index Collection: {}", INDEX_COLLECTION);
+            return INDEX_COLLECTION;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   @Override
@@ -61,7 +75,7 @@ public class DefaultSolrIndexCollectionProvider extends DescribableImpl
     List<SolrConfigurationData> configurationData = new ArrayList<>(SOLR_CONFIG_FILES.size());
     for (String filename : SOLR_CONFIG_FILES) {
       InputStream inputStream =
-          DefaultSolrIndexCollectionProvider.class
+          SolrResourceIndexCollectionProvider.class
               .getClassLoader()
               .getResourceAsStream("solr/conf/" + filename);
       SolrConfigurationData solrConfigurationDataFile =
@@ -69,10 +83,10 @@ public class DefaultSolrIndexCollectionProvider extends DescribableImpl
       configurationData.add(solrConfigurationDataFile);
     }
     return new SolrCollectionConfigurationImpl(
-        DEFAULT_INDEX_COLLECTION, initialNumShards, configurationData);
+        INDEX_COLLECTION, initialShardCount, configurationData);
   }
 
-  public void setInitialNumShards(int initialNumShards) {
-    this.initialNumShards = initialNumShards;
+  public void setInitialShardCount(int initialShardCount) {
+    this.initialShardCount = initialShardCount;
   }
 }

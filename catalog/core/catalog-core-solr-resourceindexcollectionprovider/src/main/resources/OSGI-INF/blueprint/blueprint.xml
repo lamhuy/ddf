@@ -14,13 +14,12 @@
 <blueprint xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
 		   xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
 
-	<bean id="defaultSolrIndexCollectionProvider" class="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider">
-		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider"
+	<bean id="resourceSolrIndexCollectionProvider" class="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider">
+		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider"
 			update-strategy="container-managed"/>
-		<property name="initialNumShards" value="2"/>
+		<property name="initialShardCount" value="2"/>
 	</bean>
 
-	<!-- Publish so the ranking is last -->
-	<service ref="defaultSolrIndexCollectionProvider" interface="ddf.catalog.source.solr.api.IndexCollectionProvider" ranking="1"/>
+	<service ref="resourceSolrIndexCollectionProvider" interface="ddf.catalog.source.solr.api.IndexCollectionProvider" ranking="10"/>
 
 </blueprint>

@@ -27,5 +27,7 @@ public interface IndexCollectionProvider {
    */
   String getCollection(Metacard metacard);
 
+  String getIndexCollectionValue();
+
   SolrCollectionConfiguration getConfiguration();
 }

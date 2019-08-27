@@ -23,8 +23,8 @@
       type="Integer" default="2"/>
   </OCD>
 
-  <Designate pid="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProviderTest">
-    <Object ocdref="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProviderTest"/>
+  <Designate pid="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider">
+    <Object ocdref="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider"/>
   </Designate>
 
 </metatype:MetaData>

@@ -54,6 +54,11 @@ public class SolrResourceIndexCollectionProvider extends DescribableImpl
       LoggerFactory.getLogger(SolrResourceIndexCollectionProvider.class);
 
   @Override
+  public String getIndexCollectionValue() {
+    return INDEX_COLLECTION;
+  }
+
+  @Override
   public String getCollection(Metacard metacard) {
     Attribute tagAttr = metacard.getAttribute(Core.METACARD_TAGS);
     if (tagAttr != null) {

@@ -89,22 +89,11 @@ public class ConfigurationFileProxy {
       File currentFile = new File(configDir, filename);
       File backupFile = new File(configDir, filename + ".bak");
       if (!currentFile.exists() && !backupFile.exists()) {
-        try {
-          InputStream inputStream =
-              ConfigurationFileProxy.class
-                  .getClassLoader()
-                  .getResourceAsStream("solr/conf/" + core + "/" + filename);
-
-          FileOutputStream outputStream = new FileOutputStream(currentFile);
-          if (inputStream == null) {
-            LOGGER.debug(
-                "Unable to copy core specific Solr configuration file: {} . Using default configuration files",
-                filename);
-            inputStream =
+        try (InputStream inputStream =
                 ConfigurationFileProxy.class
                     .getClassLoader()
                     .getResourceAsStream("solr/conf/" + filename);
-          }
+            FileOutputStream outputStream = new FileOutputStream(currentFile)) {
           long byteCount = IOUtils.copyLarge(inputStream, outputStream);
           LOGGER.debug("Wrote out {} bytes for [{}].", byteCount, filename);
         } catch (IOException e) {

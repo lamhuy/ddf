@@ -51,6 +51,11 @@ public class DefaultSolrIndexCollectionProvider extends DescribableImpl
       LoggerFactory.getLogger(DefaultSolrIndexCollectionProvider.class);
 
   @Override
+  public String getIndexCollectionValue() {
+    return DEFAULT_INDEX_COLLECTION;
+  }
+
+  @Override
   public String getCollection(Metacard metacard) {
     LOGGER.trace("Returning Index Collection: {}", DEFAULT_INDEX_COLLECTION);
     return DEFAULT_INDEX_COLLECTION;

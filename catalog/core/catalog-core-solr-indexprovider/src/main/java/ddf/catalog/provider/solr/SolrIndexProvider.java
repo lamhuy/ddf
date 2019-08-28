@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
@@ -295,7 +296,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     synchronized (catalogProviders) {
       if (clientFactory.collectionExists(collection)) {
         catalogProviders.put(collection, newProvider(collection));
-        return true;
+        return catalogProviders.get(collection).isAvailable(10, TimeUnit.SECONDS);
       } else {
         return false;
       }

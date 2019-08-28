@@ -674,9 +674,7 @@ public final class SolrClientAdapter extends SolrClientProxy
       futureToCancel = cancelFuture ? future : null;
       previousClientToClose = realClient;
       // notify only if we were available
-      notifyAvailability =
-          shouldNotifyUnavailability(
-              "client hasn't been created yet", null);
+      notifyAvailability = shouldNotifyUnavailability("client hasn't been created yet", null);
       LOGGER.debug("Solr({}): starting a failsafe client creation task", core);
       this.apiClient = newUnavailableClient;
       this.pingClient = newUnavailableClient;

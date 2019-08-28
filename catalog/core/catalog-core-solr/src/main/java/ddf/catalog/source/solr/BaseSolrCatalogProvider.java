@@ -52,6 +52,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -183,6 +184,15 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     // first register the callback
     solr.isAvailable(new SolrClientListenerAdapter(callback));
     return isAvailable(); // then trigger an active ping
+  }
+
+  public boolean isAvailable(long timeout, TimeUnit unit) {
+    try {
+      return solr.isAvailable(timeout, unit);
+    } catch (InterruptedException e) {
+      LOGGER.debug("Solr client is available interrupted exception {}", e);
+      return false;
+    }
   }
 
   @Override

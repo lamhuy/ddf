@@ -676,7 +676,7 @@ public final class SolrClientAdapter extends SolrClientProxy
       // notify only if we were available
       notifyAvailability =
           shouldNotifyUnavailability(
-              newUnavailableClient.getCause(), newUnavailableClient.getCause());
+              "client hasn't been created yet", null);
       LOGGER.debug("Solr({}): starting a failsafe client creation task", core);
       this.apiClient = newUnavailableClient;
       this.pingClient = newUnavailableClient;
@@ -959,7 +959,7 @@ public final class SolrClientAdapter extends SolrClientProxy
   }
 
   private static String goingOrRemaining(boolean going) {
-    return going ? "going" : "remaining";
+    return going ? "going to be" : "remaining";
   }
 
   /** Functional interface used to create Solr clients. */

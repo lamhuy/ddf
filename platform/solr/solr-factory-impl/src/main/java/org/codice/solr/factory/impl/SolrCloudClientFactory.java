@@ -263,7 +263,10 @@ public class SolrCloudClientFactory implements SolrClientFactory {
       CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
       client.connect();
       return client.getIdField() != null;
+    } catch (Exception e) {
+      LOGGER.trace("Unable to check availability", e);
     }
+    return false;
   }
 
   @VisibleForTesting

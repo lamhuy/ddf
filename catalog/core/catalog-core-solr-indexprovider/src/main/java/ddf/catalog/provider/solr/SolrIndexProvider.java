@@ -197,7 +197,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   @Override
   public boolean isAvailable() {
     if (clientFactory != null) {
-      clientFactory.isAvailable();
+      return clientFactory.isAvailable();
     }
     return false;
   }

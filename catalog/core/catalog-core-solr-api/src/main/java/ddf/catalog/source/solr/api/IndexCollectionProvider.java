@@ -16,6 +16,8 @@ package ddf.catalog.source.solr.api;
 import ddf.catalog.data.Metacard;
 import org.codice.solr.factory.SolrCollectionConfiguration;
 
+import com.sun.istack.internal.Nullable;
+
 /** Provider to get a index collection name for a given request. */
 public interface IndexCollectionProvider {
 
@@ -25,7 +27,7 @@ public interface IndexCollectionProvider {
    * @param metacard
    * @return Core name
    */
-  String getCollection(Metacard metacard);
+  String getCollection(@Nullable Metacard metacard);
 
   String getIndexCollectionValue();
 

@@ -114,7 +114,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
     } else {
       for (IndexCollectionProvider provider : indexCollectionProviders) {
-        createCollectionIfRequired(provider.getIndexCollectionValue(), provider);
+        createCollectionIfRequired(provider.getCollection(null), provider);
       }
     }
   }
@@ -279,6 +279,10 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   }
 
   private void createCollectionIfRequired(String collection, IndexCollectionProvider provider) {
+    if (collection == null) {
+      return;
+    }
+
     if (!collectionExists(collection)) {
       createCollection(collection, provider);
       for (SolrCollectionCreationPlugin plugin : collectionCreationPlugins) {
@@ -366,7 +370,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
   private void ensureAliasExists(String alias) {
     for (IndexCollectionProvider provider : indexCollectionProviders) {
-      clientFactory.addCollectionToAlias(alias, provider.getIndexCollectionValue());
+      clientFactory.addCollectionToAlias(alias, provider.getCollection(null));
     }
   }
 }

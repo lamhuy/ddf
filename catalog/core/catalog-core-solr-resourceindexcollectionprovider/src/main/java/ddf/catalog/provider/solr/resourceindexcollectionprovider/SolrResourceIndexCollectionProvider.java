@@ -60,6 +60,10 @@ public class SolrResourceIndexCollectionProvider extends DescribableImpl
 
   @Override
   public String getCollection(Metacard metacard) {
+    if (metacard == null) {
+      return null;
+    }
+
     Attribute tagAttr = metacard.getAttribute(Core.METACARD_TAGS);
     if (tagAttr != null) {
       for (Serializable attr : tagAttr.getValues()) {

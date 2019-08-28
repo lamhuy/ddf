@@ -113,9 +113,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       LOGGER.debug("Adding provider for core: {}", DEFAULT_INDEX_CORE);
       catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
     } else {
-      for (IndexCollectionProvider provider : indexCollectionProviders) {
-        createCollectionIfRequired(provider.getCollection(null), provider);
-      }
+      ensureDefaultCollectionExists();
     }
   }
 
@@ -179,6 +177,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
           .queryIndex(queryRequest);
     }
     // Always query against the common index core
+    ensureDefaultCollectionExists();
     return catalogProviders
         .computeIfAbsent(QUERY_ALIAS, this::newProvider)
         .queryIndex(queryRequest);
@@ -270,16 +269,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
 
     for (IndexCollectionProvider provider : indexCollectionProviders) {
       String collection = provider.getCollection(metacard);
-      if (StringUtils.isNotBlank(collection)) {
-        createCollectionIfRequired(collection, provider);
-        return collection;
-      }
+      createCollectionIfRequired(collection, provider);
     }
     return DEFAULT_INDEX_CORE;
   }
 
   private void createCollectionIfRequired(String collection, IndexCollectionProvider provider) {
-    if (collection == null) {
+    if (StringUtils.isBlank(collection)) {
       return;
     }
 
@@ -371,6 +367,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   private void ensureAliasExists(String alias) {
     for (IndexCollectionProvider provider : indexCollectionProviders) {
       clientFactory.addCollectionToAlias(alias, provider.getCollection(null));
+    }
+  }
+
+  private void ensureDefaultCollectionExists() {
+    for (IndexCollectionProvider provider : indexCollectionProviders) {
+      String collection = provider.getCollection(null);
+      createCollectionIfRequired(collection, provider);
     }
   }
 }

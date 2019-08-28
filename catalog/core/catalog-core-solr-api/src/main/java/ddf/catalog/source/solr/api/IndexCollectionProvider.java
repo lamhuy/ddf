@@ -13,10 +13,9 @@
  */
 package ddf.catalog.source.solr.api;
 
+import com.sun.istack.internal.Nullable;
 import ddf.catalog.data.Metacard;
 import org.codice.solr.factory.SolrCollectionConfiguration;
-
-import com.sun.istack.internal.Nullable;
 
 /** Provider to get a index collection name for a given request. */
 public interface IndexCollectionProvider {

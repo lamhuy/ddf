@@ -209,6 +209,10 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
   @Override
   public void addCollectionToAlias(String alias, String collection) {
+    if (StringUtils.isBlank(alias) || StringUtils.isBlank(collection)) {
+      return;
+    }
+
     try (final Closer closer = new Closer()) {
       CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
       client.connect();

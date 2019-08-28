@@ -71,7 +71,8 @@ function convertToValid(key, model) {
     key.lon = Math.min(180, key.lon)
   }
   if (key.radius !== undefined) {
-    key.radius = Math.max(minimumBuffer, key.radius)
+    let tempRadius = Math.max(minimumBuffer, key.radius)
+    key.radius = isNaN(tempRadius) ? model.get('radius') : tempRadius
   }
   if (key.lineWidth !== undefined) {
     key.lineWidth = Math.max(minimumBuffer, key.lineWidth)
@@ -191,7 +192,7 @@ module.exports = Backbone.AssociatedModel.extend({
       this.setRadiusDmsLon
     )
     this.listenTo(this, 'change:locationType', this.handleLocationType)
-    this.listenTo(this, 'change:bbox', this.setBboxLatLon)
+    this.listenTo(this, 'change:bbox', _.debounce(this.setBboxLatLon, 150))
     this.listenTo(this, 'change:lat change:lon', this.setRadiusLatLon)
     this.listenTo(this, 'change:usngbb', this.setBboxUsng)
     this.listenTo(this, 'change:usng', this.setRadiusUsng)
@@ -575,10 +576,8 @@ module.exports = Backbone.AssociatedModel.extend({
     } else {
       this.clearUtmUpsPointRadius(true)
       this.set({
-        usng: undefined,
-        lat: undefined,
-        lon: undefined,
-        radius: 1,
+        lat: 0,
+        lon: 0,
       })
     }
   },

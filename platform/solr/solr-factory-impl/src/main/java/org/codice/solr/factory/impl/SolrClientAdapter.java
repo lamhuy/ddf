@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import javax.annotation.Nullable;
-import net.jodah.failsafe.AsyncFailsafe;
 import net.jodah.failsafe.ExecutionContext;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
@@ -106,9 +105,9 @@ public final class SolrClientAdapter extends SolrClientProxy
 
   private final transient Creator creator;
 
-  private final transient AsyncFailsafe<SolrClient> createFailsafe;
+  private final transient SyncFailsafe<SolrClient> createFailsafe;
 
-  private final transient AsyncFailsafe<Void> pingFailsafe;
+  private final transient SyncFailsafe<Void> pingFailsafe;
 
   private final transient Waiter waiter;
 
@@ -152,9 +151,6 @@ public final class SolrClientAdapter extends SolrClientProxy
 
   // writes are always protected by synchronization, reads are not
   private transient volatile State state;
-
-  // writes and reads are always protected by synchronization
-  @Nullable private transient Future<?> future;
 
   /**
    * Constructs a new client adapter for the specified code and using the specified creator to
@@ -225,7 +221,6 @@ public final class SolrClientAdapter extends SolrClientProxy
             .apply(
                 SolrClientAdapter
                     .ABORT_WHEN_INTERRUPTED_AND_RETRY_UNTIL_NO_ERROR_AND_A_CLIENT_IS_CREATED)
-            .with(SolrClientAdapter.SCHEDULED_EXECUTOR)
             .onRetry(this::logFailure)
             .onAbort(this::logInterruptionAndRecreate)
             .onFailure(this::logAndRecreateIfNotCancelled)
@@ -233,7 +228,6 @@ public final class SolrClientAdapter extends SolrClientProxy
     this.pingFailsafe =
         pingFailsafeCreator
             .apply(SolrClientAdapter.ABORT_WHEN_INTERRUPTED_AND_RETRY_UNTIL_NO_ERROR)
-            .with(SolrClientAdapter.SCHEDULED_EXECUTOR)
             .onRetry(this::logFailure)
             .onAbort(this::logInterruptionAndReconnectIfStillConnecting)
             .onFailure(this::logAndReconnectIfNotCancelledAndStillConnecting)
@@ -250,8 +244,7 @@ public final class SolrClientAdapter extends SolrClientProxy
     this.pingClient = unavailableClient;
     this.realClient = null;
     this.state = State.CREATING;
-    this.future = null;
-    setCreating(unavailableClient, false);
+    setCreating(unavailableClient);
   }
 
   @Override
@@ -261,7 +254,7 @@ public final class SolrClientAdapter extends SolrClientProxy
       try {
         checkIfReachable("from the API because it is currently unavailable");
         // if we get here then the ping was successful so make sure we move to connected
-        setConnected(true);
+        setConnected();
         // fall-through to return the current one which should have been changed to the actual one
       } catch (UnavailableSolrException e) {
         // fall-through to return the current one which should still be an unavailable one
@@ -314,13 +307,11 @@ public final class SolrClientAdapter extends SolrClientProxy
         return;
       }
       final SolrClient previousClientToClose;
-      final Future<?> futureToCancel;
 
       synchronized (lock) {
         if (state == State.CLOSED) { // already closed so bail
           return;
         }
-        futureToCancel = future;
         previousClientToClose = realClient;
         LOGGER.debug("Solr({}): closing", core);
         this.unavailableClient =
@@ -330,10 +321,9 @@ public final class SolrClientAdapter extends SolrClientProxy
         this.pingClient = unavailableClient;
         this.realClient = null;
         this.state = State.CLOSED;
-        this.future = null;
         lock.notifyAll(); // wakeup those waiting for isAvailable(timeout)
       }
-      finalizeStateChange(true, futureToCancel, previousClientToClose, false);
+      finalizeStateChange(true, previousClientToClose, false);
     } finally {
       listeners.clear();
       initializers.clear();
@@ -487,12 +477,6 @@ public final class SolrClientAdapter extends SolrClientProxy
   }
 
   @VisibleForTesting
-  @SuppressWarnings("squid:S1452" /* the future's value is never used internally */)
-  Future<?> getFuture() {
-    return future;
-  }
-
-  @VisibleForTesting
   boolean hasListeners() {
     return !listeners.isEmpty();
   }
@@ -573,7 +557,7 @@ public final class SolrClientAdapter extends SolrClientProxy
     // ... and piggy back the exception as the cause
     // that is because normally we would get here if the thread was interrupted from the outside
     // which typically should happen if the executor was shutdown but we currently don't do that
-    setCreating(unavailableClient, false);
+    setCreating(unavailableClient);
   }
 
   @VisibleForTesting
@@ -585,7 +569,7 @@ public final class SolrClientAdapter extends SolrClientProxy
     // ... and piggy back the exception as the cause
     // that is because normally we would get here if the thread was interrupted from the outside
     // which typically should happen if the executor was shutdown but we currently don't do that
-    setConnecting(realClient, unavailableClient, false, State.CONNECTING);
+    setConnecting(realClient, unavailableClient, State.CONNECTING);
   }
 
   @VisibleForTesting
@@ -595,7 +579,7 @@ public final class SolrClientAdapter extends SolrClientProxy
     }
     LOGGER.debug(
         "Solr({}): failed all failsafe attempts for client creation; re-creating", core, t);
-    setCreating(unavailableClient, false);
+    setCreating(unavailableClient);
   }
 
   @VisibleForTesting
@@ -605,7 +589,7 @@ public final class SolrClientAdapter extends SolrClientProxy
     }
     LOGGER.debug(
         "Solr({}): failed all failsafe attempts for client connection; re-connecting", core, t);
-    setConnecting(realClient, unavailableClient, false, State.CONNECTING);
+    setConnecting(realClient, unavailableClient, State.CONNECTING);
   }
 
   @VisibleForTesting
@@ -618,7 +602,7 @@ public final class SolrClientAdapter extends SolrClientProxy
         ctx.getExecutions(),
         newRealClient);
     setConnecting(
-        newRealClient, unavailableClient, false, State.CREATING, State.CONNECTING, State.CONNECTED);
+        newRealClient, unavailableClient, State.CREATING, State.CONNECTING, State.CONNECTED);
   }
 
   @VisibleForTesting
@@ -630,7 +614,7 @@ public final class SolrClientAdapter extends SolrClientProxy
         "Solr({}): client connection was successful after {} failsafe attempt(s)",
         core,
         ctx.getExecutions());
-    setConnected(false);
+    setConnected();
   }
 
   // should only be called when a real client has been created
@@ -641,10 +625,10 @@ public final class SolrClientAdapter extends SolrClientProxy
     }
     try {
       checkIfReachable(how);
-      setConnected(true);
+      setConnected();
     } catch (UnavailableSolrException e) {
       // ignore the reason for the ping failure and continue with the one provided in parameter
-      setConnecting(realClient, new UnavailableSolrClient(error), true, State.CONNECTED);
+      setConnecting(realClient, new UnavailableSolrClient(error), State.CONNECTED);
     }
   }
 
@@ -655,23 +639,19 @@ public final class SolrClientAdapter extends SolrClientProxy
    *
    * @param newUnavailableClient the new unavailable client to use from now on indicating why we are
    *     creating/re-creating a new client
-   * @param cancelFuture <code>true</code> to cancel the current future; <code>false</code> to only
-   *     clear it
    */
   @VisibleForTesting
-  void setCreating(UnavailableSolrClient newUnavailableClient, boolean cancelFuture) {
+  void setCreating(UnavailableSolrClient newUnavailableClient) {
     if (state == State.CLOSED) { // quick check to avoid synchronization
       return;
     }
     final boolean notifyAvailability;
-    final Future<?> futureToCancel;
     final SolrClient previousClientToClose;
 
     synchronized (lock) {
       if (state == State.CLOSED) { // already closed so bail
         return;
       }
-      futureToCancel = cancelFuture ? future : null;
       previousClientToClose = realClient;
       // notify only if we were available
       notifyAvailability = shouldNotifyUnavailability("client hasn't been created yet", null);
@@ -681,10 +661,9 @@ public final class SolrClientAdapter extends SolrClientProxy
       this.realClient = null;
       this.unavailableClient = newUnavailableClient;
       this.state = State.CREATING;
-      this.future = createFailsafe.get(creator::create);
+      createFailsafe.get(creator::create);
     }
-    finalizeStateChangeWhileSwallowingIOExceptions(
-        notifyAvailability, futureToCancel, previousClientToClose);
+    finalizeStateChangeWhileSwallowingIOExceptions(notifyAvailability, previousClientToClose);
   }
 
   /**
@@ -696,22 +675,16 @@ public final class SolrClientAdapter extends SolrClientProxy
    * @param newClient the new client to use
    * @param newUnavailableClient the new unavailable client to use from now on indicating why we are
    *     connecting/re-connecting to the client
-   * @param cancelFuture <code>true</code> to cancel the current future; <code>false</code> to only
-   *     clear it
    * @param onlyIf a set of states for which we should proceed with this state change
    *     <i>connected</i>; <code>false</code> to change it for any other states
    */
   @VisibleForTesting
   void setConnecting(
-      SolrClient newClient,
-      UnavailableSolrClient newUnavailableClient,
-      boolean cancelFuture,
-      State... onlyIf) {
+      SolrClient newClient, UnavailableSolrClient newUnavailableClient, State... onlyIf) {
     if (state == State.CLOSED) { // quick check to avoid synchronization
       return;
     }
     final boolean notifyAvailability;
-    final Future<?> futureToCancel;
     final SolrClient previousClientToClose;
 
     synchronized (lock) {
@@ -721,7 +694,6 @@ public final class SolrClientAdapter extends SolrClientProxy
       if (!ArrayUtils.contains(onlyIf, state)) {
         return;
       }
-      futureToCancel = cancelFuture ? future : null;
       previousClientToClose = realClient;
       // notify only if we were available
       notifyAvailability =
@@ -733,43 +705,36 @@ public final class SolrClientAdapter extends SolrClientProxy
       this.realClient = newClient;
       this.unavailableClient = newUnavailableClient;
       this.state = State.CONNECTING;
-      this.future = pingFailsafe.run(this::checkIfReachable);
+      pingFailsafe.run(this::checkIfReachable);
     }
-    finalizeStateChangeWhileSwallowingIOExceptions(
-        notifyAvailability, futureToCancel, previousClientToClose);
+    finalizeStateChangeWhileSwallowingIOExceptions(notifyAvailability, previousClientToClose);
   }
 
   /**
    * Changes the state to <i>connected</i>.
    *
    * <p><i>Note:</i> Nothing will happen if the adapter is closed.
-   *
-   * @param cancelFuture <code>true</code> to cancel the current future; <code>false</code> to only
-   *     clear it
    */
   @VisibleForTesting
-  void setConnected(boolean cancelFuture) {
+  void setConnected() {
     if (state == State.CLOSED) { // quick check to avoid synchronization
       return;
     }
     final boolean notifyAvailability;
-    final Future<?> futureToCancel;
 
     synchronized (lock) {
       if (state == State.CLOSED) { // already closed so bail
         return;
       }
-      futureToCancel = cancelFuture ? future : null;
       // notify only if we were not available as we will now be
       notifyAvailability = shouldNotifyOfAvailability();
       this.apiClient = realClient;
       // keep pingClient and realClient as is
       this.unavailableClient = null;
       this.state = State.CONNECTED;
-      this.future = null;
       lock.notifyAll(); // wakeup those waiting for isAvailable(timeout)
     }
-    finalizeStateChangeWhileSwallowingIOExceptions(notifyAvailability, futureToCancel, null);
+    finalizeStateChangeWhileSwallowingIOExceptions(notifyAvailability, null);
   }
 
   @VisibleForTesting
@@ -799,21 +764,19 @@ public final class SolrClientAdapter extends SolrClientProxy
         setConnecting(
             realClient,
             new UnavailableSolrClient(new UnavailableSolrException("ping failed with no response")),
-            true,
             State.CONNECTED);
         return response;
       }
       final Object status = response.getResponse().get("status");
 
       if (SolrClientAdapter.OK_STATUS.equals(status)) {
-        setConnected(true);
+        setConnected();
       } else {
         LOGGER.debug(SolrClientAdapter.FAILED_TO_PING_WITH_STATUS, core, status);
         setConnecting(
             realClient,
             new UnavailableSolrClient(
                 new UnavailableSolrException("ping failed with " + status + " status")),
-            true,
             State.CONNECTED);
       }
       return response;
@@ -821,7 +784,7 @@ public final class SolrClientAdapter extends SolrClientProxy
       throw e;
     } catch (Throwable t) {
       LOGGER.debug(SolrClientAdapter.FAILED_TO_PING, core, t, t);
-      setConnecting(realClient, new UnavailableSolrClient(t), true, State.CONNECTED);
+      setConnecting(realClient, new UnavailableSolrClient(t), State.CONNECTED);
       throw t;
     }
   }
@@ -833,11 +796,9 @@ public final class SolrClientAdapter extends SolrClientProxy
   }
 
   private void finalizeStateChangeWhileSwallowingIOExceptions(
-      boolean notifyAvailability,
-      @Nullable Future<?> futureToCancel,
-      @Nullable SolrClient previousClientToClose) {
+      boolean notifyAvailability, @Nullable SolrClient previousClientToClose) {
     try {
-      finalizeStateChange(notifyAvailability, futureToCancel, previousClientToClose, true);
+      finalizeStateChange(notifyAvailability, previousClientToClose, true);
     } catch (IOException e) { // will never happen, exceptions are swallowed above
     }
   }
@@ -845,17 +806,13 @@ public final class SolrClientAdapter extends SolrClientProxy
   @SuppressWarnings("PMD.CompareObjectsWithEquals" /* purposely testing previous client identity */)
   private void finalizeStateChange(
       boolean notifyAvailability,
-      @Nullable Future<?> futureToCancel,
       @Nullable SolrClient previousClientToClose,
       boolean swallowIOExceptions)
       throws IOException {
     if (notifyAvailability) {
       notifyListenersAndInitializers();
     }
-    if ((futureToCancel != null) && !futureToCancel.isDone()) {
-      LOGGER.debug("Solr({}): cancelling its previous failsafe task", core);
-      futureToCancel.cancel(true);
-    }
+
     // don't close if we still use the same client
     if ((previousClientToClose != null) && (previousClientToClose != realClient)) {
       LOGGER.debug("Solr({}): closing its previous client [{}]", core, previousClientToClose);

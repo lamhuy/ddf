@@ -15,11 +15,11 @@
  -->
 <metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
 
-  <OCD name="Default Solr Index Collection Provider"
+  <OCD name="Default Index Collection Provider"
     id="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider">
 
-    <AD description="Set initial shard count for collection created for this index."
-      name="Initial Shard Count" id="initialNumShards"
+    <AD description="Set initial shard count for collection created for this index. Must be set before the collection is created."
+      name="Shard Count" id="shardCount"
       type="Integer" default="2"/>
   </OCD>
 

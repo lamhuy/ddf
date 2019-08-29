@@ -266,11 +266,14 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
    * @return the first associate solr core for those given tags
    */
   private String getCollection(Metacard metacard) {
-    LOGGER.trace("Getting core for metacard: {}", metacard);
+    LOGGER.trace("Getting collection for metacard: {}", metacard);
 
     for (IndexCollectionProvider provider : indexCollectionProviders) {
       String collection = provider.getCollection(metacard);
-      createCollectionIfRequired(collection, provider);
+      if (collection != null) {
+        createCollectionIfRequired(collection, provider);
+        return collection;
+      }
     }
     return DEFAULT_INDEX_CORE;
   }

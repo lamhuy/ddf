@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.provider.solr.resourceindexcollectionprovider;
+package ddf.catalog.provider.solr.nrtindexcollectionprovider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -20,15 +20,14 @@ import static org.mockito.Mockito.mock;
 import ddf.catalog.data.Metacard;
 import org.junit.Test;
 
-public class SolrResourceIndexCollectionProviderTest {
+public class NrtIndexCollectionProviderTest {
 
-  private SolrResourceIndexCollectionProvider indexProvider =
-      new SolrResourceIndexCollectionProvider();
+  private NrtIndexCollectionProvider indexProvider = new NrtIndexCollectionProvider();
 
   @Test
   public void testGetCollection() throws Exception {
     Metacard mockCard = mock(Metacard.class);
     String collection = indexProvider.getCollection(mockCard);
-    assertThat(collection, is(SolrResourceIndexCollectionProvider.COLLECTION));
+    assertThat(collection, is(NrtIndexCollectionProvider.COLLECTION));
   }
 }

@@ -11,33 +11,48 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.provider.solr.defaultindexcollectionprovider;
+package ddf.catalog.provider.solr.nrtindexcollectionprovider;
 
+import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.types.Core;
 import ddf.catalog.source.solr.api.impl.AbstractIndexCollectionProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.Serializable;
+import java.util.List;
+import org.springframework.util.CollectionUtils;
 
 /** This is the default collection provider and will always return `catalog_index` */
-public class DefaultSolrIndexCollectionProvider extends AbstractIndexCollectionProvider {
-  static final String DEFAULT_INDEX_COLLECTION = "catalog_index";
+public class NrtIndexCollectionProvider extends AbstractIndexCollectionProvider {
+  static final String COLLECTION = "catalog_nrt";
 
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(DefaultSolrIndexCollectionProvider.class);
+  private List<String> nrtMetacardTypes;
+
+  public void setNrtMetacardTypes(List<String> nrtMetacardTypes) {
+    this.nrtMetacardTypes = nrtMetacardTypes;
+  }
 
   @Override
   protected String getCollectionName() {
-    return DEFAULT_INDEX_COLLECTION;
+    return COLLECTION;
   }
 
   @Override
   protected boolean matches(Metacard metacard) {
-    return true;
-  }
+    if (CollectionUtils.isEmpty(nrtMetacardTypes)) {
+      return false;
+    }
 
-  @Override
-  public String getCollection(Metacard metacard) {
-    LOGGER.trace("Returning Index Collection: {}", DEFAULT_INDEX_COLLECTION);
-    return DEFAULT_INDEX_COLLECTION;
+    Attribute tagAttr = metacard.getAttribute(Core.METACARD_TAGS);
+    if (tagAttr != null) {
+      for (Serializable attr : tagAttr.getValues()) {
+        if (attr instanceof String) {
+          String tag = (String) attr;
+          if (nrtMetacardTypes.contains(tag)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 }

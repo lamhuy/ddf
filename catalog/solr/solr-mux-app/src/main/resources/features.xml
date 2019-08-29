@@ -43,6 +43,7 @@
         <bundle>mvn:org.postgresql/postgresql/${postgres.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-solr-resourceindexcollectionprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-solr-defaultindexcollectionprovider/${project.version}</bundle>
+        <bundle>mvn:ddf.catalog.core/catalog-core-solr-nrtindexcollectionprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}</bundle>
         <bundle>mvn:ddf.catalog.core/catalog-core-provider/${project.version}</bundle>

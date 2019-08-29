@@ -4,6 +4,7 @@
   "bundleLocations": [
     "mvn:ddf.catalog.core/catalog-core-solr-defaultindexcollectionprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-resourceindexcollectionprovider/${project.version}",
+    "mvn:ddf.catalog.core/catalog-core-solr-nrtindexcollectionprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-storageprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}",

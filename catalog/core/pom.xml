@@ -112,5 +112,6 @@
         <module>catalog-core-solr-api-impl</module>
         <module>catalog-core-solr-defaultindexcollectionprovider</module>
         <module>catalog-core-solr-resourceindexcollectionprovider</module>
+        <module>catalog-core-solr-nrtindexcollectionprovider</module>
     </modules>
 </project>

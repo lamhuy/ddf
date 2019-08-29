@@ -17,7 +17,7 @@
 	<bean id="resourceSolrIndexCollectionProvider" class="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider"
 			update-strategy="container-managed"/>
-		<property name="initialShardCount" value="2"/>
+		<property name="shardCount" value="2"/>
 	</bean>
 
 	<service ref="resourceSolrIndexCollectionProvider" interface="ddf.catalog.source.solr.api.IndexCollectionProvider" ranking="10"/>

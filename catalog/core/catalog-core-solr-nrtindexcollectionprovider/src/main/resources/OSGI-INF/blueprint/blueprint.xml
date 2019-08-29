@@ -14,13 +14,22 @@
 <blueprint xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
 		   xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
 
-	<bean id="defaultSolrIndexCollectionProvider" class="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider">
-		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider"
+	<bean id="nrtIndexCollectionProvider" class="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider">
+		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider"
 			update-strategy="container-managed"/>
 		<property name="shardCount" value="2"/>
+		<property name="nrtMetacardTypes">
+			<list value-type="java.lang.String">
+				<value>workspace</value>
+				<value>metacard.query</value>
+				<value>metacard.list</value>
+				<value>query-template</value>
+				<value>attribute-group</value>
+				<value>resource-note</value>
+			</list>
+		</property>
 	</bean>
 
-	<!-- Publish so the ranking is last -->
-	<service ref="defaultSolrIndexCollectionProvider" interface="ddf.catalog.source.solr.api.IndexCollectionProvider" ranking="1"/>
+	<service ref="nrtIndexCollectionProvider" interface="ddf.catalog.source.solr.api.IndexCollectionProvider" ranking="10"/>
 
 </blueprint>

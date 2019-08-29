@@ -15,16 +15,20 @@
  -->
 <metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
 
-  <OCD name="Resource Index Collection Provider"
-    id="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider">
+  <OCD name="Near Real Time Index Collection Provider"
+    id="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider">
 
-    <AD description="Set initial shard count for collection created for this index. Must be set before collection is created."
-      name="Shard Count" id="shardCount"
-      type="Integer" default="2"/>
+    <AD description="Set initial shard count for collection created for this index. Must be set before the collection is created."
+    name="Shard Count" id="shardCount"
+    type="Integer" default="2"/>
+
+    <AD description="List of Near Real Time metacard types."
+      name="NRT Metacard Types" id="nrtMetacardTypes"
+      type="String" default="workspace,metacard.query,metacard.list,query-template,attribute-group,resource-note" cardinality="100"/>
   </OCD>
 
-  <Designate pid="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider">
-    <Object ocdref="ddf.catalog.provider.solr.resourceindexcollectionprovider.SolrResourceIndexCollectionProvider"/>
+  <Designate pid="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider">
+    <Object ocdref="ddf.catalog.provider.solr.nrtindexcollectionprovider.NrtIndexCollectionProvider"/>
   </Designate>
 
 </metatype:MetaData>

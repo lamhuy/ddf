@@ -18,9 +18,8 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -62,9 +61,6 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpSolrClientFactory.class);
 
   private final org.codice.solr.factory.impl.HttpClientBuilder httpClientBuilder;
-
-  private final Map<String, org.codice.solr.client.solrj.SolrClient> solrClientMap =
-      new HashMap<>();
 
   public HttpSolrClientFactory(org.codice.solr.factory.impl.HttpClientBuilder httpClientBuilder) {
     this.httpClientBuilder = httpClientBuilder;
@@ -130,11 +126,6 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   }
 
   @Override
-  public org.codice.solr.client.solrj.SolrClient getClient(String core) {
-    return solrClientMap.computeIfAbsent(core, this::newClient);
-  }
-
-  @Override
   public org.codice.solr.client.solrj.SolrClient newClient(String core) {
     String solrUrl =
         StringUtils.defaultIfBlank(
@@ -150,7 +141,17 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
       ConfigurationStore.getInstance().setDataDirectoryPath(solrDataDir);
     }
     LOGGER.debug("Solr({}): Creating an HTTP Solr client using url [{}]", core, coreUrl);
-    return new SolrClientAdapter(core, () -> createSolrHttpClient(solrUrl, core, coreUrl));
+
+    SolrClientAdapter adaptor =
+        new SolrClientAdapter(core, () -> createSolrHttpClient(solrUrl, core, coreUrl));
+    try {
+      if (!adaptor.isAvailable(30, TimeUnit.SECONDS)) {
+        LOGGER.warn("Solr Client {} is not available after 30 seconds", core);
+      }
+    } catch (InterruptedException e) {
+      LOGGER.error("Unable to connect to solr client {}: {} ", core, e.getStackTrace());
+    }
+    return adaptor;
   }
 
   @Override
@@ -161,7 +162,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   @Override
   public boolean collectionExists(String collection) {
     // Force the configuration to be created, so the core exists and return true
-    getClient(collection);
+    newClient(collection);
     return true;
   }
 

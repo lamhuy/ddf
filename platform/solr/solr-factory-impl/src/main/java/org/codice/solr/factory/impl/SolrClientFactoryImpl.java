@@ -53,11 +53,6 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   }
 
   @Override
-  public SolrClient getClient(String core) {
-    return factory.getClient(core);
-  }
-
-  @Override
   public boolean isSolrCloud() {
     return isCloud;
   }

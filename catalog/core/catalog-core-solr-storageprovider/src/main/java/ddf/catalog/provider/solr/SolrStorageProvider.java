@@ -113,7 +113,7 @@ public class SolrStorageProvider extends DescribableImpl implements StorageProvi
     /** Create storage collection to provider map */
     provider =
         new BaseSolrCatalogProvider(
-            this.clientFactory.getClient(DEFAULT_SOLR_CATALOG_STORE),
+            this.clientFactory.newClient(DEFAULT_SOLR_CATALOG_STORE),
             adapter,
             solrFilterDelegateFactory,
             resolver);

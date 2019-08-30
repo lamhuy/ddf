@@ -51,7 +51,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
@@ -147,7 +146,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       ensureAliasExists(QUERY_ALIAS);
     }
     return new BaseSolrCatalogProvider(
-        clientFactory.getClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
+        clientFactory.newClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
   }
 
   @Override
@@ -322,7 +321,8 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     synchronized (catalogProviders) {
       if (clientFactory.collectionExists(collection)) {
         catalogProviders.put(collection, newProvider(collection));
-        return catalogProviders.get(collection).isAvailable(10, TimeUnit.SECONDS);
+        return true;
+
       } else {
         return false;
       }

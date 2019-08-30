@@ -31,10 +31,7 @@ public interface SolrClientFactory {
    * @return the newly created {@code SolrClient}
    * @throws IllegalArgumentException if <code>core</code> is <code>null</code>
    */
-  @Deprecated
   SolrClient newClient(String core);
-
-  SolrClient getClient(String core);
 
   boolean collectionExists(String collection);
 

@@ -74,7 +74,7 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
 
   @Override
   protected BaseSolrCatalogProvider newProvider(String core) {
-    when(clientFactory.getClient(anyString())).thenReturn(mock(SolrClient.class));
+    when(clientFactory.newClient(anyString())).thenReturn(mock(SolrClient.class));
     super.newProvider(core);
     catalogProvider = mock(BaseSolrCatalogProvider.class);
     return catalogProvider;

@@ -75,9 +75,6 @@ public class SolrCloudClientFactory implements SolrClientFactory {
   private final int maximumShardsPerNode =
       NumberUtils.toInt(System.getProperty("solr.cloud.maxShardPerNode"), 2);
 
-  private final Map<String, org.codice.solr.client.solrj.SolrClient> solrClientMap =
-      new HashMap<>();
-
   private final Map<String, Integer> shardCountMap = new HashMap<>();
 
   private final Map<String, Integer> replicationFactorMap = new HashMap<>();
@@ -110,16 +107,20 @@ public class SolrCloudClientFactory implements SolrClientFactory {
   }
 
   @Override
-  public org.codice.solr.client.solrj.SolrClient getClient(String core) {
-    return solrClientMap.computeIfAbsent(core, this::newClient);
-  }
-
-  @Override
   public org.codice.solr.client.solrj.SolrClient newClient(String core) {
     checkConfig();
     LOGGER.debug(
         "Solr({}): Creating a Solr Cloud client using Zookeeper hosts [{}]", core, zookeeperHosts);
-    return new SolrClientAdapter(core, () -> createSolrCloudClient(zookeeperHosts, core));
+    SolrClientAdapter adaptor =
+        new SolrClientAdapter(core, () -> createSolrCloudClient(zookeeperHosts, core));
+    try {
+      if (!adaptor.isAvailable(30, TimeUnit.SECONDS)) {
+        LOGGER.warn("Solr Client {} is not available after 30 seconds", core);
+      }
+    } catch (InterruptedException e) {
+      LOGGER.error("Unable to connect to solr client {}: {} ", core, e.getStackTrace());
+    }
+    return adaptor;
   }
 
   @Override

@@ -85,6 +85,11 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   }
 
   @Override
+  public List<String> getCollectionsForAlias(String alias) {
+    return factory.getCollectionsForAlias(alias);
+  }
+
+  @Override
   public boolean isAvailable() {
     return factory.isAvailable();
   }

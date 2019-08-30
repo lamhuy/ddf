@@ -43,6 +43,16 @@ public interface SolrMetacardClient {
   IndexQueryResponse queryIndex(QueryRequest request) throws UnsupportedQueryException;
 
   /**
+   * Performs an cache query by ID against Solr. Uses the /get handler to retrieve data that may not
+   * yet have been indexed.
+   *
+   * @param request query request to execute against Solr
+   * @return converted Solr response
+   * @throws UnsupportedQueryException if the query is not supported
+   */
+  IndexQueryResponse queryIndexCache(QueryRequest request) throws UnsupportedQueryException;
+
+  /**
    * Converts a {@link QueryRequest} into a Solr query and returns the result as a {@link
    * SourceResponse}.
    *

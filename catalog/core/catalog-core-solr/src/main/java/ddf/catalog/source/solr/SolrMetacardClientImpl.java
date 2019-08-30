@@ -214,6 +214,39 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
   }
 
   @Override
+  public IndexQueryResponse queryIndexCache(QueryRequest request) throws UnsupportedQueryException {
+    if (request == null || request.getQuery() == null) {
+      return new IndexQueryResponseImpl(request, new HashMap<>(), new ArrayList<>(), 0L);
+    }
+
+    long totalHits = 0;
+    Map<String, Serializable> responseProps = new HashMap<>();
+    List<String> results = new ArrayList<>();
+
+    SolrFilterDelegate solrFilterDelegate =
+        filterDelegateFactory.newInstance(resolver, request.getProperties());
+    SolrQuery query = getSolrQuery(request, solrFilterDelegate);
+
+    try {
+      QueryResponse solrResponse;
+
+      LOGGER.debug("Performing real time query");
+      SolrQuery realTimeQuery = getRealTimeQuery(query, solrFilterDelegate.getIds());
+      solrResponse = client.query(realTimeQuery, METHOD.POST);
+      SolrDocumentList docs = solrResponse.getResults();
+      docs = handleSpellcheck(solrResponse, responseProps, query, docs, false);
+      if (docs != null) {
+        processDocsToIds(docs, results);
+        totalHits = docs.getNumFound();
+      }
+    } catch (SolrServerException | IOException | SolrException e) {
+      throw new UnsupportedQueryException("Could not complete solr query.", e);
+    }
+
+    return new IndexQueryResponseImpl(request, responseProps, results, totalHits);
+  }
+
+  @Override
   public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
     if (request == null || request.getQuery() == null) {
       return new QueryResponseImpl(request, new ArrayList<>(), true, 0L);

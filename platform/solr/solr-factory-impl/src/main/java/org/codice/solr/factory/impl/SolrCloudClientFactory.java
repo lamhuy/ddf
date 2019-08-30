@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -259,6 +260,27 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     } catch (SolrServerException | IOException e) {
       LOGGER.warn("Failed to update alias [{}}]", alias, e);
     }
+  }
+
+  @Override
+  public List<String> getCollectionsForAlias(String alias) {
+    try (final Closer closer = new Closer()) {
+      CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
+      client.connect();
+
+      CollectionAdminResponse aliasResponse =
+          new CollectionAdminRequest.ListAliases().process(client);
+      if (aliasResponse != null) {
+        Map<String, String> aliases = aliasResponse.getAliases();
+        if (aliases != null && aliases.containsKey(alias)) {
+          String aliasedCollections = aliases.get(alias);
+          return Arrays.asList(aliasedCollections.split(","));
+        }
+      }
+    } catch (SolrServerException | IOException e) {
+      LOGGER.warn("Failed to get alias information [{}}]", alias, e);
+    }
+    return Collections.emptyList();
   }
 
   @Override

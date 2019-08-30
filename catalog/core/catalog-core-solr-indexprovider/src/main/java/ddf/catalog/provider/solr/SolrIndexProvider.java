@@ -28,6 +28,7 @@ import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateRequestImpl;
 import ddf.catalog.operation.impl.CreateResponseImpl;
+import ddf.catalog.operation.impl.IndexQueryResponseImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
@@ -36,6 +37,7 @@ import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
+import ddf.catalog.source.solr.RealTimeGetDelegate;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import ddf.catalog.source.solr.api.SolrCollectionCreationPlugin;
@@ -115,6 +117,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
     } else {
       ensureDefaultCollectionExists();
+      initializeKnownProviders();
     }
   }
 
@@ -177,11 +180,31 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
           .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
           .queryIndex(queryRequest);
     }
-    // Always query against the common index core
-    ensureDefaultCollectionExists();
-    return catalogProviders
-        .computeIfAbsent(QUERY_ALIAS, this::newProvider)
-        .queryIndex(queryRequest);
+
+    Boolean doRealTimeGet = filterAdapter.adapt(queryRequest.getQuery(), new RealTimeGetDelegate());
+    if (doRealTimeGet) {
+      // Need to call get handler on every index core
+      List<String> ids = new ArrayList<>();
+      long totalHits = 0;
+      for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
+        IndexQueryResponse response = entry.getValue().queryIndexCache(queryRequest);
+        ids.addAll(response.getIds());
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace(
+              "Performing index cache query on provider: {} returned {} hits",
+              entry.getKey(),
+              response.getHits());
+        }
+        totalHits += response.getHits();
+      }
+      return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
+    } else {
+      // Always query against the common index core
+      ensureDefaultCollectionExists();
+      return catalogProviders
+          .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+          .queryIndex(queryRequest);
+    }
   }
 
   public void shutdown() {
@@ -378,6 +401,13 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
     for (IndexCollectionProvider provider : indexCollectionProviders) {
       String collection = provider.getCollection(null);
       createCollectionIfRequired(collection, provider);
+    }
+  }
+
+  private void initializeKnownProviders() {
+    List<String> collections = clientFactory.getCollectionsForAlias(QUERY_ALIAS);
+    for (String collection : collections) {
+      catalogProviders.computeIfAbsent(collection, this::newProvider);
     }
   }
 }

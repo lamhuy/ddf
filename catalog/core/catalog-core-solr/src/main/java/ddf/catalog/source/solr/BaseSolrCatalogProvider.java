@@ -239,6 +239,10 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return response;
   }
 
+  public IndexQueryResponse queryIndexCache(QueryRequest request) throws UnsupportedQueryException {
+    return client.queryIndexCache(request);
+  }
+
   public void deleteIndex(DeleteRequest deleteRequest) throws IngestException {
     nonNull(deleteRequest);
 

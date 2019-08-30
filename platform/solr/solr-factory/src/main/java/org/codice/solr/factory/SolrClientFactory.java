@@ -44,6 +44,8 @@ public interface SolrClientFactory {
 
   void addCollectionToAlias(String alias, String collection);
 
+  List<String> getCollectionsForAlias(String alias);
+
   boolean isAvailable();
 
   /**

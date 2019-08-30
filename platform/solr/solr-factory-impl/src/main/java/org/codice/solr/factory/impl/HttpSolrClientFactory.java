@@ -183,6 +183,11 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   }
 
   @Override
+  public List<String> getCollectionsForAlias(String alias) {
+    throw new IllegalStateException("getCollectionsForAlias not supported.");
+  }
+
+  @Override
   public boolean isAvailable() {
     String solrUrl =
         StringUtils.defaultIfBlank(

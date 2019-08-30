@@ -114,7 +114,7 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     SolrClientAdapter adaptor =
         new SolrClientAdapter(core, () -> createSolrCloudClient(zookeeperHosts, core));
     try {
-      if (!adaptor.isAvailable(30, TimeUnit.SECONDS)) {
+      if (!adaptor.isAvailable(30, 5, TimeUnit.SECONDS)) {
         LOGGER.warn("Solr Client {} is not available after 30 seconds", core);
       }
     } catch (InterruptedException e) {

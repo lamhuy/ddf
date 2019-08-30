@@ -186,9 +186,9 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     return isAvailable(); // then trigger an active ping
   }
 
-  public boolean isAvailable(long timeout, TimeUnit unit) {
+  public boolean isAvailable(long timeout, long pollInterval, TimeUnit unit) {
     try {
-      return solr.isAvailable(timeout, unit);
+      return solr.isAvailable(timeout, pollInterval, unit);
     } catch (InterruptedException e) {
       LOGGER.debug("Solr client is available interrupted exception {}", e);
       return false;

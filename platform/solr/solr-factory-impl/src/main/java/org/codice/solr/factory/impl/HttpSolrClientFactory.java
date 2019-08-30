@@ -145,7 +145,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
     SolrClientAdapter adaptor =
         new SolrClientAdapter(core, () -> createSolrHttpClient(solrUrl, core, coreUrl));
     try {
-      if (!adaptor.isAvailable(30, TimeUnit.SECONDS)) {
+      if (!adaptor.isAvailable(30, 5, TimeUnit.SECONDS)) {
         LOGGER.warn("Solr Client {} is not available after 30 seconds", core);
       }
     } catch (InterruptedException e) {

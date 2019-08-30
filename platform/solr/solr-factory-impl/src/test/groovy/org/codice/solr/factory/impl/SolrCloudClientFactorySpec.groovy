@@ -54,7 +54,7 @@ class SolrCloudClientFactorySpec extends Specification {
 
   static final int MAX_RETRIES = 2
 
-  static final int AVAILABLE_TIMEOUT_IN_SECS = 25
+  static final int AVAILABLE_TIMEOUT_IN_SECS = 45
 
   @Rule
   TemporaryFolder tempFolder = new TemporaryFolder();
@@ -105,7 +105,7 @@ class SolrCloudClientFactorySpec extends Specification {
       // ping will be successful right away. Therefore this should all happen very quickly without
       // a hitch. Worst case scenario we have a bug and it will take about 30 seconds to detect it.
       // Best case scenario, it will return pretty much right away.
-      def available = client.isAvailable(AVAILABLE_TIMEOUT_IN_SECS + 5L, SECONDS)
+      def available = client.isAvailable(AVAILABLE_TIMEOUT_IN_SECS + 5L, 5L, SECONDS)
 
     then: "it should be"
       available

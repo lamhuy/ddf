@@ -63,7 +63,7 @@
     <dynamicField name="*_txt_tokenized_has_case" type="text_case" indexed="true" stored="false" multiValued="true"/>
 
     <dynamicField name="*_bin" type="binary" indexed="false" stored="false" multiValued="true"/>
-    <dynamicField name="*_obj" type="binary" indexed="false" stored="false" multiValued="true"/>
+    <dynamicField name="*_obj" type="binary" indexed="false" stored="true" multiValued="true"/>
 
     <!-- Copy Fields -->
     <copyField source="*_txt_tokenized" dest="*_txt_tokenized_has_case"/>

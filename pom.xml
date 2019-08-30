@@ -52,9 +52,9 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <!--  default URL properties -->
-        <ddf.scm.connection.url />
-        <snapshots.repository.url />
-        <reports.repository.url />
+        <ddf.scm.connection.url/>
+        <snapshots.repository.url/>
+        <reports.repository.url/>
         <!-- Must MANUALLY update this if the ddf/support project's version changes -->
         <ddf.support.version>2.3.16</ddf.support.version>
         <!-- Must MANUALLY update this if the codice-maven project's version changes -->
@@ -224,7 +224,7 @@
         <jboss-logging.version>3.3.1.Final</jboss-logging.version>
         <jcodec.version>0.2.0_1</jcodec.version>
         <jdom.bundle.version>1.1_4</jdom.bundle.version>
-        <jetty.solr.version>9.4.10.v20180503</jetty.solr.version>
+        <jetty.solr.version>9.4.14.v20181114</jetty.solr.version>
         <jetty.version>9.4.12.v20180830</jetty.version>
         <jgroups.version>3.6.13.Final</jgroups.version>
         <joda-convert.version>1.7</joda-convert.version>
@@ -246,7 +246,7 @@
         <log4j.version>1.2.17</log4j.version>
         <logback.classic.version>1.2.3</logback.classic.version>
         <logback.version>1.2.3</logback.version>
-        <lucene.version>7.4.0</lucene.version>
+        <lucene.version>7.7.2</lucene.version>
         <lux.version>1.2</lux.version>
         <lux.saxon.version>9.5.1-3</lux.saxon.version>
         <!-- Mina version is not the latest version due to Apache FTPServer 1.0.6 not supporting newer releases properly -->
@@ -283,9 +283,12 @@
         <servicemix-json-1.1.spec.version>2.9.0</servicemix-json-1.1.spec.version>
         <servicemix.specs.version>2.9.0</servicemix.specs.version>
         <servlet-api.version>3.1.0</servlet-api.version>
-        <solr.version>7.4.0</solr.version>
+        <solr.version>7.7.2</solr.version>
         <solr.httpclient.version>4.5.6</solr.httpclient.version>
         <solr.httpcore.version>4.4.10</solr.httpcore.version>
+        <solr.zookeeper.version>3.4.14</solr.zookeeper.version>
+        <solr.noggit.version>0.8</solr.noggit.version>
+        <solr.spatial4j.version>0.7</solr.spatial4j.version>
 
         <spark.version>2.5.5</spark.version>
         <spatial4j.version>0.7</spatial4j.version>
@@ -308,7 +311,7 @@
         <xpp3.bundle.version>1.1.4c_6</xpp3.bundle.version>
         <xstream.version>1.4.9</xstream.version>
         <!-- Command line argument properties for the maven-surefire-plugin -->
-        <surefire.argline.append />
+        <surefire.argline.append/>
         <surefire.argline>${jacoco.argline} ${surefire.argline.append} -Xmx1024m -Djava.awt.headless=true -noverify</surefire.argline>
         <failsafe.argline>${jacoco.argline}</failsafe.argline>
 

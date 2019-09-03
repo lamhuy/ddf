@@ -38,6 +38,7 @@ import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.BasicTypes;
 import ddf.catalog.data.impl.types.CoreAttributes;
 import ddf.catalog.source.solr.json.MetacardTypeMapperFactory;
+import ddf.catalog.source.solr.metacardtypecache.MetacardTypeCacheImpl;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.BufferOverflowException;
@@ -229,6 +230,7 @@ public class DynamicSchemaResolverTest {
     DynamicSchemaResolver resolver =
         new DynamicSchemaResolver(
             Collections.EMPTY_LIST,
+            new MetacardTypeCacheImpl(),
             tinyTree -> {
               throw new BufferOverflowException();
             });
@@ -246,7 +248,8 @@ public class DynamicSchemaResolverTest {
 
   @Test
   public void testAdditionalFieldConstructorWithEmptyList() throws Exception {
-    DynamicSchemaResolver resolver = new DynamicSchemaResolver(Collections.EMPTY_LIST);
+    DynamicSchemaResolver resolver =
+        new DynamicSchemaResolver(Collections.EMPTY_LIST, new MetacardTypeCacheImpl());
     int fieldsCacheSize = resolver.fieldsCache.size();
 
     assertThat(fieldsCacheSize, equalTo(INITIAL_FIELDS_CACHE_COUNT));
@@ -261,7 +264,8 @@ public class DynamicSchemaResolverTest {
     additionalFields.add(someExtraField);
     additionalFields.add(anotherExtraField);
 
-    DynamicSchemaResolver resolver = new DynamicSchemaResolver(additionalFields);
+    DynamicSchemaResolver resolver =
+        new DynamicSchemaResolver(additionalFields, new MetacardTypeCacheImpl());
 
     assertThat(
         resolver.fieldsCache.size(), equalTo(INITIAL_FIELDS_CACHE_COUNT + additionalFields.size()));

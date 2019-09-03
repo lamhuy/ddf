@@ -16,8 +16,6 @@ package ddf.catalog.source.solr;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryCollection;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -35,7 +33,9 @@ import ddf.catalog.data.impl.BasicTypes;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.MetacardTypeImpl;
 import ddf.catalog.data.types.Validation;
+import ddf.catalog.source.MetacardTypeCache;
 import ddf.catalog.source.solr.json.MetacardTypeMapperFactory;
+import ddf.catalog.source.solr.metacardtypecache.MetacardTypeCacheImpl;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -170,23 +170,22 @@ public class DynamicSchemaResolver {
 
   protected SchemaFields schemaFields;
 
-  protected Cache<String, MetacardType> metacardTypesCache =
-      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
-
-  protected Cache<String, byte[]> metacardTypeNameToSerialCache =
-      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
-
   private Processor processor = new Processor(new Config());
 
+  private MetacardTypeCache metacardTypeCache;
+
   public DynamicSchemaResolver(
-      List<String> additionalFields, Function<TinyTree, TinyBinary> tinyBinaryFunction) {
-    this(additionalFields);
+      List<String> additionalFields,
+      MetacardTypeCache metacardTypeCache,
+      Function<TinyTree, TinyBinary> tinyBinaryFunction) {
+    this(additionalFields, metacardTypeCache);
     this.tinyBinaryFunction = tinyBinaryFunction;
   }
 
-  public DynamicSchemaResolver(List<String> additionalFields) {
+  public DynamicSchemaResolver(List<String> additionalFields, MetacardTypeCache metacardTypeCache) {
     this.tinyBinaryFunction = this::newTinyBinary;
     this.schemaFields = new SchemaFields();
+    this.metacardTypeCache = metacardTypeCache;
     metadataMaximumBytes = getMetadataSizeLimit();
     fieldsCache.add(Metacard.ID + SchemaFields.TEXT_SUFFIX);
     fieldsCache.add(Metacard.ID + SchemaFields.TEXT_SUFFIX + SchemaFields.TOKENIZED);
@@ -217,7 +216,7 @@ public class DynamicSchemaResolver {
   }
 
   public DynamicSchemaResolver() {
-    this(Collections.emptyList());
+    this(Collections.emptyList(), new MetacardTypeCacheImpl());
   }
 
   /**
@@ -379,17 +378,17 @@ public class DynamicSchemaResolver {
      */
     String schemaName = String.format("%s#%s", schema.getName(), schema.hashCode());
     solrInputDocument.addField(SchemaFields.METACARD_TYPE_FIELD_NAME, schemaName);
-    byte[] metacardTypeBytes = metacardTypeNameToSerialCache.getIfPresent(schemaName);
+    byte[] metacardTypeBytes = metacardTypeCache.getMetacardSerializedType(schemaName);
 
     if (metacardTypeBytes == null) {
       MetacardType coreMetacardType =
           new MetacardTypeImpl(
               schema.getName(), convertAttributeDescriptors(schema.getAttributeDescriptors()));
 
-      metacardTypesCache.put(schemaName, coreMetacardType);
+      metacardTypeCache.addMetacardType(schemaName, coreMetacardType);
 
       metacardTypeBytes = serialize(coreMetacardType);
-      metacardTypeNameToSerialCache.put(schemaName, metacardTypeBytes);
+      metacardTypeCache.addMetacardSerializedType(schemaName, metacardTypeBytes);
 
       addToFieldsCache(coreMetacardType.getAttributeDescriptors());
     }
@@ -653,7 +652,7 @@ public class DynamicSchemaResolver {
   public MetacardType getMetacardType(SolrDocument doc) throws MetacardCreationException {
     String mTypeFieldName = doc.getFirstValue(SchemaFields.METACARD_TYPE_FIELD_NAME).toString();
 
-    MetacardType cachedMetacardType = metacardTypesCache.getIfPresent(mTypeFieldName);
+    MetacardType cachedMetacardType = metacardTypeCache.getMetacardType(mTypeFieldName);
 
     if (cachedMetacardType != null) {
       return cachedMetacardType;
@@ -667,8 +666,8 @@ public class DynamicSchemaResolver {
       throw new MetacardCreationException(COULD_NOT_READ_METACARD_TYPE_MESSAGE);
     }
 
-    metacardTypeNameToSerialCache.put(mTypeFieldName, bytes);
-    metacardTypesCache.put(mTypeFieldName, cachedMetacardType);
+    metacardTypeCache.addMetacardSerializedType(mTypeFieldName, bytes);
+    metacardTypeCache.addMetacardType(mTypeFieldName, cachedMetacardType);
     addToFieldsCache(cachedMetacardType.getAttributeDescriptors());
 
     return cachedMetacardType;

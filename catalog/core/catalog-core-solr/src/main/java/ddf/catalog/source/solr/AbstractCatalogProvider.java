@@ -182,12 +182,20 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   @Override
   public DeleteResponse delete(DeleteRequest deleteRequest) throws IngestException {
     indexProvider.delete(deleteRequest);
-    DeleteResponse deleteResponse = storageProvider.delete(deleteRequest);
-    return deleteResponse;
+    return storageProvider.delete(deleteRequest);
   }
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
+    // TODO TROY -- move dynamic schema resolver lookup logic for metacard type up here
+    // Change the resolver to use the metacardtypecache
+    // Get types from the storage provider
+    // Query for existing card first using updateRequest.getAttributeName() and the values in the
+    // getUpdates entry
+    // Add logic for query to populate type map cache
+    // Change update to then update storage and then update index. Verify how we update... Do we
+    // update the doc in place or delete/add?
+    // new cards from incoming request
     storageProvider.update(updateRequest);
     return indexProvider.update(updateRequest);
   }

@@ -47,6 +47,11 @@
     </dependency>
     <dependency>
       <groupId>ddf.catalog.core</groupId>
+      <artifactId>catalog-core-metacardtypecache</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
       <artifactId>catalog-core-solr-api</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -84,6 +89,7 @@
               platform-util,
               catalog-core-solr,
               catalog-core-api-impl,
+              catalog-core-metacardtypecache,
               lux,
               Saxon-HE
             </Embed-Dependency>

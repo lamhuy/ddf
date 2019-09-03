@@ -35,6 +35,8 @@
 
     <reference id="solrClientFactory" interface="org.codice.solr.factory.SolrClientFactory"/>
 
+    <reference id="metacardTypeCache" interface="ddf.catalog.source.MetacardTypeCache"/>
+
     <bean id="solrCatalogCache" class="ddf.catalog.cache.solr.impl.SolrCache"
           destroy-method="shutdown">
         <argument ref="filterAdapter"/>
@@ -42,6 +44,7 @@
         <argument>
             <bean class="ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl"/>
         </argument>
+        <argument ref="metacardTypeCache"/>
     </bean>
 
     <bean id="cacheQueryFactory" class="ddf.catalog.cache.solr.impl.CacheQueryFactory">

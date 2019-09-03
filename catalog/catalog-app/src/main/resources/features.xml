@@ -632,11 +632,16 @@
         <bundle>mvn:ddf.catalog.migrate/workspace-query-separation/${project.version}</bundle>
     </feature>
 
+    <feature name="catalog-core-metacardtypecache" version="${project.version}">
+        <bundle>mvn:ddf.catalog.core/catalog-core-metacardtypecache/${project.version}</bundle>
+    </feature>
+
     <feature name="catalog-app" version="${project.version}"
              description="The Catalog provides a framework for storing, searching, processing, and transforming information.\nClients typically perform query, create, read, update, and delete (QCRUD) operations against the Catalog.\nAt the core of the Catalog functionality is the Catalog Framework, which routes all requests and responses through the system, invoking additional processing per the system configuration.">
         <feature>admin-app</feature>
         <feature>catalog-core-api</feature>
         <feature>catalog-core</feature>
+        <feature>catalog-core-metacardtypecache</feature>
         <feature>catalog-core-plugins</feature>
         <feature>catalog-core-content</feature>
         <feature>catalog-core-directorymonitor</feature>

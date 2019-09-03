@@ -27,6 +27,7 @@ import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
+import ddf.catalog.source.MetacardTypeCache;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.SchemaFields;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
@@ -106,8 +107,13 @@ public class SolrCache implements SolrCacheMBean {
   public SolrCache(
       FilterAdapter adapter,
       SolrClientFactory solrClientFactory,
-      SolrFilterDelegateFactory solrFilterDelegateFactory) {
-    this(adapter, solrClientFactory.newClient(METACARD_CACHE_CORE_NAME), solrFilterDelegateFactory);
+      SolrFilterDelegateFactory solrFilterDelegateFactory,
+      MetacardTypeCache metacardTypeCache) {
+    this(
+        adapter,
+        solrClientFactory.newClient(METACARD_CACHE_CORE_NAME),
+        solrFilterDelegateFactory,
+        metacardTypeCache);
   }
 
   @VisibleForTesting
@@ -132,8 +138,11 @@ public class SolrCache implements SolrCacheMBean {
   private SolrCache(
       FilterAdapter adapter,
       SolrClient client,
-      SolrFilterDelegateFactory solrFilterDelegateFactory) {
-    this(client, new CacheSolrMetacardClient(client, adapter, solrFilterDelegateFactory));
+      SolrFilterDelegateFactory solrFilterDelegateFactory,
+      MetacardTypeCache metacardTypeCache) {
+    this(
+        client,
+        new CacheSolrMetacardClient(client, adapter, solrFilterDelegateFactory, metacardTypeCache));
   }
 
   public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {

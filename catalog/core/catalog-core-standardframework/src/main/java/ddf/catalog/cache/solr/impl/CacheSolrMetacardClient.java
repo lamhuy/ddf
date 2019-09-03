@@ -17,6 +17,7 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardCreationException;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.filter.FilterAdapter;
+import ddf.catalog.source.MetacardTypeCache;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.SolrMetacardClientImpl;
@@ -40,12 +41,13 @@ class CacheSolrMetacardClient extends SolrMetacardClientImpl {
   public CacheSolrMetacardClient(
       SolrClient client,
       FilterAdapter catalogFilterAdapter,
-      SolrFilterDelegateFactory solrFilterDelegateFactory) {
+      SolrFilterDelegateFactory solrFilterDelegateFactory,
+      MetacardTypeCache metacardTypeCache) {
     super(
         client,
         catalogFilterAdapter,
         solrFilterDelegateFactory,
-        new DynamicSchemaResolver(ADDITIONAL_FIELDS));
+        new DynamicSchemaResolver(ADDITIONAL_FIELDS, metacardTypeCache));
   }
 
   @Override

@@ -86,7 +86,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   private StorageProvider storageProvider;
 
   private FilterBuilder filterBuilder;
-  
+
   public AbstractCatalogProvider(
       IndexProvider indexProvider, StorageProvider storageProvider, FilterBuilder filterBuilder) {
     this.indexProvider = indexProvider;

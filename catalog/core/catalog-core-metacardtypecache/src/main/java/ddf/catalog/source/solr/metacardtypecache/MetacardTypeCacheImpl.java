@@ -22,11 +22,13 @@ import org.slf4j.LoggerFactory;
 
 public class MetacardTypeCacheImpl implements MetacardTypeCache {
 
+  private static final int INITIAL_CACHE_SIZE = 64;
+
   protected Cache<String, MetacardType> metacardTypesCache =
-      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
+      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(INITIAL_CACHE_SIZE).build();
 
   protected Cache<String, byte[]> metacardTypeNameToSerialCache =
-      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
+      CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(INITIAL_CACHE_SIZE).build();
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MetacardTypeCacheImpl.class);
 
@@ -63,8 +65,16 @@ public class MetacardTypeCacheImpl implements MetacardTypeCache {
   }
 
   public void setCacheSize(int cacheSize) {
-    metacardTypesCache = CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
-    metacardTypeNameToSerialCache =
-        CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
+    int initialSize = cacheSize > INITIAL_CACHE_SIZE ? INITIAL_CACHE_SIZE : cacheSize;
+
+    Cache<String, MetacardType> newTypeCache =
+        CacheBuilder.newBuilder().maximumSize(cacheSize).initialCapacity(initialSize).build();
+    newTypeCache.putAll(metacardTypesCache.asMap());
+    metacardTypesCache = newTypeCache;
+
+    Cache<String, byte[]> newSerialCache =
+        CacheBuilder.newBuilder().maximumSize(cacheSize).initialCapacity(initialSize).build();
+    newSerialCache.putAll(metacardTypeNameToSerialCache.asMap());
+    metacardTypeNameToSerialCache = newSerialCache;
   }
 }

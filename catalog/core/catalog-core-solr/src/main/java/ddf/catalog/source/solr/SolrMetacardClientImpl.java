@@ -374,9 +374,8 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       List<Map.Entry<String, String>> suggestionResults =
           suggesterResponse
               .getSuggestions()
-              .entrySet()
+              .values()
               .stream()
-              .map(Map.Entry::getValue)
               .flatMap(List::stream)
               .map(
                   suggestion ->
@@ -476,7 +475,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
           resolver
               .getDocValues(solrFieldName, fieldValues)
               .stream()
-              .map(v -> v.toString())
+              .map(Object::toString)
               .collect(Collectors.toList());
       ids.addAll(values);
     }
@@ -526,7 +525,10 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     List<Metacard> results = new ArrayList<>(docs.size());
     for (SolrDocument doc : docs) {
       try {
-        results.add(createMetacard(doc));
+        Metacard metacard = createMetacard(doc);
+        if (metacard != null) {
+          results.add(metacard);
+        }
       } catch (MetacardCreationException e) {
         throw new UnsupportedQueryException("Could not create metacard(s).", e);
       }
@@ -870,7 +872,11 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
   }
 
   private ResultImpl createResult(SolrDocument doc) throws MetacardCreationException {
-    ResultImpl result = new ResultImpl(createMetacard(doc));
+    Metacard metacard = createMetacard(doc);
+    if (metacard == null) {
+      return new ResultImpl();
+    }
+    ResultImpl result = new ResultImpl(metacard);
 
     if (doc.get(RELEVANCE_SORT_FIELD) != null) {
       result.setRelevanceScore(((Float) (doc.get(RELEVANCE_SORT_FIELD))).doubleValue());
@@ -882,7 +888,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       if (distance != null) {
         LOGGER.debug("Distance returned from Solr [{}]", distance);
         double convertedDistance =
-            new Distance(Double.valueOf(distance.toString()), Distance.LinearUnit.KILOMETER)
+            new Distance(Double.parseDouble(distance.toString()), Distance.LinearUnit.KILOMETER)
                 .getAs(Distance.LinearUnit.METER);
 
         result.setDistanceInMeters(convertedDistance);
@@ -894,6 +900,10 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
 
   public MetacardImpl createMetacard(SolrDocument doc) throws MetacardCreationException {
     MetacardType metacardType = resolver.getMetacardType(doc);
+    if (metacardType == null) {
+      return null;
+    }
+
     MetacardImpl metacard = new MetacardImpl(metacardType);
 
     for (String solrFieldName : doc.getFieldNames()) {

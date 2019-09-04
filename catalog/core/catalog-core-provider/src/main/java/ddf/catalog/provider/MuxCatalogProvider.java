@@ -13,13 +13,15 @@
  */
 package ddf.catalog.provider;
 
+import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.StorageProvider;
 import ddf.catalog.source.solr.AbstractCatalogProvider;
 
 /** Catalog Provider that interfaces with Solr */
 public class MuxCatalogProvider extends AbstractCatalogProvider {
-  public MuxCatalogProvider(IndexProvider indexProvider, StorageProvider storageProvider) {
-    super(indexProvider, storageProvider);
+  public MuxCatalogProvider(
+      IndexProvider indexProvider, StorageProvider storageProvider, FilterBuilder filterBuilder) {
+    super(indexProvider, storageProvider, filterBuilder);
   }
 }

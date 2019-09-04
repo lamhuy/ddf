@@ -14,6 +14,10 @@
 package ddf.catalog.source.solr;
 
 import ddf.catalog.data.ContentType;
+import ddf.catalog.data.Metacard;
+import ddf.catalog.data.Result;
+import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
@@ -21,10 +25,16 @@ import ddf.catalog.operation.DeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
+import ddf.catalog.operation.Update;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.QueryImpl;
+import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.operation.impl.QueryResponseImpl;
+import ddf.catalog.operation.impl.UpdateImpl;
+import ddf.catalog.operation.impl.UpdateRequestImpl;
+import ddf.catalog.operation.impl.UpdateResponseImpl;
 import ddf.catalog.source.CatalogProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
@@ -34,10 +44,19 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.opengis.filter.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,13 +82,16 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   }
 
   private IndexProvider indexProvider;
+
   private StorageProvider storageProvider;
 
-  /** Constructor. */
-  public AbstractCatalogProvider(IndexProvider indexProvider, StorageProvider storageProvider) {
-
+  private FilterBuilder filterBuilder;
+  
+  public AbstractCatalogProvider(
+      IndexProvider indexProvider, StorageProvider storageProvider, FilterBuilder filterBuilder) {
     this.indexProvider = indexProvider;
     this.storageProvider = storageProvider;
+    this.filterBuilder = filterBuilder;
     indexProvider.maskId(getId());
     storageProvider.maskId(getId());
   }
@@ -187,17 +209,70 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   @Override
   public UpdateResponse update(UpdateRequest updateRequest) throws IngestException {
-    // TODO TROY -- move dynamic schema resolver lookup logic for metacard type up here
-    // Change the resolver to use the metacardtypecache
-    // Get types from the storage provider
-    // Query for existing card first using updateRequest.getAttributeName() and the values in the
-    // getUpdates entry
-    // Add logic for query to populate type map cache
-    // Change update to then update storage and then update index. Verify how we update... Do we
-    // update the doc in place or delete/add?
-    // new cards from incoming request
-    storageProvider.update(updateRequest);
-    return indexProvider.update(updateRequest);
+    if (updateRequest.getAttributeName().equals(UpdateRequest.UPDATE_BY_ID)) {
+      // We can directly perform updates in the storage provider and index provider in this case
+      UpdateResponse response = storageProvider.update(updateRequest);
+      indexProvider.update(updateRequest);
+      return response;
+    }
+
+    // If not ID update, then we query for metacards by attribute name/values, create ID based
+    // update
+    // for storage and index providers.
+    String attributeName = updateRequest.getAttributeName();
+    List<Filter> attributeFilters = new ArrayList<>();
+    for (Entry<Serializable, Metacard> entry : updateRequest.getUpdates()) {
+      attributeFilters.add(
+          filterBuilder
+              .attribute(attributeName)
+              .is()
+              .equalTo()
+              .text(String.valueOf(entry.getKey())));
+    }
+
+    QueryImpl query = new QueryImpl(filterBuilder.anyOf(attributeFilters));
+    query.setPageSize(attributeFilters.size() + 1);
+
+    QueryRequest queryRequest = new QueryRequestImpl(query);
+    try {
+      IndexQueryResponse queryResponse = indexProvider.query(queryRequest);
+      List<String> metacardsToUpdate = queryResponse.getIds();
+      if (metacardsToUpdate.size() > updateRequest.getUpdates().size()) {
+        throw new IngestException(
+            "Found more metacards than updated metacards provided. Please ensure your attribute values match unique records.");
+      }
+
+      SourceResponse storageResponse =
+          storageProvider.queryByIds(queryRequest, Collections.emptyMap(), metacardsToUpdate);
+      Map<Serializable, Metacard> oldMetacardByQueryAttribute =
+          storageResponse
+              .getResults()
+              .stream()
+              .map(Result::getMetacard)
+              .collect(Collectors.toMap(mc -> mc.getAttribute(attributeName), Function.identity()));
+      List<Update> updateList = new ArrayList<>();
+      List<Entry<Serializable, Metacard>> newUpdateEntryById = new ArrayList<>();
+      for (Entry<Serializable, Metacard> newEntries : updateRequest.getUpdates()) {
+        Metacard oldMetacard = oldMetacardByQueryAttribute.get(newEntries.getKey());
+        MetacardImpl newMetacard = new MetacardImpl(newEntries.getValue());
+        newMetacard.setId(oldMetacard.getId());
+        newMetacard.setSourceId(getId());
+        updateList.add(new UpdateImpl(newMetacard, oldMetacard));
+        newUpdateEntryById.add(
+            new AbstractMap.SimpleEntry<Serializable, Metacard>(newMetacard.getId(), newMetacard));
+      }
+
+      UpdateRequest updateByIdRequest =
+          new UpdateRequestImpl(
+              newUpdateEntryById, UpdateRequestImpl.UPDATE_BY_ID, updateRequest.getProperties());
+      storageProvider.update(updateByIdRequest);
+      indexProvider.update(updateByIdRequest);
+
+      return new UpdateResponseImpl(updateRequest, updateRequest.getProperties(), updateList);
+    } catch (UnsupportedQueryException e) {
+      LOGGER.debug("Unable to query for metacards to update: {}", query, e);
+      throw new IngestException("Unable to query for metacards to update: " + query, e);
+    }
   }
 
   public void setStorageProvider(StorageProvider storageProvider) {

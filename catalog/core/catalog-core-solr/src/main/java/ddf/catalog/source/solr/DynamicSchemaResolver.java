@@ -376,7 +376,7 @@ public class DynamicSchemaResolver {
     /*
      * Lastly the metacardType must be added to the solr document. These are internal fields
      */
-    String schemaName = String.format("%s#%s", schema.getName(), schema.hashCode());
+    String schemaName = metacardTypeCache.getIndexName(schema);
     solrInputDocument.addField(SchemaFields.METACARD_TYPE_FIELD_NAME, schemaName);
     byte[] metacardTypeBytes = metacardTypeCache.getMetacardSerializedType(schemaName);
 
@@ -650,7 +650,12 @@ public class DynamicSchemaResolver {
   @SuppressWarnings(
       "squid:S2093" /* try-with-resource will throw IOException with InputStream and we do not care to get that exception */)
   public MetacardType getMetacardType(SolrDocument doc) throws MetacardCreationException {
-    String mTypeFieldName = doc.getFirstValue(SchemaFields.METACARD_TYPE_FIELD_NAME).toString();
+    Object typeField = doc.getFirstValue(SchemaFields.METACARD_TYPE_FIELD_NAME);
+    if (typeField == null) {
+      return null;
+    }
+
+    String mTypeFieldName = typeField.toString();
 
     MetacardType cachedMetacardType = metacardTypeCache.getMetacardType(mTypeFieldName);
 
@@ -659,16 +664,20 @@ public class DynamicSchemaResolver {
     }
 
     byte[] bytes = (byte[]) doc.getFirstValue(SchemaFields.METACARD_TYPE_OBJECT_FIELD_NAME);
-    try {
-      cachedMetacardType = METACARD_TYPE_MAPPER.readValue(bytes, MetacardType.class);
-    } catch (IOException e) {
-      LOGGER.info("IO exception loading cached metacard type", e);
-      throw new MetacardCreationException(COULD_NOT_READ_METACARD_TYPE_MESSAGE);
-    }
+    if (bytes != null) {
+      try {
+        cachedMetacardType = METACARD_TYPE_MAPPER.readValue(bytes, MetacardType.class);
+      } catch (IOException e) {
+        LOGGER.info("IO exception loading cached metacard type", e);
+        throw new MetacardCreationException(COULD_NOT_READ_METACARD_TYPE_MESSAGE);
+      }
 
-    metacardTypeCache.addMetacardSerializedType(mTypeFieldName, bytes);
-    metacardTypeCache.addMetacardType(mTypeFieldName, cachedMetacardType);
-    addToFieldsCache(cachedMetacardType.getAttributeDescriptors());
+      if (cachedMetacardType != null) {
+        metacardTypeCache.addMetacardSerializedType(mTypeFieldName, bytes);
+        metacardTypeCache.addMetacardType(mTypeFieldName, cachedMetacardType);
+        addToFieldsCache(cachedMetacardType.getAttributeDescriptors());
+      }
+    }
 
     return cachedMetacardType;
   }

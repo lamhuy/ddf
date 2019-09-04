@@ -630,7 +630,9 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
     @Override
     public MetacardImpl createMetacard(SolrDocument doc) throws MetacardCreationException {
       MetacardImpl metacard = super.createMetacard(doc);
-      metacard.setSourceId(getId());
+      if (metacard != null) {
+        metacard.setSourceId(getId());
+      }
       return metacard;
     }
   }

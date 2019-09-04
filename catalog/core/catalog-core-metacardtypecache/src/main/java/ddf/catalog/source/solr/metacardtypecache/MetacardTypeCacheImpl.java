@@ -52,6 +52,16 @@ public class MetacardTypeCacheImpl implements MetacardTypeCache {
     return metacardTypeNameToSerialCache.getIfPresent(type);
   }
 
+  @Override
+  public String getIndexName(MetacardType metacardType) {
+    return String.format("%s#%s", metacardType.getName(), metacardType.hashCode());
+  }
+
+  @Override
+  public boolean isTypeCached(String type) {
+    return metacardTypesCache.getIfPresent(type) != null;
+  }
+
   public void setCacheSize(int cacheSize) {
     metacardTypesCache = CacheBuilder.newBuilder().maximumSize(4096).initialCapacity(64).build();
     metacardTypeNameToSerialCache =

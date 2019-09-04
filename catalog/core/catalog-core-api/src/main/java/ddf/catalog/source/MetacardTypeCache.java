@@ -24,4 +24,8 @@ public interface MetacardTypeCache {
   void addMetacardSerializedType(String type, byte[] metacardTypeBytes);
 
   byte[] getMetacardSerializedType(String type);
+
+  boolean isTypeCached(String type);
+
+  String getIndexName(MetacardType metacardType);
 }

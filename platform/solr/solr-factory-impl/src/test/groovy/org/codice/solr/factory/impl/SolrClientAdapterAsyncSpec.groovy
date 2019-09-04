@@ -933,7 +933,7 @@ class SolrClientAdapterAsyncSpec extends Specification {
       !adapter.available
 
     when: "checking availability with a timeout"
-      def available = adapter.isAvailable(timeout, 5, unit)
+      def available = adapter.isAvailable(timeout, 1, unit)
 
     then: "make sure the waiter was called or not"
       waitCalled.get() == wait_count
@@ -963,8 +963,8 @@ class SolrClientAdapterAsyncSpec extends Specification {
       with_a_timeout_of || timeout | unit         || wait_count
       'negative'        || -25     | NANOSECONDS  || 0
       '0 seconds'       || 0       | SECONDS      || 0
-      '1 millisecond'   || 1       | MILLISECONDS || 1
-      '5 seconds'       || 5       | SECONDS      || 1
+      '1 millisecond'   || 2       | MILLISECONDS || 1
+      '5 seconds'       || 5       | SECONDS      || 4
   }
 
   def 'test isAvailable() with a listener as the adapter changes states'() {

@@ -112,6 +112,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
    */
   public void setForceAutoCommit(boolean forceAutoCommit) {
     ConfigurationStore.getInstance().setForceAutoCommit(forceAutoCommit);
+    indexProvider.setForceAutoCommit(forceAutoCommit);
   }
 
   /**

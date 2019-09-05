@@ -51,5 +51,7 @@ public interface IndexProvider extends Maskable {
 
   boolean isAvailable();
 
+  void setForceAutoCommit(boolean forceAutoCommit);
+
   void shutdown();
 }

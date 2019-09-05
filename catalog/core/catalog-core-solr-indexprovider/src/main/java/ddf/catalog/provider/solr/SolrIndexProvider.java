@@ -36,6 +36,7 @@ import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
+import ddf.catalog.source.solr.ConfigurationStore;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.RealTimeGetDelegate;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
@@ -222,6 +223,11 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
       return clientFactory.isAvailable();
     }
     return false;
+  }
+
+  @Override
+  public void setForceAutoCommit(boolean forceAutoCommit) {
+    ConfigurationStore.getInstance().setForceAutoCommit(forceAutoCommit);
   }
 
   protected Response executeRequest(Request request) throws IngestException {

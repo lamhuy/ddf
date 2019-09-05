@@ -65,7 +65,7 @@ public class MetacardTypeCacheImpl implements MetacardTypeCache {
   }
 
   public void setCacheSize(int cacheSize) {
-    int initialSize = cacheSize > INITIAL_CACHE_SIZE ? INITIAL_CACHE_SIZE : cacheSize;
+    int initialSize = Math.min(cacheSize, INITIAL_CACHE_SIZE);
 
     Cache<String, MetacardType> newTypeCache =
         CacheBuilder.newBuilder().maximumSize(cacheSize).initialCapacity(initialSize).build();

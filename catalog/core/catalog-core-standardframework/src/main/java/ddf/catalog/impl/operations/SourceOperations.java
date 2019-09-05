@@ -313,8 +313,14 @@ public class SourceOperations extends DescribableImpl {
             })
         .orElseGet(
             () -> {
-              LOGGER.debug("Unknown availability for source id={}", source.getId());
-              return false;
+              LOGGER.debug(
+                  "Source status is not found in cache. Checking source id={} availability directly",
+                  source.getId());
+              final boolean available = source.isAvailable();
+              if (!available) {
+                LOGGER.debug("source \"{}\" is not available", source.getId());
+              }
+              return available;
             });
   }
 

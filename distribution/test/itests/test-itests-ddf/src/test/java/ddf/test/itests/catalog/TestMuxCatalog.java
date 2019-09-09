@@ -51,6 +51,7 @@ public class TestMuxCatalog extends TestCatalog {
   public void waitForBaseSystemFeatures() {
     try {
       basePort = getBasePort();
+      getServiceManager().stopBundle("catalog-solr-provider");
       getServiceManager()
           .startFeature(
               true, Arrays.copyOf(DEFAULT_REQUIRED_MUX_APPS, DEFAULT_REQUIRED_MUX_APPS.length));

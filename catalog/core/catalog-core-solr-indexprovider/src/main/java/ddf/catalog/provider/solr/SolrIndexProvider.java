@@ -411,6 +411,7 @@ public class SolrIndexProvider extends DescribableImpl implements IndexProvider 
   }
 
   private void initializeKnownProviders() {
+    catalogProviders.computeIfAbsent(QUERY_ALIAS, this::newProvider);
     List<String> collections = clientFactory.getCollectionsForAlias(QUERY_ALIAS);
     for (String collection : collections) {
       catalogProviders.computeIfAbsent(collection, this::newProvider);

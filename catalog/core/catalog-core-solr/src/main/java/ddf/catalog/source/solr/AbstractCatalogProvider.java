@@ -144,8 +144,12 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     long startTime = System.currentTimeMillis();
     IndexQueryResponse indexQueryResponse = indexProvider.query(queryRequest);
     long indexElapsedTime = System.currentTimeMillis() - startTime;
-    SourceResponse queryResponse = null;
+    long numHits = 0;
+    SourceResponse queryResponse =
+        new QueryResponseImpl(
+            queryRequest, Collections.emptyList(), true, numHits, queryRequest.getProperties());
     if (indexQueryResponse != null) {
+      numHits = indexQueryResponse.getHits();
       if (CollectionUtils.isNotEmpty(indexQueryResponse.getIds())) {
         queryResponse =
             storageProvider.queryByIds(
@@ -161,7 +165,8 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
         "Query Index elapsed time {} and query storage elapsed time {}",
         indexElapsedTime,
         totalElapsedTime - indexElapsedTime);
-    return queryResponse;
+    return new QueryResponseImpl(
+        queryRequest, queryResponse.getResults(), true, numHits, queryResponse.getProperties());
   }
 
   @Override

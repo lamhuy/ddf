@@ -63,9 +63,15 @@ public abstract class AbstractIndexCollectionProvider extends DescribableImpl
     for (String filename : SOLR_CONFIG_FILES) {
       InputStream inputStream =
           getClass().getClassLoader().getResourceAsStream("solr/conf/" + filename);
-      SolrConfigurationData solrConfigurationDataFile =
-          new SolrConfigurationDataImpl(filename, inputStream);
-      configurationData.add(solrConfigurationDataFile);
+      if (inputStream == null) {
+        inputStream =
+            getClass().getClassLoader().getResourceAsStream("solr-schema/solr/conf/" + filename);
+      }
+      if (inputStream != null) {
+        SolrConfigurationData solrConfigurationDataFile =
+            new SolrConfigurationDataImpl(filename, inputStream);
+        configurationData.add(solrConfigurationDataFile);
+      }
     }
     return new SolrCollectionConfigurationImpl(getCollectionName(), shardCount, configurationData);
   }

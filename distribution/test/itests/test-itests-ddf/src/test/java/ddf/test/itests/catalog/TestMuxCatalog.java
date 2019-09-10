@@ -28,7 +28,7 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 public class TestMuxCatalog extends TestCatalog {
 
   protected static final String[] DEFAULT_REQUIRED_MUX_APPS = {
-    "catalog-app", "solr-mux-app", "spatial-app"
+    "catalog-app", "solr-mux-app", "spatial-app", "sdk-app"
   };
 
   @BeforeExam

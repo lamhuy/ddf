@@ -162,7 +162,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     }
     long totalElapsedTime = System.currentTimeMillis() - startTime;
     LOGGER.trace(
-        "Query Index elapsed time {} and query storage elapsed time {}",
+        "Query Index elapsed time {} ms and query storage elapsed time {} ms",
         indexElapsedTime,
         totalElapsedTime - indexElapsedTime);
     return new QueryResponseImpl(

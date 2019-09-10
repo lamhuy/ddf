@@ -35,7 +35,7 @@ import ddf.catalog.data.impl.MetacardTypeImpl;
 import ddf.catalog.data.types.Validation;
 import ddf.catalog.source.MetacardTypeCache;
 import ddf.catalog.source.solr.json.MetacardTypeMapperFactory;
-import ddf.catalog.source.solr.metacardtypecache.MetacardTypeCacheImpl;
+import ddf.catalog.source.solr.metacardtypecache.impl.MetacardTypeCacheImpl;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -287,6 +287,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   public void init() {
+    try {
+      ds.close();
+    } catch (SQLException e) {
+      LOGGER.trace("Unable to close existing data source", e);
+    }
+
     if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(dbUrl)) {
       try {
         createDB();

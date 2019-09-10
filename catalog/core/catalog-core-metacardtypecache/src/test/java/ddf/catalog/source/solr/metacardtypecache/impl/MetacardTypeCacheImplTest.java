@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.source.solr.metacardtypecache;
+package ddf.catalog.source.solr.metacardtypecache.impl;
 
 public class MetacardTypeCacheImplTest {
 

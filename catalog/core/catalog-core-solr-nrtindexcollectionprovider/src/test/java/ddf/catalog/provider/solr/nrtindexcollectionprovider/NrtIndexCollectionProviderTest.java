@@ -13,21 +13,69 @@
  */
 package ddf.catalog.provider.solr.nrtindexcollectionprovider;
 
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.types.Core;
+import java.util.Collections;
+import org.junit.Before;
 import org.junit.Test;
 
 public class NrtIndexCollectionProviderTest {
 
   private NrtIndexCollectionProvider indexProvider = new NrtIndexCollectionProvider();
 
+  @Before
+  public void setUp() {
+    indexProvider.setNrtMetacardTypes(Collections.singletonList("workspace"));
+  }
+
   @Test
   public void testGetCollection() throws Exception {
-    Metacard mockCard = mock(Metacard.class);
+    Metacard mockCard = getMockMetacard("workspace");
     String collection = indexProvider.getCollection(mockCard);
     assertThat(collection, is(NrtIndexCollectionProvider.COLLECTION));
+  }
+
+  @Test
+  public void testUnsetNrtTypes() {
+    indexProvider.setNrtMetacardTypes(Collections.emptyList());
+    Metacard mockCard = getMockMetacard("workspace");
+    String collection = indexProvider.getCollection(mockCard);
+    assertThat(collection, is(nullValue()));
+  }
+
+  @Test
+  public void testNotSupportedTag() {
+    Metacard mockCard = getMockMetacard("resource");
+    String collection = indexProvider.getCollection(mockCard);
+    assertThat(collection, is(nullValue()));
+  }
+
+  @Test
+  public void testNoTags() {
+    Metacard mockCard = mock(Metacard.class);
+    when(mockCard.getAttribute(Core.METACARD_TAGS)).thenReturn(null);
+    String collection = indexProvider.getCollection(mockCard);
+    assertThat(collection, is(nullValue()));
+  }
+
+  @Test
+  public void testNullMetacard() {
+    String collection = indexProvider.getCollection(null);
+    assertThat(collection, is(nullValue()));
+  }
+
+  private Metacard getMockMetacard(String tag) {
+    Metacard metacard = mock(Metacard.class);
+    Attribute tagAttr = mock(Attribute.class);
+    when(tagAttr.getValues()).thenReturn(Collections.singletonList(tag));
+    when(metacard.getAttribute(Core.METACARD_TAGS)).thenReturn(tagAttr);
+    return metacard;
   }
 }

@@ -53,6 +53,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -89,11 +90,11 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private static final String QUERY_SQL_START =
       "select ID, METACARD_DATA from METACARD_STORE where ID IN (";
 
-  private static BasicDataSource ds = new BasicDataSource();
+  private static BasicDataSource ds;
 
-  protected InputTransformer metacardDecodeTransformer;
+  private InputTransformer metacardDecodeTransformer;
 
-  protected MetacardTransformer metacardEncodeTransformer;
+  private MetacardTransformer metacardEncodeTransformer;
 
   private String dbUrl = null;
 
@@ -104,8 +105,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private int poolSize = 100;
 
   /**
-   * @param metacardDecodeTransformer
-   * @param metacardEncodeTransformer
+   * Constructs JdbcStorageProvider with decode and encode transformer to be used when persisting
+   * Metacard data to the database. The transformer pair should be lossless when called to encode
+   * and decode data.
+   *
+   * @param metacardDecodeTransformer - Transformer used to decode stored data
+   * @param metacardEncodeTransformer - Transformer used to encode data prior to storage.
    */
   public JdbcStorageProvider(
       InputTransformer metacardDecodeTransformer, MetacardTransformer metacardEncodeTransformer) {
@@ -138,19 +143,22 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
               .map(Serializable::toString)
               .filter(Objects::nonNull)
               .collect(Collectors.toSet());
+
       Map<String, Metacard> oldMetacardMap =
           getMetacards(identifiers)
               .stream()
               .filter(Objects::nonNull)
               .collect(Collectors.toMap(Metacard::getId, Function.identity()));
 
-      List<Metacard> updatedCards =
-          requestedUpdates
-              .stream()
-              .map(Map.Entry::getValue)
-              .peek(mc -> mc.setSourceId(getId()))
-              .collect(Collectors.toList());
+      List<Metacard> updatedCards = new ArrayList<>();
+      for (Entry<Serializable, Metacard> requestedUpdate : requestedUpdates) {
+        Metacard value = requestedUpdate.getValue();
+        value.setSourceId(getId());
+        updatedCards.add(value);
+      }
+
       updateMetacards(updatedCards);
+
       List<Update> updates =
           updatedCards
               .stream()
@@ -176,24 +184,27 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
             .stream()
             .map(Object::toString)
             .collect(Collectors.toSet());
-    try {
-      List<Metacard> deletedMetacards = getMetacards(ids);
-      try (Connection conn = ds.getConnection()) {
-        for (String id : ids) {
-          try (PreparedStatement ps = conn.prepareStatement(DELETE_SQL)) {
-            ps.setString(1, id);
-            int numRecords = ps.executeUpdate();
-            LOGGER.trace("Deleted {} records", numRecords);
-          }
-        }
-      } catch (SQLException e) {
-        throw new IngestException("Unable to get DB connection: " + dbUrl, e);
-      }
 
-      return new DeleteResponseImpl(deleteRequest, deleteRequest.getProperties(), deletedMetacards);
+    List<Metacard> deletedMetacards;
+    try {
+      deletedMetacards = getMetacards(ids);
     } catch (UnsupportedQueryException e) {
       throw new IngestException("Unable to delete metacards", e);
     }
+
+    try (Connection conn = ds.getConnection()) {
+      for (String id : ids) {
+        try (PreparedStatement ps = conn.prepareStatement(DELETE_SQL)) {
+          ps.setString(1, id);
+          int numRecords = ps.executeUpdate();
+          LOGGER.trace("Deleted {} records", numRecords);
+        }
+      }
+    } catch (SQLException e) {
+      throw new IngestException("Unable to get DB connection: " + dbUrl, e);
+    }
+
+    return new DeleteResponseImpl(deleteRequest, deleteRequest.getProperties(), deletedMetacards);
   }
 
   @Override
@@ -213,7 +224,10 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     return new SourceResponseImpl(queryRequest, properties, results);
   }
 
-  public void shutdown() {}
+  @Override
+  public void shutdown() {
+    destroy();
+  }
 
   @Override
   public boolean isAvailable() {
@@ -221,8 +235,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       if (!ds.isClosed()) {
         return true;
       } else {
+        initDataSource();
         try (Connection conn = ds.getConnection()) {
-          return true;
+          return conn != null;
         } catch (SQLException e) {
           LOGGER.trace("Unable to test data source connection", e);
         }
@@ -247,11 +262,6 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     return Collections.emptySet();
   }
 
-  @Override
-  public void maskId(String id) {
-    super.maskId(id);
-  }
-
   public void refresh(Map<String, Object> configuration) {
     if (configuration == null) {
       LOGGER.debug("Null configuration");
@@ -262,9 +272,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     setUser((String) configuration.get(USERNAME_KEY));
     setPassword((String) configuration.get(PASSWORD_KEY));
 
-    Integer poolSize = (Integer) configuration.get(POOLSIZE_KEY);
-    if (poolSize != null) {
-      setPoolSize(poolSize);
+    Integer configPoolSize = (Integer) configuration.get(POOLSIZE_KEY);
+    if (configPoolSize != null) {
+      setPoolSize(configPoolSize);
     }
 
     init();
@@ -287,10 +297,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   public void init() {
-    try {
-      ds.close();
-    } catch (SQLException e) {
-      LOGGER.trace("Unable to close existing data source", e);
+    if (ds != null) {
+      try {
+        ds.close();
+      } catch (SQLException e) {
+        LOGGER.trace("Unable to close existing data source", e);
+      }
     }
 
     if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(dbUrl)) {
@@ -323,17 +335,19 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   private void initDataSource() {
+    ds = new BasicDataSource();
     ds.setUrl(dbUrl);
     ds.setUsername(user);
     ds.setPassword(password);
     ds.setMinIdle(5);
-    ds.setMaxIdle(10);
-    ds.setMaxOpenPreparedStatements(poolSize * 200);
+    ds.setMaxIdle(50);
+    ds.setMaxOpenPreparedStatements(poolSize * 500);
   }
 
   private void insertMetacards(List<Metacard> metacards) throws IngestException {
     long insertTime = System.currentTimeMillis();
 
+    List<Metacard> cardsToUpdate = new ArrayList<>();
     try (Connection conn = ds.getConnection()) {
       for (Metacard metacard : metacards) {
         String encodedMetacard = getEncodedMetacard(metacard);
@@ -341,31 +355,47 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
           ps.setString(1, metacard.getId());
           ps.setLong(2, insertTime);
           ps.setString(3, encodedMetacard);
-          try {
-            int numRecords = ps.executeUpdate();
-            LOGGER.trace("Inserted {} records", numRecords);
-          } catch (SQLException e) {
-            if (e.getSQLState().contains("23000") || e.getSQLState().contains("23505")) {
-              LOGGER.trace("Integrity constraint, attempting to update");
-              updateMetacards(Collections.singletonList(metacard));
-            } else {
-              throw e;
-            }
+          if (!executeInsert(ps)) {
+            cardsToUpdate.add(metacard);
           }
         }
-      }
-      if (LOGGER.isTraceEnabled()) {
-        long totalTime = System.currentTimeMillis() - insertTime;
-        LOGGER.trace("Total time to insert records: {} ms", totalTime);
       }
     } catch (SQLException e) {
       LOGGER.debug("SQL Exception encountered while storing data", e);
       throw new IngestException("Unable to insert metadata to: " + dbUrl, e);
     }
+
+    updateMetacards(cardsToUpdate);
+
+    if (LOGGER.isTraceEnabled()) {
+      long totalTime = System.currentTimeMillis() - insertTime;
+      LOGGER.trace("Total time to insert records: {} ms", totalTime);
+    }
+  }
+
+  private boolean executeInsert(PreparedStatement ps) throws SQLException {
+    boolean success = false;
+    try {
+      int numRecords = ps.executeUpdate();
+      success = true;
+      LOGGER.trace("Inserted {} records", numRecords);
+    } catch (SQLException e) {
+      if (e.getSQLState().contains("23000") || e.getSQLState().contains("23505")) {
+        LOGGER.trace("Integrity constraint, attempting to update");
+        success = false;
+      } else {
+        throw e;
+      }
+    }
+    return success;
   }
 
   private void updateMetacards(List<Metacard> metacards) throws IngestException {
     long insertTime = System.currentTimeMillis();
+
+    if (CollectionUtils.isEmpty(metacards)) {
+      return;
+    }
 
     try (Connection conn = ds.getConnection()) {
       for (Metacard metacard : metacards) {

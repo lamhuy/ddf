@@ -70,6 +70,12 @@
       <artifactId>filter-proxy</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
+      <artifactId>catalog-core-solr-defaultindexcollectionprovider</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <resources>
@@ -183,17 +189,17 @@
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>INSTRUCTION</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.92</minimum>
+                      <minimum>0.99</minimum>
                     </limit>
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>BRANCH</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.92</minimum>
+                      <minimum>0.99</minimum>
                     </limit>
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>COMPLEXITY</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.90</minimum>
+                      <minimum>0.99</minimum>
                     </limit>
                   </limits>
                 </rule>

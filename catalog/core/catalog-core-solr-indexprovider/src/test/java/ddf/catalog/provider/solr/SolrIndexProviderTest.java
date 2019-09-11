@@ -15,12 +15,14 @@ package ddf.catalog.provider.solr;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
@@ -36,6 +38,7 @@ import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
+import ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
@@ -47,37 +50,33 @@ import java.util.stream.Collectors;
 import org.codice.solr.client.solrj.SolrClient;
 import org.codice.solr.factory.SolrClientFactory;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.opengis.filter.Filter;
 
-public class SolrIndexProviderTest extends SolrIndexProvider {
+public class SolrIndexProviderTest {
 
-  private static SolrFilterBuilder filterBuilder = new SolrFilterBuilder();
+  private FilterBuilder filterBuilder = new GeotoolsFilterBuilder();
   private BaseSolrCatalogProvider catalogProvider;
   private SolrIndexProvider indexProvider;
 
-  public SolrIndexProviderTest() {
-    super(
-        mock(SolrClientFactory.class),
-        mock(FilterAdapter.class),
-        mock(SolrFilterDelegateFactory.class),
-        mock(DynamicSchemaResolver.class),
-        Collections.emptyList(),
-        Collections.emptyList());
-  }
+  public SolrIndexProviderTest() {}
 
   @Before
   public void setup() {
-    indexProvider = this;
-  }
+    SolrClient solrClientMock = mock(SolrClient.class);
+    SolrClientFactory cloudClientMock = mock(SolrClientFactory.class);
+    when(cloudClientMock.isSolrCloud()).thenReturn(true);
+    when(cloudClientMock.newClient(any())).thenReturn(solrClientMock);
+    indexProvider =
+        new SolrIndexProvider(
+            cloudClientMock,
+            mock(FilterAdapter.class),
+            mock(SolrFilterDelegateFactory.class),
+            mock(DynamicSchemaResolver.class),
+            Collections.singletonList(new DefaultSolrIndexCollectionProvider()),
+            Collections.emptyList());
 
-  @Override
-  protected BaseSolrCatalogProvider newProvider(String core) {
-    when(clientFactory.newClient(anyString())).thenReturn(mock(SolrClient.class));
-    super.newProvider(core);
     catalogProvider = mock(BaseSolrCatalogProvider.class);
-    return catalogProvider;
   }
 
   @Test
@@ -88,9 +87,8 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
 
   @Test
   public void testQuery() throws Exception {
-
     CreateResponse records = createRecord(indexProvider);
-    Filter filter = filterBuilder.attribute(Metacard.ANY_TEXT).is().like().text("*");
+    Filter filter = filterBuilder.attribute("anyText").is().like().text("*");
     QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
     when(catalogProvider.queryIndex(request))
         .thenReturn(
@@ -99,7 +97,7 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
                 records
                     .getCreatedMetacards()
                     .stream()
-                    .map(c -> c.getId())
+                    .map(Metacard::getId)
                     .collect(Collectors.toList()),
                 2L));
 
@@ -145,25 +143,6 @@ public class SolrIndexProviderTest extends SolrIndexProvider {
         .thenReturn(new CreateResponseImpl(request, request.getProperties(), list));
 
     return provider.create(request);
-  }
-
-  @Test
-  @Ignore
-  public void testGetCatalogProvider() throws Exception {
-    when(clientFactory.isSolrCloud()).thenReturn(true);
-
-    List<Metacard> list =
-        Arrays.asList(
-            new MockMetacard(Library.getFlagstaffRecord()),
-            new MockMetacard(Library.getTampaRecord()));
-    CreateRequest createRequest = new CreateRequestImpl(list);
-    UpdateRequest updateRequest = new UpdateRequestImpl(list.get(0).getId(), list.get(0));
-    Filter filter = filterBuilder.attribute(Metacard.ANY_TEXT).is().like().text("*");
-    QueryRequest queryRequest = new QueryRequestImpl(new QueryImpl(filter));
-    // TODO Fix test
-    //    assertThat(indexProvider.create(createRequest), is(catalogProvider));
-    //    assertThat(indexProvider.update(updateRequest), is(catalogProvider));
-    //    assertThat(indexProvider.query(queryRequest), is(catalogProvider));
   }
 
   @Test

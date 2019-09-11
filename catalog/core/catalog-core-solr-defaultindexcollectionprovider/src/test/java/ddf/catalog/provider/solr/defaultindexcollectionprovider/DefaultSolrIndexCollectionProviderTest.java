@@ -16,8 +16,12 @@ package ddf.catalog.provider.solr.defaultindexcollectionprovider;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.types.Core;
+import java.util.Collections;
 import org.junit.Test;
 
 public class DefaultSolrIndexCollectionProviderTest {
@@ -27,8 +31,55 @@ public class DefaultSolrIndexCollectionProviderTest {
 
   @Test
   public void testGetCollection() throws Exception {
-    Metacard mockCard = mock(Metacard.class);
+    Metacard mockCard = getMockMetacard("workspace");
     String collection = indexProvider.getCollection(mockCard);
     assertThat(collection, is(DefaultSolrIndexCollectionProvider.DEFAULT_INDEX_COLLECTION));
+  }
+
+  @Test
+  public void testNotSupportedTag() {
+    Metacard mockCard = getMockMetacard("resource");
+    String collection = indexProvider.getCollection(mockCard);
+    assertThat(collection, is(DefaultSolrIndexCollectionProvider.DEFAULT_INDEX_COLLECTION));
+  }
+
+  @Test
+  public void testNoTags() {
+    Metacard mockCard = mock(Metacard.class);
+    when(mockCard.getAttribute(Core.METACARD_TAGS)).thenReturn(null);
+    String collection = indexProvider.getCollection(mockCard);
+    assertThat(collection, is(DefaultSolrIndexCollectionProvider.DEFAULT_INDEX_COLLECTION));
+  }
+
+  @Test
+  public void testNullMetacard() {
+    String collection = indexProvider.getCollection(null);
+    assertThat(collection, is(DefaultSolrIndexCollectionProvider.DEFAULT_INDEX_COLLECTION));
+  }
+
+  @Test
+  public void testMatches() {
+    boolean matches = indexProvider.matches(null);
+    assertThat(matches, is(true));
+  }
+
+  @Test
+  public void testMetacardMatches() {
+    boolean matches = indexProvider.matches(getMockMetacard("anything"));
+    assertThat(matches, is(true));
+  }
+
+  @Test
+  public void testGetCollectionName() {
+    String collectionName = indexProvider.getCollectionName();
+    assertThat(collectionName, is(DefaultSolrIndexCollectionProvider.DEFAULT_INDEX_COLLECTION));
+  }
+
+  private Metacard getMockMetacard(String tag) {
+    Metacard metacard = mock(Metacard.class);
+    Attribute tagAttr = mock(Attribute.class);
+    when(tagAttr.getValues()).thenReturn(Collections.singletonList(tag));
+    when(metacard.getAttribute(Core.METACARD_TAGS)).thenReturn(tagAttr);
+    return metacard;
   }
 }

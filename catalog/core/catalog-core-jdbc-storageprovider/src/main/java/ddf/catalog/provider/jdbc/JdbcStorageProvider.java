@@ -13,6 +13,7 @@
  */
 package ddf.catalog.provider.jdbc;
 
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
@@ -41,6 +42,7 @@ import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.InputTransformer;
 import ddf.catalog.transform.MetacardTransformer;
 import ddf.catalog.util.impl.MaskableImpl;
+import java.beans.PropertyVetoException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -59,7 +61,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.flywaydb.core.Flyway;
@@ -90,7 +91,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private static final String QUERY_SQL_START =
       "select ID, METACARD_DATA from METACARD_STORE where ID IN (";
 
-  private static BasicDataSource ds;
+  private static ComboPooledDataSource ds;
 
   private InputTransformer metacardDecodeTransformer;
 
@@ -119,6 +120,8 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
     this.metacardDecodeTransformer = metacardDecodeTransformer;
     this.metacardEncodeTransformer = metacardEncodeTransformer;
+
+    init();
   }
 
   @Override
@@ -232,15 +235,20 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   @Override
   public boolean isAvailable() {
     if (ds != null) {
-      if (!ds.isClosed()) {
-        return true;
-      } else {
-        initDataSource();
-        try (Connection conn = ds.getConnection()) {
-          return conn != null;
-        } catch (SQLException e) {
-          LOGGER.trace("Unable to test data source connection", e);
-        }
+      try (Connection conn = ds.getConnection()) {
+        LOGGER.debug("Number of Connections: {}", ds.getNumConnections());
+        LOGGER.debug("Number of Connections: {}", ds.getNumConnectionsAllUsers());
+        LOGGER.debug("Number of Busy Connections: {}", ds.getNumBusyConnections());
+        LOGGER.debug("Number of Busy Connections: {}", ds.getNumBusyConnectionsAllUsers());
+        LOGGER.debug("Number of Idle Connections: {}", ds.getNumIdleConnections());
+        LOGGER.debug("Number of Idle Connections: {}", ds.getNumIdleConnectionsAllUsers());
+        LOGGER.debug("Number of Orphaned Connections: {}", ds.getNumUnclosedOrphanedConnections());
+        LOGGER.debug(
+            "Number of Orphaned Connections: {}", ds.getNumUnclosedOrphanedConnectionsAllUsers());
+
+        return conn != null && !conn.isClosed();
+      } catch (SQLException e) {
+        LOGGER.trace("Unable to test data source connection", e);
       }
     }
     return false;
@@ -298,11 +306,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   public void init() {
     if (ds != null) {
-      try {
-        ds.close();
-      } catch (SQLException e) {
-        LOGGER.trace("Unable to close existing data source", e);
-      }
+      ds.close();
     }
 
     if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(dbUrl)) {
@@ -320,11 +324,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   public void destroy() {
     if (ds != null) {
-      try {
-        ds.close();
-      } catch (SQLException e) {
-        LOGGER.trace("Unable to close datasource", e);
-      }
+      ds.close();
     }
   }
 
@@ -335,13 +335,18 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   private void initDataSource() {
-    ds = new BasicDataSource();
-    ds.setUrl(dbUrl);
-    ds.setUsername(user);
-    ds.setPassword(password);
-    ds.setMinIdle(5);
-    ds.setMaxIdle(50);
-    ds.setMaxOpenPreparedStatements(poolSize * 500);
+    try {
+      ds = new ComboPooledDataSource();
+      ds.setDriverClass("org.postgresql.Driver"); // loads the jdbc driver
+      ds.setJdbcUrl(dbUrl);
+      ds.setUser(user);
+      ds.setPassword(password);
+      ds.setMinPoolSize(5);
+      ds.setMaxPoolSize(50);
+      ds.setAcquireIncrement(5);
+    } catch (PropertyVetoException e) {
+      LOGGER.error("Failed to create a connection pool");
+    }
   }
 
   private void insertMetacards(List<Metacard> metacards) throws IngestException {

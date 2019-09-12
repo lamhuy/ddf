@@ -60,6 +60,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
@@ -93,21 +94,21 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private static final String QUERY_SQL_START =
       "select ID, METACARD_DATA from METACARD_STORE where ID IN (";
 
-  private static ComboPooledDataSource ds;
+  protected DataSource ds;
 
   private InputTransformer metacardDecodeTransformer;
 
   private MetacardTransformer metacardEncodeTransformer;
 
-  private String dbUrl = null;
+  protected String dbUrl = null;
 
-  private String driver = null;
+  protected String driver = null;
 
-  private String user = null;
+  protected String user = null;
 
-  private String password = null;
+  protected String password = null;
 
-  private int poolSize = 100;
+  protected int poolSize = 100;
 
   /**
    * Constructs JdbcStorageProvider with decode and encode transformer to be used when persisting
@@ -240,16 +241,22 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   public boolean isAvailable() {
     if (ds != null) {
       try (Connection conn = ds.getConnection()) {
-        LOGGER.debug("Number of Connections: {}", ds.getNumConnections());
-        LOGGER.debug("Number of Connections: {}", ds.getNumConnectionsAllUsers());
-        LOGGER.debug("Number of Busy Connections: {}", ds.getNumBusyConnections());
-        LOGGER.debug("Number of Busy Connections: {}", ds.getNumBusyConnectionsAllUsers());
-        LOGGER.debug("Number of Idle Connections: {}", ds.getNumIdleConnections());
-        LOGGER.debug("Number of Idle Connections: {}", ds.getNumIdleConnectionsAllUsers());
-        LOGGER.debug("Number of Orphaned Connections: {}", ds.getNumUnclosedOrphanedConnections());
-        LOGGER.debug(
-            "Number of Orphaned Connections: {}", ds.getNumUnclosedOrphanedConnectionsAllUsers());
-
+        if (LOGGER.isDebugEnabled()) {
+          if (ds instanceof ComboPooledDataSource) {
+            ComboPooledDataSource poolDs = (ComboPooledDataSource) ds;
+            LOGGER.debug("Number of Connections: {}", poolDs.getNumConnections());
+            LOGGER.debug("Number of Connections: {}", poolDs.getNumConnectionsAllUsers());
+            LOGGER.debug("Number of Busy Connections: {}", poolDs.getNumBusyConnections());
+            LOGGER.debug("Number of Busy Connections: {}", poolDs.getNumBusyConnectionsAllUsers());
+            LOGGER.debug("Number of Idle Connections: {}", poolDs.getNumIdleConnections());
+            LOGGER.debug("Number of Idle Connections: {}", poolDs.getNumIdleConnectionsAllUsers());
+            LOGGER.debug(
+                "Number of Orphaned Connections: {}", poolDs.getNumUnclosedOrphanedConnections());
+            LOGGER.debug(
+                "Number of Orphaned Connections: {}",
+                poolDs.getNumUnclosedOrphanedConnectionsAllUsers());
+          }
+        }
         return conn != null && !conn.isClosed();
       } catch (SQLException e) {
         LOGGER.trace("Unable to test data source connection", e);
@@ -313,10 +320,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     this.poolSize = poolSize;
   }
 
+  public void setDataSource(DataSource dataSource) {
+    this.ds = dataSource;
+  }
+
   public void init() {
-    if (ds != null) {
-      ds.close();
-    }
+    closeDataSource();
 
     if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(dbUrl)) {
       try {
@@ -332,8 +341,12 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   public void destroy() {
-    if (ds != null) {
-      ds.close();
+    closeDataSource();
+  }
+
+  private void closeDataSource() {
+    if (ds instanceof ComboPooledDataSource) {
+      ((ComboPooledDataSource) ds).close();
     }
   }
 
@@ -345,7 +358,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   private void initDataSource() {
     try {
-      ds = new ComboPooledDataSource();
+      ComboPooledDataSource ds = new ComboPooledDataSource();
       ds.setDriverClass(driver); // loads the jdbc driver
       ds.setJdbcUrl(dbUrl);
       ds.setUser(user);
@@ -353,6 +366,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       ds.setMinPoolSize(5);
       ds.setMaxPoolSize(50);
       ds.setAcquireIncrement(5);
+      setDataSource(ds);
     } catch (PropertyVetoException e) {
       LOGGER.error("Failed to create a connection pool");
     }

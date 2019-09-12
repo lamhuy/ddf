@@ -349,5 +349,52 @@ public class Library {
         + "</purchaseOrder>";
   }
 
+  public static String getTestMetacard() {
+    return "<metacard xmlns=\"urn:catalog:metacard\" xmlns:ns2=\"http://www.opengis.net/gml\"\n"
+        + "          xmlns:ns3=\"http://www.w3.org/1999/xlink\" xmlns:ns4=\"http://www.w3.org/2001/SMIL20/\"\n"
+        + "          xmlns:ns5=\"http://www.w3.org/2001/SMIL20/Language\">\n"
+        + "    <type>ddf.metacard</type>\n"
+        + "    <source>ddf.distribution</source>\n"
+        + "    <string name=\"metadata-content-type-version\">\n"
+        + "        <value>myVersion</value>\n"
+        + "    </string>\n"
+        + "    <string name=\"title\">\n"
+        + "        <value>Metacard-1</value>\n"
+        + "    </string>\n"
+        + "    <string name=\"description\">\n"
+        + "        <value>My Description</value>\n"
+        + "    </string>\n"
+        + "    <geometry name=\"location\">\n"
+        + "        <value>\n"
+        + "            <ns2:Point>\n"
+        + "                <ns2:pos>-74.0452177 40.6898329</ns2:pos>\n"
+        + "            </ns2:Point>\n"
+        + "        </value>\n"
+        + "    </geometry>\n"
+        + "    <dateTime name=\"created\">\n"
+        + "        <value>2013-04-18T10:50:27.371-07:00</value>\n"
+        + "    </dateTime>\n"
+        + "    <dateTime name=\"modified\">\n"
+        + "        <value>2013-04-18T10:50:27.371-07:00</value>\n"
+        + "    </dateTime>\n"
+        + "    <base64Binary name=\"thumbnail\">\n"
+        + "        <value>/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAALAAgDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAJBAAAAQFAwUAAAAAAAAAAAAAABETFAEDBBIVAgUGISJRYZP/xAAVAQEBAAAAAAAAAAAAAAAAAAADBf/EABkRAAMAAwAAAAAAAAAAAAAAAAABAwISIv/aAAwDAQACEQMRAD8A3fRvVTHmTS+RjkUfbolC+fUBDhR0zXMN5WUyibqyClrhMj8WdoAtynSGLfJ//9k=</value>\n"
+        + "    </base64Binary>\n"
+        + "    <string name=\"metadata\">\n"
+        + "        <value>&lt;?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?&gt;\n"
+        + "            &lt;Resource&gt;\n"
+        + "            &lt;name&gt;Lady Liberty&lt;/name&gt;\n"
+        + "            &lt;/Resource&gt;\n"
+        + "        </value>\n"
+        + "    </string>\n"
+        + "    <string name=\"metadata-content-type\">\n"
+        + "        <value>myType</value>\n"
+        + "    </string>\n"
+        + "    <string name=\"resource-uri\">\n"
+        + "        <value>\" + uri + \"</value>\n"
+        + "    </string>\n"
+        + "</metacard>";
+  }
+
   // @formatter:on
 }

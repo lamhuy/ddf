@@ -71,6 +71,11 @@
         <version>${project.version}</version>
         <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
+      <artifactId>filter-proxy</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <resources>
@@ -164,17 +169,17 @@
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>INSTRUCTION</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.83</minimum>
+                      <minimum>0.69</minimum>
                     </limit>
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>BRANCH</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>.45</minimum>
+                      <minimum>.62</minimum>
                     </limit>
                     <limit implementation="org.codice.jacoco.LenientLimit">
                       <counter>COMPLEXITY</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.60</minimum>
+                      <minimum>0.64</minimum>
                     </limit>
                   </limits>
                 </rule>

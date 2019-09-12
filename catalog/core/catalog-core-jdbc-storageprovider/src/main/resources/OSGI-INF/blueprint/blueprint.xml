@@ -32,6 +32,7 @@
 		<argument ref="xmlInputTransformer"/>
         <argument ref="metacardTransformer"/>
 		<property name="dbUrl" value="jdbc:postgresql://localhost:5432/ddf"/>
+    <property name="driver" value="org.postgresql.Driver"/>
 		<property name="user" value="ddf"/>
 		<property name="password" value="ddf-password"/>
 		<property name="poolSize" value="100" />

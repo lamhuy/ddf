@@ -74,6 +74,8 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   private static final String URL_KEY = "dbUrl";
 
+  private static final String DRIVER_KEY = "driver";
+
   private static final String USERNAME_KEY = "user";
 
   @SuppressWarnings("squid:S2068" /* Referring to the key, not a value */)
@@ -98,6 +100,8 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private MetacardTransformer metacardEncodeTransformer;
 
   private String dbUrl = null;
+
+  private String driver = null;
 
   private String user = null;
 
@@ -277,6 +281,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     }
 
     setDbUrl((String) configuration.get(URL_KEY));
+    setDriver((String) configuration.get(DRIVER_KEY));
     setUser((String) configuration.get(USERNAME_KEY));
     setPassword((String) configuration.get(PASSWORD_KEY));
 
@@ -290,6 +295,10 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   public void setDbUrl(String dbUrl) {
     this.dbUrl = dbUrl;
+  }
+
+  public void setDriver(String driver) {
+    this.driver = driver;
   }
 
   public void setUser(String user) {
@@ -337,7 +346,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private void initDataSource() {
     try {
       ds = new ComboPooledDataSource();
-      ds.setDriverClass("org.postgresql.Driver"); // loads the jdbc driver
+      ds.setDriverClass(driver); // loads the jdbc driver
       ds.setJdbcUrl(dbUrl);
       ds.setUser(user);
       ds.setPassword(password);

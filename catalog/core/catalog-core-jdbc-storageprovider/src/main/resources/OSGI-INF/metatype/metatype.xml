@@ -17,6 +17,10 @@
 
   <OCD name="JDBC Storage Provider"
     id="ddf.catalog.provider.jdbc.JdbcStorageProvider">
+    <AD description="JDBC Driver"
+      name="Driver" id="driver"
+      type="String" default="org.postgresql.Driver"/>
+
     <AD description="JDBC Connection String."
       name="DB URL" id="dbUrl"
       type="String" default="jdbc:postgresql://localhost:5432/ddf"/>

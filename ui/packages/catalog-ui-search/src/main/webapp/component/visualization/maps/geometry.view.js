@@ -49,7 +49,7 @@ var GeometryView = Marionette.ItemView.extend({
     this.onDestroy()
     this.isSelected = undefined
     this.isClustered = undefined
-    var geometry = this.model.getGeometries()
+    const geometry = _.flatten(this.model.getGeometries())
     if (geometry.length > 0) {
       this.geometry = []
       _.forEach(

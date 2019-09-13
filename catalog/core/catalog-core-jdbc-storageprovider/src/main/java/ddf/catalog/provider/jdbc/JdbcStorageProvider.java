@@ -366,6 +366,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       ds.setMinPoolSize(5);
       ds.setMaxPoolSize(50);
       ds.setAcquireIncrement(5);
+      ds.setTestConnectionOnCheckout(false);
+      ds.setTestConnectionOnCheckin(false);
+      ds.setIdleConnectionTestPeriod(60);
       setDataSource(ds);
     } catch (PropertyVetoException e) {
       LOGGER.error("Failed to create a connection pool");

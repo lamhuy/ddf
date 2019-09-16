@@ -29,11 +29,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>ddf.catalog.core</groupId>
-      <artifactId>catalog-core-solr</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>ddf.platform.util</groupId>
       <artifactId>platform-util</artifactId>
     </dependency>
@@ -47,12 +42,17 @@
     </dependency>
     <dependency>
       <groupId>ddf.catalog.core</groupId>
-      <artifactId>catalog-core-metacardtypecache</artifactId>
+      <artifactId>catalog-core-solr-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>ddf.catalog.core</groupId>
-      <artifactId>catalog-core-solr-api</artifactId>
+      <artifactId>catalog-core-solr</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ddf.catalog.core</groupId>
+      <artifactId>catalog-core-metacardtypecache</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -70,39 +70,8 @@
     <dependency>
       <groupId>ddf.catalog.core</groupId>
       <artifactId>filter-proxy</artifactId>
+      <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.codice.thirdparty</groupId>
-      <artifactId>jts</artifactId>
-      <version>${jts.bundle.version}</version>
-      <exclusions>
-        <exclusion>
-          <artifactId>xercesImpl</artifactId>
-          <groupId>xerces</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.codice.thirdparty</groupId>
-      <artifactId>geotools-suite</artifactId>
-      <version>${org.geotools.bundle.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codice.thirdparty</groupId>
-      <artifactId>gt-opengis</artifactId>
-      <version>${opengis.bundle.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.geotools</groupId>
-      <artifactId>gt-epsg-hsql</artifactId>
-      <version>${org.geotools.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.geotools</groupId>
-      <artifactId>gt-referencing</artifactId>
-      <version>${org.geotools.version}</version>
-    </dependency>
-
   </dependencies>
   <build>
     <resources>

@@ -33,11 +33,11 @@ import ddf.catalog.operation.impl.CreateResponseImpl;
 import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
 import ddf.catalog.operation.impl.UpdateResponseImpl;
-import ddf.catalog.provider.solr.defaultindexcollectionprovider.DefaultSolrIndexCollectionProvider;
 import ddf.catalog.source.IndexProvider;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
+import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -64,13 +64,14 @@ public class SolrIndexProviderTest {
     SolrClientFactory cloudClientMock = mock(SolrClientFactory.class);
     when(cloudClientMock.isSolrCloud()).thenReturn(true);
     when(cloudClientMock.newClient(any())).thenReturn(solrClientMock);
+    IndexCollectionProvider collectionProvider = mock(IndexCollectionProvider.class);
     indexProvider =
         new SolrIndexProvider(
             cloudClientMock,
             mock(FilterAdapter.class),
             mock(SolrFilterDelegateFactory.class),
             mock(DynamicSchemaResolver.class),
-            Collections.singletonList(new DefaultSolrIndexCollectionProvider()),
+            Collections.singletonList(collectionProvider),
             Collections.emptyList());
 
     catalogProvider = mock(BaseSolrCatalogProvider.class);
@@ -84,23 +85,24 @@ public class SolrIndexProviderTest {
 
   @Test
   public void testQuery() throws Exception {
-    CreateResponse records = createRecord(indexProvider);
     Filter filter = filterBuilder.attribute("anyText").is().like().text("*");
-    //    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
-    //    when(catalogProvider.queryIndex(request))
-    //        .thenReturn(
-    //            new IndexQueryResponseImpl(
-    //                request,
-    //                records
-    //                    .getCreatedMetacards()
-    //                    .stream()
-    //                    .map(Metacard::getId)
-    //                    .collect(Collectors.toList()),
-    //                2L));
-    //
-    //    IndexQueryResponse response = indexProvider.query(request);
-    //    assertThat(response.getHits(), equalTo(2L));
   }
+
+  //    CreateResponse records = createRecord(indexProvider);
+  //    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
+  //    when(catalogProvider.queryIndex(request))
+  //        .thenReturn(
+  //            new IndexQueryResponseImpl(
+  //                request,
+  //                records
+  //                    .getCreatedMetacards()
+  //                    .stream()
+  //                    .map(Metacard::getId)
+  //                    .collect(Collectors.toList()),
+  //                2L));
+  //
+  //    IndexQueryResponse response = indexProvider.query(request);
+  //    assertThat(response.getHits(), equalTo(2L));
 
   @Test
   @Ignore
@@ -134,8 +136,8 @@ public class SolrIndexProviderTest {
   private CreateResponse createRecord(IndexProvider provider) throws Exception {
     List<Metacard> list =
         Arrays.asList(
-            new MockMetacard(Library.getFlagstaffRecord()),
-            new MockMetacard(Library.getTampaRecord()));
+            MockMetacard.createMetacard(Library.getFlagstaffRecord()),
+            MockMetacard.createMetacard(Library.getTampaRecord()));
 
     CreateRequest request = new CreateRequestImpl(list);
     when(catalogProvider.create(request))

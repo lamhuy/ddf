@@ -248,7 +248,7 @@ public class JdbcStorageProviderTest {
   @Test
   public void testRefreshNoData() {
     storageProvider.refresh(null);
-    assertThat(storageProvider.poolSize, is(100));
+    assertThat(storageProvider.maxPoolSize, is(100));
   }
 
   @Test
@@ -263,14 +263,20 @@ public class JdbcStorageProviderTest {
     config.put("driver", driver);
     config.put("user", user);
     config.put("password", password);
-    config.put("poolSize", 200);
+    config.put("maxPoolSize", 200);
+    config.put("minPoolSize", 10);
+    config.put("idleConnectionTestPeriod", 500);
+    config.put("maxStatementCache", 450);
 
     storageProvider.refresh(config);
     assertThat(storageProvider.dbUrl, is(url));
     assertThat(storageProvider.driver, is(driver));
     assertThat(storageProvider.user, is(user));
     assertThat(storageProvider.password, is(password));
-    assertThat(storageProvider.poolSize, is(200));
+    assertThat(storageProvider.maxPoolSize, is(200));
+    assertThat(storageProvider.minPoolSize, is(10));
+    assertThat(storageProvider.idleConnectionTestPeriod, is(500));
+    assertThat(storageProvider.maxStatementCache, is(450));
   }
 
   private ResultSet getMockResults() throws Exception {

@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-public class MockMetacard extends MetacardImpl {
+public class MockMetacard {
 
   public static final String DEFAULT_TITLE = "Flagstaff";
 
@@ -38,29 +38,31 @@ public class MockMetacard extends MetacardImpl {
 
   private static final long serialVersionUID = -189776439741244547L;
 
-  public MockMetacard(String metadata, MetacardType type, Calendar calendar) {
-    super(type);
+  public static Metacard createMetacard(String metadata, MetacardType type, Calendar calendar) {
+    MetacardImpl metacard = new MetacardImpl(type);
+
     // make a simple metacard
-    this.setCreatedDate(calendar.getTime());
-    this.setEffectiveDate(calendar.getTime());
-    this.setExpirationDate(calendar.getTime());
-    this.setModifiedDate(calendar.getTime());
-    this.setMetadata(metadata);
-    this.setContentTypeName(DEFAULT_TYPE);
-    this.setContentTypeVersion(DEFAULT_VERSION);
-    this.setLocation(DEFAULT_LOCATION);
-    this.setThumbnail(DEFAULT_THUMBNAIL);
-    this.setTitle(DEFAULT_TITLE);
-    this.setSecurity(new HashMap<>());
-    this.setTags(Collections.singleton(DEFAULT_TAG));
+    metacard.setCreatedDate(calendar.getTime());
+    metacard.setEffectiveDate(calendar.getTime());
+    metacard.setExpirationDate(calendar.getTime());
+    metacard.setModifiedDate(calendar.getTime());
+    metacard.setMetadata(metadata);
+    metacard.setContentTypeName(DEFAULT_TYPE);
+    metacard.setContentTypeVersion(DEFAULT_VERSION);
+    metacard.setLocation(DEFAULT_LOCATION);
+    metacard.setThumbnail(DEFAULT_THUMBNAIL);
+    metacard.setTitle(DEFAULT_TITLE);
+    metacard.setSecurity(new HashMap<>());
+    metacard.setTags(Collections.singleton(DEFAULT_TAG));
+    return metacard;
   }
 
-  public MockMetacard(String metadata, MetacardType type) {
-    this(metadata, type, Calendar.getInstance());
+  public static Metacard createMetacard(String metadata, MetacardType type) {
+    return MockMetacard.createMetacard(metadata, type, Calendar.getInstance());
   }
 
-  public MockMetacard(String metadata) {
-    this(metadata, MetacardImpl.BASIC_METACARD);
+  public static Metacard createMetacard(String metadata) {
+    return MockMetacard.createMetacard(metadata, MetacardImpl.BASIC_METACARD);
   }
 
   public static List<String> toStringList(List<Metacard> cards) {

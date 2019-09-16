@@ -82,7 +82,13 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   @SuppressWarnings("squid:S2068" /* Referring to the key, not a value */)
   private static final String PASSWORD_KEY = "password";
 
-  private static final String POOLSIZE_KEY = "poolSize";
+  private static final String MAX_POOL_SIZE_KEY = "maxPoolSize";
+
+  private static final String MIN_POOL_SIZE_KEY = "minPoolSize";
+
+  private static final String IDLE_CONN_TEST_KEY = "idleConnectionTestPeriod";
+
+  private static final String STATEMENT_CACHE_KEY = "maxStatementCache";
 
   private static final String INSERT_SQL = "insert into METACARD_STORE values(?,?,?)";
 
@@ -94,7 +100,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   private static final String QUERY_SQL_START =
       "select ID, METACARD_DATA from METACARD_STORE where ID IN (";
 
-  protected DataSource ds;
+  protected static DataSource ds;
 
   private InputTransformer metacardDecodeTransformer;
 
@@ -108,7 +114,13 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   protected String password = null;
 
-  protected int poolSize = 100;
+  protected int maxPoolSize = 100;
+
+  protected int minPoolSize = 5;
+
+  protected int idleConnectionTestPeriod = 300;
+
+  protected int maxStatementCache = 250;
 
   /**
    * Constructs JdbcStorageProvider with decode and encode transformer to be used when persisting
@@ -292,9 +304,24 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     setUser((String) configuration.get(USERNAME_KEY));
     setPassword((String) configuration.get(PASSWORD_KEY));
 
-    Integer configPoolSize = (Integer) configuration.get(POOLSIZE_KEY);
+    Integer configPoolSize = (Integer) configuration.get(MAX_POOL_SIZE_KEY);
     if (configPoolSize != null) {
-      setPoolSize(configPoolSize);
+      setMaxPoolSize(configPoolSize);
+    }
+
+    Integer configMinPoolSize = (Integer) configuration.get(MIN_POOL_SIZE_KEY);
+    if (configMinPoolSize != null) {
+      setMinPoolSize(configMinPoolSize);
+    }
+
+    Integer configIdleConnTimeout = (Integer) configuration.get(IDLE_CONN_TEST_KEY);
+    if (configIdleConnTimeout != null) {
+      setIdleConnectionTestPeriod(configIdleConnTimeout);
+    }
+
+    Integer configStatementCache = (Integer) configuration.get(STATEMENT_CACHE_KEY);
+    if (configStatementCache != null) {
+      setMaxStatementCache(configStatementCache);
     }
 
     init();
@@ -316,8 +343,20 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     this.password = password;
   }
 
-  public void setPoolSize(int poolSize) {
-    this.poolSize = poolSize;
+  public void setMaxPoolSize(int maxPoolSize) {
+    this.maxPoolSize = maxPoolSize;
+  }
+
+  public void setMinPoolSize(int minPoolSize) {
+    this.minPoolSize = minPoolSize;
+  }
+
+  public void setIdleConnectionTestPeriod(int idleConnectionTestPeriod) {
+    this.idleConnectionTestPeriod = idleConnectionTestPeriod;
+  }
+
+  public void setMaxStatementCache(int maxStatementCache) {
+    this.maxStatementCache = maxStatementCache;
   }
 
   public void setDataSource(DataSource dataSource) {
@@ -363,12 +402,14 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       ds.setJdbcUrl(dbUrl);
       ds.setUser(user);
       ds.setPassword(password);
-      ds.setMinPoolSize(5);
-      ds.setMaxPoolSize(50);
+      ds.setMinPoolSize(minPoolSize);
+      ds.setMaxPoolSize(maxPoolSize);
       ds.setAcquireIncrement(5);
       ds.setTestConnectionOnCheckout(false);
       ds.setTestConnectionOnCheckin(false);
-      ds.setIdleConnectionTestPeriod(60);
+      ds.setIdleConnectionTestPeriod(idleConnectionTestPeriod);
+      ds.setMaxStatements(maxStatementCache);
+      ds.setNumHelperThreads(Runtime.getRuntime().availableProcessors() * 2);
       setDataSource(ds);
     } catch (PropertyVetoException e) {
       LOGGER.error("Failed to create a connection pool");

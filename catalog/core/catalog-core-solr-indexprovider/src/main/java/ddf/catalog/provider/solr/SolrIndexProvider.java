@@ -42,7 +42,7 @@ import ddf.catalog.source.solr.RealTimeGetDelegate;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import ddf.catalog.source.solr.api.SolrCollectionCreationPlugin;
-import ddf.catalog.util.impl.DescribableImpl;
+import ddf.catalog.util.impl.MaskableImpl;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** {@link CatalogProvider} implementation using Apache Solr */
-public class SolrIndexProvider extends DescribableImpl implements IndexProvider {
+public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrIndexProvider.class);
 

@@ -35,7 +35,10 @@
     <property name="driver" value="org.postgresql.Driver"/>
 		<property name="user" value="ddf"/>
 		<property name="password" value="ddf-password"/>
-		<property name="poolSize" value="100" />
+		<property name="maxPoolSize" value="100" />
+		<property name="minPoolSize" value="5" />
+		<property name="idleConnectionTestPeriod" value="300" />
+		<property name="maxStatementCache" value="250" />
 	</bean>
 
 	<service ref="solrStorageProvider" interface="ddf.catalog.source.StorageProvider" />

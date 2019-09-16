@@ -70,6 +70,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrRequest.METHOD;
@@ -186,7 +187,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
       QueryResponse solrResponse;
       Boolean doRealTimeGet = filterAdapter.adapt(request.getQuery(), new RealTimeGetDelegate());
 
-      if (doRealTimeGet) {
+      if (BooleanUtils.isTrue(doRealTimeGet)) {
         LOGGER.debug("Performing real time query");
         SolrQuery realTimeQuery = getRealTimeQuery(query, solrFilterDelegate.getIds());
         solrResponse = client.query(realTimeQuery, METHOD.POST);

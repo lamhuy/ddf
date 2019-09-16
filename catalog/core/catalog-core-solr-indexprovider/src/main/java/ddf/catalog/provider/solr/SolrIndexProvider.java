@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.codice.solr.factory.SolrClientFactory;
@@ -182,7 +183,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     }
 
     Boolean doRealTimeGet = filterAdapter.adapt(queryRequest.getQuery(), new RealTimeGetDelegate());
-    if (doRealTimeGet) {
+    if (BooleanUtils.isTrue(doRealTimeGet)) {
       // Need to call get handler on every index core
       List<String> ids = new ArrayList<>();
       long totalHits = 0;
@@ -272,7 +273,9 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
             catalogProviders
                 .computeIfAbsent(entry.getKey(), this::newProvider)
                 .update(entry.getValue());
-        props.putAll(response.getProperties());
+        if (response.getProperties() != null) {
+          props.putAll(response.getProperties());
+        }
         for (Update update : response.getUpdatedMetacards()) {
           updatedMetacards.add(update.getNewMetacard());
           oldMetacards.add(update.getOldMetacard());

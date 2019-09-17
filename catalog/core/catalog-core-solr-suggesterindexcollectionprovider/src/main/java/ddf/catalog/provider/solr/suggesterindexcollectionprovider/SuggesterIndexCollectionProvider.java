@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package ddf.catalog.provider.solr.nrtindexcollectionprovider;
+package ddf.catalog.provider.solr.suggesterindexcollectionprovider;
 
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
@@ -21,13 +21,13 @@ import java.io.Serializable;
 import java.util.List;
 import org.springframework.util.CollectionUtils;
 
-public class NrtIndexCollectionProvider extends AbstractIndexCollectionProvider {
-  static final String COLLECTION = "catalog_nrt";
+public class SuggesterIndexCollectionProvider extends AbstractIndexCollectionProvider {
+  static final String COLLECTION = "suggester";
 
-  private List<String> nrtMetacardTypes;
+  private List<String> suggesterMetacardTypes;
 
-  public void setNrtMetacardTypes(List<String> nrtMetacardTypes) {
-    this.nrtMetacardTypes = nrtMetacardTypes;
+  public void setSuggesterMetacardTypes(List<String> suggesterMetacardTypes) {
+    this.suggesterMetacardTypes = suggesterMetacardTypes;
   }
 
   @Override
@@ -37,7 +37,7 @@ public class NrtIndexCollectionProvider extends AbstractIndexCollectionProvider 
 
   @Override
   protected boolean matches(Metacard metacard) {
-    if (CollectionUtils.isEmpty(nrtMetacardTypes)) {
+    if (CollectionUtils.isEmpty(suggesterMetacardTypes)) {
       return false;
     }
 
@@ -46,7 +46,7 @@ public class NrtIndexCollectionProvider extends AbstractIndexCollectionProvider 
       for (Serializable attr : tagAttr.getValues()) {
         if (attr instanceof String) {
           String tag = (String) attr;
-          if (nrtMetacardTypes.contains(tag)) {
+          if (suggesterMetacardTypes.contains(tag)) {
             return true;
           }
         }

@@ -113,6 +113,7 @@
         <module>catalog-core-solr-defaultindexcollectionprovider</module>
         <module>catalog-core-solr-resourceindexcollectionprovider</module>
         <module>catalog-core-solr-nrtindexcollectionprovider</module>
+        <module>catalog-core-solr-suggesterindexcollectionprovider</module>
         <module>catalog-core-metacardtypecache</module>
     </modules>
 </project>

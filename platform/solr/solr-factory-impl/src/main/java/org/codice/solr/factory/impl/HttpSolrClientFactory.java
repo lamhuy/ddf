@@ -167,6 +167,11 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   }
 
   @Override
+  public void removeCollection(String collection) {
+    throw new IllegalStateException("removeCollection not supported.");
+  }
+
+  @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
     throw new IllegalStateException("addConfiguration not supported.");

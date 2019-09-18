@@ -52,6 +52,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
@@ -344,7 +347,17 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         configuration.getConfigurationName(), configuration.getSolrConfigurationData());
     clientFactory.addCollection(
         collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
+    waitForCollection(collection);
     clientFactory.addCollectionToAlias(QUERY_ALIAS, collection);
+  }
+
+  private void waitForCollection(final String collection) {
+    RetryPolicy retryPolicy =
+        new RetryPolicy()
+            .withDelay(100, TimeUnit.MILLISECONDS)
+            .withMaxDuration(3, TimeUnit.MINUTES)
+            .retryWhen(false);
+    Failsafe.with(retryPolicy).run(() -> clientFactory.collectionExists(collection));
   }
 
   private Map<String, CreateRequest> getCreateRequests(CreateRequest createRequest) {

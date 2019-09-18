@@ -63,6 +63,11 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   }
 
   @Override
+  public void removeCollection(String collection) {
+    factory.removeCollection(collection);
+  }
+
+  @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
     factory.addConfiguration(configurationName, configurationData);

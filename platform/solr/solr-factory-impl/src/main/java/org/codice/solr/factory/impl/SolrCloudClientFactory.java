@@ -37,6 +37,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
+import org.apache.solr.client.solrj.impl.HttpSolrClient.RemoteSolrException;
 import org.apache.solr.client.solrj.impl.ZkClientClusterStateProvider;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.CollectionAdminResponse;
@@ -141,6 +142,22 @@ public class SolrCloudClientFactory implements SolrClientFactory {
   }
 
   @Override
+  public void removeCollection(String collection) {
+    try (final Closer closer = new Closer()) {
+      CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
+      client.connect();
+      CollectionAdminResponse response =
+          CollectionAdminRequest.deleteCollection(collection).process(client);
+      if (!response.isSuccess()) {
+        throw new SolrFactoryException(
+            "Failed to delete collection [" + collection + "]: " + response.getErrorMessages());
+      }
+    } catch (SolrServerException | SolrException | SolrFactoryException | IOException e) {
+      LOGGER.debug("Unable to verify if collection ({}) exists", collection, e);
+    }
+  }
+
+  @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
     checkConfig();
@@ -198,7 +215,7 @@ public class SolrCloudClientFactory implements SolrClientFactory {
     try (final Closer closer = new Closer()) {
       CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
       client.connect();
-      createCollection(collection, configShardCount, configurationName, client);
+      createCollection(collection, Math.max(1, configShardCount), configurationName, client);
     } catch (SolrFactoryException e) {
       LOGGER.debug(
           "Unable to create collection: {} using configuration: {} and shardCount: {}",
@@ -243,8 +260,19 @@ public class SolrCloudClientFactory implements SolrClientFactory {
         }
       }
 
+      final String aliasedCollections = newCollections;
+      RetryPolicy retryPolicy =
+          new RetryPolicy()
+              .withDelay(100, TimeUnit.MILLISECONDS)
+              .withMaxDuration(3, TimeUnit.MINUTES)
+              .retryOn(RemoteSolrException.class);
       CollectionAdminResponse response =
-          CollectionAdminRequest.createAlias(alias, newCollections).process(client);
+          Failsafe.with(retryPolicy)
+              .get(
+                  () ->
+                      CollectionAdminRequest.createAlias(alias, aliasedCollections)
+                          .process(client));
+
       if (response.getErrorMessages() != null && response.getErrorMessages().size() != 0) {
         LOGGER.warn(
             "Failed to update alias [{}}] with collections: [{}}], this will cause queries to be inconsistent. Error: {}",
@@ -313,7 +341,10 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
           try {
             createCollection(
-                collection, shardCountMap.getOrDefault(collection, shardCount), collection, client);
+                collection,
+                Math.max(1, shardCountMap.getOrDefault(collection, shardCount)),
+                collection,
+                client);
           } catch (SolrFactoryException e) {
             LOGGER.debug("Solr({}): Unable to create collection on Solr Cloud", collection, e);
             return null;

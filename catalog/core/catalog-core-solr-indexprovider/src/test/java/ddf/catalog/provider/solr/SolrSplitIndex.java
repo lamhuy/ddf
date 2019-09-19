@@ -13,6 +13,7 @@
  */
 package ddf.catalog.provider.solr;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Matchers.any;
@@ -22,10 +23,17 @@ import static org.mockito.Mockito.verify;
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
+import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.filter.proxy.adapter.GeotoolsFilterAdapterImpl;
+import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
+import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.Query;
+import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.QueryImpl;
+import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.BaseSolrCatalogProvider;
@@ -37,11 +45,14 @@ import ddf.catalog.source.solr.api.impl.AbstractIndexCollectionProvider;
 import ddf.catalog.source.solr.provider.SolrProviderTestUtil;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.collections4.MapUtils;
 import org.codice.solr.factory.SolrClientFactory;
 import org.codice.solr.factory.impl.SolrCloudClientFactory;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opengis.filter.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,10 +75,12 @@ public class SolrSplitIndex {
 
   private static final String CATALOG_COLLECTION = "catalog";
 
+  private FilterBuilder filterBuilder;
+
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void setUpClass() {
     TestIndexCollectionProvider testIndexCollectionProvider = new TestIndexCollectionProvider();
-    //    testIndexCollectionProvider.setShardCount(2);
+    testIndexCollectionProvider.setShardCount(1);
     solrClientFactory = new SolrCloudClientFactory();
     FilterAdapter filterAdapter = new GeotoolsFilterAdapterImpl();
     SolrFilterDelegateFactory filterDelegateFactory = new SolrFilterDelegateFactoryImpl();
@@ -80,18 +93,39 @@ public class SolrSplitIndex {
             filterDelegateFactory,
             indexCollectionProviders,
             collectionCreationPlugins);
+    provider.setForceAutoCommit(true);
+  }
+
+  @Before
+  public void setUp() {
+    filterBuilder = new GeotoolsFilterBuilder();
   }
 
   @Test
   public void testCreate() throws Exception {
     cleanup();
-    CreateRequest createRequest =
-        new CreateRequestImpl(MockMetacard.createMetacard(Library.getTampaRecord()));
+    Metacard metacard = MockMetacard.createMetacard(Library.getTampaRecord());
+    CreateRequest createRequest = new CreateRequestImpl(metacard);
     assertThat(provider.isAvailable(), is(true));
     CreateResponse response = provider.create(createRequest);
     assertThat(solrClientFactory.collectionExists(TEST_COLLECTION), is(true));
     verify(creationPlugin, times(1)).collectionCreated(any());
+
+    Filter queryFilter = filterBuilder.attribute("id_txt").is().equalTo().text(metacard.getId());
+    Query query = new QueryImpl(queryFilter);
+    QueryRequest queryRequest = new QueryRequestImpl(query);
+    IndexQueryResponse queryResponse = provider.query(queryRequest);
+
+    await()
+        .pollInterval(100, TimeUnit.MILLISECONDS)
+        .atMost(2, TimeUnit.MINUTES)
+        .until(() -> !provider.query(queryRequest).getIds().isEmpty());
+
+    assertThat(queryResponse.getIds().iterator().next(), is(metacard.getId()));
   }
+
+  @Test
+  public void testCreateMultipleCollections() throws Exception {}
 
   private void cleanup() throws UnsupportedQueryException, IngestException {
     if (provider != null && MapUtils.isNotEmpty(provider.catalogProviders)) {

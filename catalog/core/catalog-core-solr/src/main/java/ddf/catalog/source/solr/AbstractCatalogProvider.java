@@ -72,6 +72,8 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
 
   private static final Properties DESCRIBABLE_PROPERTIES = new Properties();
 
+  private static final int THRESHOLD = 1000;
+
   static {
     try (InputStream inputStream =
         AbstractCatalogProvider.class.getResourceAsStream(DESCRIBABLE_PROPERTIES_FILE)) {
@@ -161,10 +163,27 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
       }
     }
     long totalElapsedTime = System.currentTimeMillis() - startTime;
+    long queryElapsedTime = totalElapsedTime - indexElapsedTime;
+
     LOGGER.trace(
         "Query Index elapsed time {} ms and query storage elapsed time {} ms",
         indexElapsedTime,
-        totalElapsedTime - indexElapsedTime);
+        queryElapsedTime);
+
+    if (indexElapsedTime > THRESHOLD) {
+      LOGGER.trace(
+          "Index query time was slow ({} ms): {}", indexElapsedTime, queryRequest.getQuery());
+    }
+
+    if (queryElapsedTime > THRESHOLD
+        && indexQueryResponse != null
+        && indexQueryResponse.getIds() != null) {
+      LOGGER.trace(
+          "Storage query time was slow ({} ms), num records requested: {}",
+          queryElapsedTime,
+          indexQueryResponse.getIds().size());
+    }
+
     return new QueryResponseImpl(
         queryRequest, queryResponse.getResults(), true, numHits, queryResponse.getProperties());
   }

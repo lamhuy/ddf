@@ -311,7 +311,7 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
       client.add(output, isForcedAutoCommit());
     } catch (SolrServerException | SolrException | IOException | MetacardCreationException e) {
       LOGGER.info("Solr could not ingest metacard(s) during create.", e);
-      throw new IngestException("Could not ingest metacard(s).");
+      throw new IngestException("Could not ingest metacard(s).", e);
     }
 
     return new CreateResponseImpl(request, request.getProperties(), output);

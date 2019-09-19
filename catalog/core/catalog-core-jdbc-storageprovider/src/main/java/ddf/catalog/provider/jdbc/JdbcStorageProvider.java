@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
@@ -410,6 +411,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       ds.setIdleConnectionTestPeriod(idleConnectionTestPeriod);
       ds.setMaxStatements(maxStatementCache);
       ds.setNumHelperThreads(Runtime.getRuntime().availableProcessors() * 2);
+      ds.setMaxConnectionAge((int) TimeUnit.HOURS.toSeconds(4));
+      ds.setMaxIdleTime((int) TimeUnit.MINUTES.toSeconds(30));
+      ds.setMaxIdleTimeExcessConnections(15);
       setDataSource(ds);
     } catch (PropertyVetoException e) {
       LOGGER.error("Failed to create a connection pool");

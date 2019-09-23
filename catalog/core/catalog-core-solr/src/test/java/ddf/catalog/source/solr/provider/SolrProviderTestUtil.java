@@ -92,7 +92,7 @@ public class SolrProviderTestUtil {
 
     LOGGER.info("Records found for deletion: {}", ids);
 
-    provider.delete(new DeleteRequestImpl(ids.toArray(new String[ids.size()])));
+    provider.delete(new DeleteRequestImpl(ids.toArray(new String[0])));
 
     LOGGER.info("Deletion complete. -----------");
   }

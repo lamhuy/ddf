@@ -172,6 +172,11 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   }
 
   @Override
+  public void removeAlias(String alias) {
+    throw new IllegalStateException("removeAlias not supported.");
+  }
+
+  @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
     throw new IllegalStateException("addConfiguration not supported.");

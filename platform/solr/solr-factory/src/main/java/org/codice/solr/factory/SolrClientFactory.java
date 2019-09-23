@@ -37,6 +37,8 @@ public interface SolrClientFactory {
 
   void removeCollection(String collection);
 
+  void removeAlias(String alias);
+
   void addConfiguration(String configurationName, List<SolrConfigurationData> configurationData);
 
   void addCollection(String collection, Integer shardCountRequested, String configurationName);

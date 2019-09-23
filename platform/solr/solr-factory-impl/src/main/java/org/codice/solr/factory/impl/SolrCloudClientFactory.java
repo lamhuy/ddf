@@ -153,7 +153,22 @@ public class SolrCloudClientFactory implements SolrClientFactory {
             "Failed to delete collection [" + collection + "]: " + response.getErrorMessages());
       }
     } catch (SolrServerException | SolrException | SolrFactoryException | IOException e) {
-      LOGGER.debug("Unable to verify if collection ({}) exists", collection, e);
+      LOGGER.debug("Unable to remove collection ({})", collection, e);
+    }
+  }
+
+  @Override
+  public void removeAlias(String alias) {
+    try (final Closer closer = new Closer()) {
+      CloudSolrClient client = closer.with(newCloudSolrClient(zookeeperHosts));
+      client.connect();
+      CollectionAdminResponse response = CollectionAdminRequest.deleteAlias(alias).process(client);
+      if (!response.isSuccess()) {
+        throw new SolrFactoryException(
+            "Failed to delete alias [" + alias + "]: " + response.getErrorMessages());
+      }
+    } catch (SolrServerException | SolrException | SolrFactoryException | IOException e) {
+      LOGGER.debug("Unable to remove alias ({})", alias, e);
     }
   }
 

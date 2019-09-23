@@ -13,40 +13,34 @@
  */
 package ddf.catalog.provider.solr;
 
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.filter.proxy.adapter.GeotoolsFilterAdapterImpl;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
+import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.IndexQueryResponse;
 import ddf.catalog.operation.Query;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.impl.CreateRequestImpl;
+import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.source.IngestException;
 import ddf.catalog.source.UnsupportedQueryException;
-import ddf.catalog.source.solr.BaseSolrCatalogProvider;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.SolrFilterDelegateFactoryImpl;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import ddf.catalog.source.solr.api.SolrCollectionCreationPlugin;
 import ddf.catalog.source.solr.api.impl.AbstractIndexCollectionProvider;
-import ddf.catalog.source.solr.provider.SolrProviderTestUtil;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import org.apache.commons.collections4.MapUtils;
 import org.codice.solr.factory.SolrClientFactory;
 import org.codice.solr.factory.impl.SolrCloudClientFactory;
 import org.junit.Before;
@@ -68,12 +62,15 @@ public class SolrSplitIndex {
 
   private static SolrClientFactory solrClientFactory;
 
-  private static SolrCollectionCreationPlugin creationPlugin =
-      mock(SolrCollectionCreationPlugin.class);
-
   private static final String TEST_COLLECTION = "catalog_test";
 
-  private static final String CATALOG_COLLECTION = "catalog";
+  private static final String TEST_ALT_COLLECTION = "catalog_alt";
+
+  private static final String CATALOG_ALIAS = "catalog";
+
+  private static final String SIMPLE_CONTENT_TYPE = "simple";
+
+  private static final String ALT_CONTENT_TYPE = "alternate";
 
   private FilterBuilder filterBuilder;
 
@@ -81,11 +78,17 @@ public class SolrSplitIndex {
   public static void setUpClass() {
     TestIndexCollectionProvider testIndexCollectionProvider = new TestIndexCollectionProvider();
     testIndexCollectionProvider.setShardCount(1);
+
+    TestAlternateCollectionProvider testAlternateCollectionProvider =
+        new TestAlternateCollectionProvider();
+    testAlternateCollectionProvider.setShardCount(1);
+
     solrClientFactory = new SolrCloudClientFactory();
+
     FilterAdapter filterAdapter = new GeotoolsFilterAdapterImpl();
     SolrFilterDelegateFactory filterDelegateFactory = new SolrFilterDelegateFactoryImpl();
     indexCollectionProviders.add(testIndexCollectionProvider);
-    collectionCreationPlugins.add(creationPlugin);
+    indexCollectionProviders.add(testAlternateCollectionProvider);
     provider =
         new SolrIndexProvider(
             solrClientFactory,
@@ -103,38 +106,61 @@ public class SolrSplitIndex {
 
   @Test
   public void testCreate() throws Exception {
-    cleanup();
-    Metacard metacard = MockMetacard.createMetacard(Library.getTampaRecord());
-    CreateRequest createRequest = new CreateRequestImpl(metacard);
     assertThat(provider.isAvailable(), is(true));
+    Metacard metacard = MockMetacard.createMetacard(Library.getTampaRecord());
+    metacard.setAttribute(new AttributeImpl(Metacard.CONTENT_TYPE, SIMPLE_CONTENT_TYPE));
+    CreateRequest createRequest = new CreateRequestImpl(metacard);
     CreateResponse response = provider.create(createRequest);
     assertThat(solrClientFactory.collectionExists(TEST_COLLECTION), is(true));
-    verify(creationPlugin, times(1)).collectionCreated(any());
 
-    Filter queryFilter = filterBuilder.attribute("id_txt").is().equalTo().text(metacard.getId());
-    Query query = new QueryImpl(queryFilter);
-    QueryRequest queryRequest = new QueryRequestImpl(query);
-    IndexQueryResponse queryResponse = provider.query(queryRequest);
-
-    await()
-        .pollInterval(100, TimeUnit.MILLISECONDS)
-        .atMost(2, TimeUnit.MINUTES)
-        .until(() -> !provider.query(queryRequest).getIds().isEmpty());
-
-    assertThat(queryResponse.getIds().iterator().next(), is(metacard.getId()));
+    assertIdExists(metacard.getId());
+    deleteAndValidate(metacard.getId());
   }
 
   @Test
-  public void testCreateMultipleCollections() throws Exception {}
+  public void testCreateMultipleCollections() throws Exception {
+    assertThat(provider.isAvailable(), is(true));
+    Metacard metacardSimple = MockMetacard.createMetacard(Library.getTampaRecord());
+    metacardSimple.setAttribute(new AttributeImpl(Metacard.CONTENT_TYPE, SIMPLE_CONTENT_TYPE));
+    Metacard metacardAlt = MockMetacard.createMetacard(Library.getFlagstaffRecord());
+    metacardAlt.setAttribute(new AttributeImpl(Metacard.CONTENT_TYPE, ALT_CONTENT_TYPE));
+    assertThat(provider.isAvailable(), is(true));
 
-  private void cleanup() throws UnsupportedQueryException, IngestException {
-    if (provider != null && MapUtils.isNotEmpty(provider.catalogProviders)) {
-      for (BaseSolrCatalogProvider catalogProvider : provider.catalogProviders.values()) {
-        SolrProviderTestUtil.deleteAll(catalogProvider);
-      }
-    }
+    CreateRequest createRequest;
 
-    solrClientFactory.removeCollection(CATALOG_COLLECTION);
+    createRequest = new CreateRequestImpl(metacardSimple);
+    provider.create(createRequest);
+    createRequest = new CreateRequestImpl(metacardAlt);
+    provider.create(createRequest);
+
+    assertThat(solrClientFactory.collectionExists(TEST_COLLECTION), is(true));
+    assertThat(solrClientFactory.collectionExists(TEST_ALT_COLLECTION), is(true));
+
+    assertIdExists(metacardSimple.getId());
+    assertIdExists(metacardAlt.getId());
+
+    deleteAndValidate(metacardSimple.getId());
+    deleteAndValidate(metacardAlt.getId());
+  }
+
+  private void assertIdExists(String metacardId) throws UnsupportedQueryException {
+    IndexQueryResponse queryResponse = getId(metacardId);
+    assertThat(queryResponse.getIds().iterator().next(), is(metacardId));
+  }
+
+  private void deleteAndValidate(String id) throws IngestException, UnsupportedQueryException {
+    DeleteRequest deleteRequest = new DeleteRequestImpl(id);
+    provider.delete(deleteRequest);
+
+    IndexQueryResponse response = getId(id);
+    assertThat(response.getHits(), is(0L));
+  }
+
+  private IndexQueryResponse getId(String metacardId) throws UnsupportedQueryException {
+    Filter queryFilter = filterBuilder.attribute(Metacard.ID).is().equalTo().text(metacardId);
+    Query query = new QueryImpl(queryFilter);
+    QueryRequest queryRequest = new QueryRequestImpl(query);
+    return provider.query(queryRequest);
   }
 
   private static class TestIndexCollectionProvider extends AbstractIndexCollectionProvider {
@@ -146,7 +172,20 @@ public class SolrSplitIndex {
 
     @Override
     protected boolean matches(Metacard metacard) {
-      return true;
+      return metacard.getContentTypeName().equals(SIMPLE_CONTENT_TYPE);
+    }
+  }
+
+  private static class TestAlternateCollectionProvider extends AbstractIndexCollectionProvider {
+
+    @Override
+    protected String getCollectionName() {
+      return TEST_ALT_COLLECTION;
+    }
+
+    @Override
+    protected boolean matches(Metacard metacard) {
+      return metacard.getContentTypeName().equals(ALT_CONTENT_TYPE);
     }
   }
 }

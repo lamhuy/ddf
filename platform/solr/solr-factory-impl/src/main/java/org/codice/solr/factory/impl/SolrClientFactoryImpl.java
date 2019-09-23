@@ -68,6 +68,11 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   }
 
   @Override
+  public void removeAlias(String alias) {
+    factory.removeAlias(alias);
+  }
+
+  @Override
   public void addConfiguration(
       String configurationName, List<SolrConfigurationData> configurationData) {
     factory.addConfiguration(configurationName, configurationData);

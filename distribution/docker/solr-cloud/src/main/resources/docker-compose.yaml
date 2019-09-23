@@ -21,6 +21,7 @@ services:
               "start",
               "-f",
               "-cloud",
+              "-m", "1500m",
               "-z", "zk1:2181",
               "-p", "${docker.solr.port.1}", "-h", "solr1"]
     hostname: solr1

@@ -162,26 +162,29 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
                 queryRequest, Collections.emptyList(), true, 0, indexQueryResponse.getProperties());
       }
     }
-    long totalElapsedTime = System.currentTimeMillis() - startTime;
-    long queryElapsedTime = totalElapsedTime - indexElapsedTime;
 
-    LOGGER.trace(
-        "Query Index elapsed time {} ms and query storage elapsed time {} ms",
-        indexElapsedTime,
-        queryElapsedTime);
+    if (LOGGER.isTraceEnabled()) {
+      long totalElapsedTime = System.currentTimeMillis() - startTime;
+      long queryElapsedTime = totalElapsedTime - indexElapsedTime;
 
-    if (indexElapsedTime > THRESHOLD) {
       LOGGER.trace(
-          "Index query time was slow ({} ms): {}", indexElapsedTime, queryRequest.getQuery());
-    }
+          "Query Index elapsed time {} ms and query storage elapsed time {} ms",
+          indexElapsedTime,
+          queryElapsedTime);
 
-    if (queryElapsedTime > THRESHOLD
-        && indexQueryResponse != null
-        && indexQueryResponse.getIds() != null) {
-      LOGGER.trace(
-          "Storage query time was slow ({} ms), num records requested: {}",
-          queryElapsedTime,
-          indexQueryResponse.getIds().size());
+      if (indexElapsedTime > THRESHOLD) {
+        LOGGER.trace(
+            "Index query time was slow ({} ms): {}", indexElapsedTime, queryRequest.getQuery());
+      }
+
+      if (queryElapsedTime > THRESHOLD
+          && indexQueryResponse != null
+          && indexQueryResponse.getIds() != null) {
+        LOGGER.trace(
+            "Storage query time was slow ({} ms), num records requested: {}",
+            queryElapsedTime,
+            indexQueryResponse.getIds().size());
+      }
     }
 
     return new QueryResponseImpl(
@@ -274,7 +277,9 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
               .getResults()
               .stream()
               .map(Result::getMetacard)
-              .collect(Collectors.toMap(mc -> mc.getAttribute(attributeName), Function.identity()));
+              .collect(
+                  Collectors.toMap(
+                      mc -> mc.getAttribute(attributeName).getValue(), Function.identity()));
       List<Update> updateList = new ArrayList<>();
       List<Entry<Serializable, Metacard>> newUpdateEntryById = new ArrayList<>();
       for (Entry<Serializable, Metacard> newEntries : updateRequest.getUpdates()) {

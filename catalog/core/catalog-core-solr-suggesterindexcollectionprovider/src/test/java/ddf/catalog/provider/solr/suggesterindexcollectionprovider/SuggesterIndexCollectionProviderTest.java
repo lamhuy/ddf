@@ -36,7 +36,7 @@ public class SuggesterIndexCollectionProviderTest {
   }
 
   @Test
-  public void testGetCollection() throws Exception {
+  public void testGetCollection() {
     Metacard mockCard = getMockMetacard("gazetteer");
     String collection = indexProvider.getCollection(mockCard);
     assertThat(collection, is(SuggesterIndexCollectionProvider.COLLECTION));

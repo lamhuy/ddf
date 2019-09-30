@@ -413,7 +413,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       ds.setNumHelperThreads(Runtime.getRuntime().availableProcessors() * 2);
       ds.setMaxConnectionAge((int) TimeUnit.HOURS.toSeconds(4));
       ds.setMaxIdleTime((int) TimeUnit.MINUTES.toSeconds(30));
-      ds.setMaxIdleTimeExcessConnections(15);
+      ds.setMaxIdleTimeExcessConnections((int) TimeUnit.MINUTES.toSeconds(30));
       setDataSource(ds);
     } catch (PropertyVetoException e) {
       LOGGER.error("Failed to create a connection pool");

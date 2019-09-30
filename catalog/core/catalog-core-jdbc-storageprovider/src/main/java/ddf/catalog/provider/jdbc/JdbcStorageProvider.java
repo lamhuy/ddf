@@ -424,10 +424,13 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
     long insertTime = System.currentTimeMillis();
 
     List<Metacard> cardsToUpdate = new ArrayList<>();
-    try (Connection conn = ds.getConnection()) {
-      for (Metacard metacard : metacards) {
-        String encodedMetacard = getEncodedMetacard(metacard);
-        try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+    Connection conn = null;
+    try {
+      conn = ds.getConnection();
+      conn.setAutoCommit(false);
+      try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+        for (Metacard metacard : metacards) {
+          String encodedMetacard = getEncodedMetacard(metacard);
           ps.setString(1, metacard.getId());
           ps.setLong(2, insertTime);
           ps.setString(3, encodedMetacard);
@@ -436,9 +439,25 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
           }
         }
       }
+      conn.commit();
     } catch (SQLException e) {
       LOGGER.debug("SQL Exception encountered while storing data", e);
+      if (conn != null) {
+        try {
+          conn.rollback();
+        } catch (SQLException ex) {
+          LOGGER.debug("Unable to rollback transaction", ex);
+        }
+      }
       throw new IngestException("Unable to insert metadata to: " + dbUrl, e);
+    } finally {
+      if (conn != null) {
+        try {
+          conn.close();
+        } catch (SQLException e) {
+          LOGGER.debug("Unable to close JDBC Connection", e);
+        }
+      }
     }
 
     updateMetacards(cardsToUpdate);
@@ -473,21 +492,38 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       return;
     }
 
-    try (Connection conn = ds.getConnection()) {
-      for (Metacard metacard : metacards) {
-        String encodedMetacard = getEncodedMetacard(metacard);
-        try (PreparedStatement ps = conn.prepareStatement(UPDATE_SQL)) {
+    Connection conn = null;
+    try {
+      conn = ds.getConnection();
+      conn.setAutoCommit(false);
+      try (PreparedStatement ps = conn.prepareStatement(UPDATE_SQL)) {
+        for (Metacard metacard : metacards) {
+          String encodedMetacard = getEncodedMetacard(metacard);
           ps.setLong(1, insertTime);
           ps.setString(2, encodedMetacard);
           ps.setString(3, metacard.getId());
-          int numRecords = ps.executeUpdate();
-          if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Updated: {} with {} records", metacard.getId(), numRecords);
-          }
+          ps.addBatch();
+        }
+        ps.executeBatch();
+      }
+      conn.commit();
+    } catch (SQLException e) {
+      if (conn != null) {
+        try {
+          conn.rollback();
+        } catch (SQLException ex) {
+          LOGGER.debug("Unable to rollback transaction", ex);
         }
       }
-    } catch (SQLException e) {
       throw new IngestException("Unable to get DB connection: " + dbUrl, e);
+    } finally {
+      if (conn != null) {
+        try {
+          conn.close();
+        } catch (SQLException e) {
+          LOGGER.debug("Unable to close JDBC connection", e);
+        }
+      }
     }
   }
 

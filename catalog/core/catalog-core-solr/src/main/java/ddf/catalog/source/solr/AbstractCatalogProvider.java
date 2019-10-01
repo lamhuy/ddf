@@ -215,7 +215,7 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
   public CreateResponse create(CreateRequest createRequest) throws IngestException {
     long startTime = System.currentTimeMillis();
     CreateResponse createResponse = storageProvider.create(createRequest);
-    long indexElapsedTime = System.currentTimeMillis() - startTime;
+    long storageElapsedTime = System.currentTimeMillis() - startTime;
     // create index only for those inserted metacard
     if (createResponse != null && !createResponse.getCreatedMetacards().isEmpty()) {
       CreateRequest indexRequest = new CreateRequestImpl(createResponse.getCreatedMetacards());
@@ -223,9 +223,9 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     }
     long totalElapsedTime = System.currentTimeMillis() - startTime;
     LOGGER.trace(
-        "Create Index elapsed time {} and create storage elapsed time {}",
-        indexElapsedTime,
-        totalElapsedTime - indexElapsedTime);
+        "Create Index elapsed time {} ms and create storage elapsed time {} ms",
+        totalElapsedTime - storageElapsedTime,
+        storageElapsedTime);
     return createResponse;
   }
 

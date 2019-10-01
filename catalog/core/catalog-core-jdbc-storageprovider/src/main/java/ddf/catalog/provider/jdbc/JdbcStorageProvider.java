@@ -91,7 +91,8 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   private static final String STATEMENT_CACHE_KEY = "maxStatementCache";
 
-  private static final String INSERT_SQL = "insert into METACARD_STORE values(?,?,?)";
+  private static final String INSERT_SQL =
+      "insert into METACARD_STORE values(?,?,?) ON CONFLICT (id) DO UPDATE SET update_dt=?, metacard_data=?";
 
   private static final String UPDATE_SQL =
       "update METACARD_STORE set update_dt=?, metacard_data=? where id=?";
@@ -434,9 +435,9 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
           ps.setString(1, metacard.getId());
           ps.setLong(2, insertTime);
           ps.setString(3, encodedMetacard);
-          if (!executeInsert(ps)) {
-            cardsToUpdate.add(metacard);
-          }
+          ps.setLong(4, insertTime);
+          ps.setString(5, encodedMetacard);
+          ps.executeUpdate();
         }
       }
       conn.commit();
@@ -466,23 +467,6 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
       long totalTime = System.currentTimeMillis() - insertTime;
       LOGGER.trace("Total time to insert records: {} ms", totalTime);
     }
-  }
-
-  private boolean executeInsert(PreparedStatement ps) throws SQLException {
-    boolean success = false;
-    try {
-      int numRecords = ps.executeUpdate();
-      success = true;
-      LOGGER.trace("Inserted {} records", numRecords);
-    } catch (SQLException e) {
-      if (e.getSQLState().contains("23000") || e.getSQLState().contains("23505")) {
-        LOGGER.trace("Integrity constraint, attempting to update");
-        success = false;
-      } else {
-        throw e;
-      }
-    }
-    return success;
   }
 
   private void updateMetacards(List<Metacard> metacards) throws IngestException {

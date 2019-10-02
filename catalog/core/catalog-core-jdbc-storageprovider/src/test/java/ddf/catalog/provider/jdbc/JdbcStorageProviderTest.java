@@ -294,6 +294,6 @@ public class JdbcStorageProviderTest {
     MetacardMarshaller metacardMarshaller =
         new MetacardMarshallerImpl(parser, new PrintWriterProviderImpl());
     decoderTransformer = new XmlMetacardTransformer(metacardMarshaller);
-    return new JdbcStorageProvider(encoderTransformer, decoderTransformer);
+    return new JdbcStorageProvider(encoderTransformer, decoderTransformer, null);
   }
 }

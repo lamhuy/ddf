@@ -42,6 +42,7 @@ import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.InputTransformer;
 import ddf.catalog.transform.MetacardTransformer;
 import ddf.catalog.util.impl.MaskableImpl;
+import ddf.security.encryption.EncryptionService;
 import java.beans.PropertyVetoException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -108,6 +109,8 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
   private MetacardTransformer metacardEncodeTransformer;
 
+  private EncryptionService encryptionService;
+
   protected String dbUrl = null;
 
   protected String driver = null;
@@ -133,12 +136,15 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
    * @param metacardEncodeTransformer - Transformer used to encode data prior to storage.
    */
   public JdbcStorageProvider(
-      InputTransformer metacardDecodeTransformer, MetacardTransformer metacardEncodeTransformer) {
+      InputTransformer metacardDecodeTransformer,
+      MetacardTransformer metacardEncodeTransformer,
+      EncryptionService encryptionService) {
     Validate.notNull(metacardDecodeTransformer, "MetacardDecodeTransformer cannot be null.");
     Validate.notNull(metacardEncodeTransformer, "MetacardEncodeTransformer cannot be null.");
 
     this.metacardDecodeTransformer = metacardDecodeTransformer;
     this.metacardEncodeTransformer = metacardEncodeTransformer;
+    this.encryptionService = encryptionService;
 
     init();
   }
@@ -342,7 +348,11 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
   }
 
   public void setPassword(String password) {
-    this.password = password;
+    if (encryptionService != null) {
+      this.password = encryptionService.decryptValue(password);
+    } else {
+      this.password = password;
+    }
   }
 
   public void setMaxPoolSize(int maxPoolSize) {

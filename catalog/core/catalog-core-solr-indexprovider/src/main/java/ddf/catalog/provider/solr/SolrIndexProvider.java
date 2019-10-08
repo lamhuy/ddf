@@ -44,6 +44,8 @@ import ddf.catalog.source.solr.api.IndexCollectionProvider;
 import ddf.catalog.source.solr.api.SolrCollectionCreationPlugin;
 import ddf.catalog.util.impl.MaskableImpl;
 import java.io.Serializable;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,13 +53,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang.math.NumberUtils;
+import org.codice.ddf.platform.util.StandardThreadFactoryBuilder;
 import org.codice.solr.factory.SolrClientFactory;
 import org.codice.solr.factory.SolrCollectionConfiguration;
 import org.slf4j.Logger;
@@ -72,6 +83,10 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   protected static final String QUERY_ALIAS = "catalog";
 
+  private static final String QUERY_POOL_NAME = "solr-indexprovider-query-pool";
+
+  private static final int MAX_Q_SIZE = 128;
+
   protected final Map<String, BaseSolrCatalogProvider> catalogProviders = new ConcurrentHashMap<>();
 
   protected final SolrClientFactory clientFactory;
@@ -85,6 +100,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   protected final List<IndexCollectionProvider> indexCollectionProviders;
 
   protected final List<SolrCollectionCreationPlugin> collectionCreationPlugins;
+
+  private ThreadPoolExecutor queryExecutor;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -113,6 +130,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     this.resolver = resolver;
     this.indexCollectionProviders = indexCollectionProviders;
     this.collectionCreationPlugins = collectionCreationPlugins;
+
+    initThreads();
 
     // Always add default provider. Solr Cloud this will be an aggregate Alias,
     // and standalone it will be the only index core
@@ -190,7 +209,15 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       // Need to call get handler on every index core
       List<String> ids = new ArrayList<>();
       long totalHits = 0;
+      // TODO TROY REMOVE LOGGING
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug(
+            "Real time query found, hitting all catalog providers [{}]", catalogProviders.size());
+      }
       for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
+        // TODO TROY REMOVE
+        long providerStart = System.currentTimeMillis();
+
         IndexQueryResponse response = entry.getValue().queryIndexCache(queryRequest);
         ids.addAll(response.getIds());
         if (LOGGER.isTraceEnabled()) {
@@ -200,14 +227,47 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
               response.getHits());
         }
         totalHits += response.getHits();
+
+        // TODO TROY REMOVE
+        if (LOGGER.isDebugEnabled()) {
+          long total = System.currentTimeMillis() - providerStart;
+          LOGGER.debug("{} took {} ms to respond", entry.getKey(), total);
+        }
       }
       return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
     } else {
-      // Always query against the common index core
-      ensureDefaultCollectionExists();
-      return catalogProviders
-          .computeIfAbsent(QUERY_ALIAS, this::newProvider)
-          .queryIndex(queryRequest);
+      if (catalogProviders.size() <= 2) {
+        // Query against the common index core/alias
+        ensureDefaultCollectionExists();
+        return catalogProviders
+            .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+            .queryIndex(queryRequest);
+      }
+
+      // TODO TROY -- implementation using manual parallel query
+      LOGGER.debug("Running custom parallel query");
+
+      List<Future<IndexQueryResponse>> futures = new ArrayList<>(catalogProviders.size());
+      CompletionService<IndexQueryResponse> queryService =
+          new ExecutorCompletionService<>(queryExecutor);
+      for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
+        Callable queryCallable = () -> entry.getValue().queryIndex(queryRequest);
+        futures.add(queryService.submit(queryCallable));
+      }
+      List<String> ids = new ArrayList<>();
+      long totalHits = 0;
+
+      for (Future<IndexQueryResponse> completedQuery : futures) {
+        try {
+          IndexQueryResponse response = completedQuery.get();
+          totalHits += response.getHits();
+          ids.addAll(response.getIds());
+        } catch (InterruptedException | ExecutionException e) {
+          LOGGER.debug("Unable to get query response", e);
+          Thread.currentThread().interrupt();
+        }
+      }
+      return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
     }
   }
 
@@ -432,5 +492,44 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     for (String collection : collections) {
       catalogProviders.computeIfAbsent(collection, this::newProvider);
     }
+  }
+
+  private void initThreads() {
+    if (queryExecutor != null) {
+      destroy();
+    }
+    int numThreads =
+        NumberUtils.toInt(
+            AccessController.doPrivileged(
+                (PrivilegedAction<String>)
+                    () -> System.getProperty("org.codice.ddf.system.threadPoolSize")),
+            128);
+    queryExecutor =
+        new ThreadPoolExecutor(
+            numThreads,
+            numThreads,
+            0L,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingDeque<>(MAX_Q_SIZE),
+            StandardThreadFactoryBuilder.newThreadFactory(QUERY_POOL_NAME),
+            new ThreadPoolExecutor.CallerRunsPolicy());
+
+    queryExecutor.prestartAllCoreThreads();
+  }
+
+  private void destroy() {
+    queryExecutor.shutdown();
+
+    try {
+      boolean shutdown = queryExecutor.awaitTermination(30L, TimeUnit.SECONDS);
+      if (!shutdown) {
+        queryExecutor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(QUERY_POOL_NAME + " graceful shutdown interrupted.", e);
+    }
+
+    queryExecutor = null;
   }
 }

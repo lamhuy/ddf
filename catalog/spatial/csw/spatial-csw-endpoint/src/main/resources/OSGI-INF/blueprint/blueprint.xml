@@ -170,8 +170,7 @@
         <property name="queryFilterTransformerProvider" ref="queryFilterTransformerProvider"/>
     </bean>
 
-    <bean id="CswSvc" class="org.codice.ddf.spatial.ogc.csw.catalog.endpoint.CswEndpoint"
-        init-method="init" destroy-method="destroy">
+    <bean id="CswSvc" class="org.codice.ddf.spatial.ogc.csw.catalog.endpoint.CswEndpoint">
         <argument ref="catalogFramework"/>
         <argument ref="queryResponseTransformerManager"/>
         <argument ref="metacardTransformerManager"/>

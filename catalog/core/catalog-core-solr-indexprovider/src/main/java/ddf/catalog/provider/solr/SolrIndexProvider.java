@@ -209,29 +209,17 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       // Need to call get handler on every index core
       List<String> ids = new ArrayList<>();
       long totalHits = 0;
-      // TODO TROY REMOVE LOGGING
-      if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug(
-            "Real time query found, hitting all catalog providers [{}]", catalogProviders.size());
-      }
-      for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
-        // TODO TROY REMOVE
+
+      for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias()) {
         long providerStart = System.currentTimeMillis();
 
-        IndexQueryResponse response = entry.getValue().queryIndexCache(queryRequest);
+        IndexQueryResponse response = provider.queryIndexCache(queryRequest);
         ids.addAll(response.getIds());
-        if (LOGGER.isTraceEnabled()) {
-          LOGGER.trace(
-              "Performing index cache query on provider: {} returned {} hits",
-              entry.getKey(),
-              response.getHits());
-        }
         totalHits += response.getHits();
 
-        // TODO TROY REMOVE
-        if (LOGGER.isDebugEnabled()) {
+        if (LOGGER.isTraceEnabled()) {
           long total = System.currentTimeMillis() - providerStart;
-          LOGGER.debug("{} took {} ms to respond", entry.getKey(), total);
+          LOGGER.trace("Provider took {} ms to respond", total);
         }
       }
       return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
@@ -250,8 +238,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       List<Future<IndexQueryResponse>> futures = new ArrayList<>(catalogProviders.size());
       CompletionService<IndexQueryResponse> queryService =
           new ExecutorCompletionService<>(queryExecutor);
-      for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
-        Callable queryCallable = () -> entry.getValue().queryIndex(queryRequest);
+      for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias()) {
+        Callable queryCallable = () -> provider.queryIndex(queryRequest);
         futures.add(queryService.submit(queryCallable));
       }
       List<String> ids = new ArrayList<>();
@@ -492,6 +480,17 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     for (String collection : collections) {
       catalogProviders.computeIfAbsent(collection, this::newProvider);
     }
+  }
+
+  private List<BaseSolrCatalogProvider> getAliasProviderNonAlias() {
+    List<BaseSolrCatalogProvider> providers = new ArrayList<>(catalogProviders.size());
+    for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
+      if (!entry.getKey().equals(QUERY_ALIAS)) {
+        providers.add(entry.getValue());
+      }
+    }
+
+    return providers;
   }
 
   private void initThreads() {

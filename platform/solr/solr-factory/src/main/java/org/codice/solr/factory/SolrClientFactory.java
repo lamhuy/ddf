@@ -43,7 +43,7 @@ public interface SolrClientFactory {
 
   void addCollection(String collection, Integer shardCountRequested, String configurationName);
 
-  void addCollectionToAlias(String alias, String collection);
+  void addCollectionToAlias(String alias, String collection, String collectionPrefix);
 
   List<String> getCollectionsForAlias(String alias);
 

@@ -702,7 +702,7 @@ class SolrCloudClientFactorySpec extends Specification {
     def factory = Spy(SolrCloudClientFactory)
 
     when: "add collection to alias"
-    factory.addCollectionToAlias("test_alias", CORE)
+    factory.addCollectionToAlias("test_alias", CORE, "test_")
 
     then: "configure client"
     1 * factory.newCloudSolrClient(*_) >> cloudClient

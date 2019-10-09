@@ -83,6 +83,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   protected static final String QUERY_ALIAS = "catalog";
 
+  protected static final String CATALOG_PREFIX = "catalog_";
+
   private static final String QUERY_POOL_NAME = "solr-indexprovider-query-pool";
 
   private static final int MAX_Q_SIZE = 128;
@@ -167,7 +169,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   protected BaseSolrCatalogProvider newProvider(String core) {
     if (clientFactory.isSolrCloud() && core.equals(QUERY_ALIAS)) {
-      ensureAliasExists(QUERY_ALIAS);
+      ensureAliasExists(QUERY_ALIAS, CATALOG_PREFIX);
     }
     return new BaseSolrCatalogProvider(
         clientFactory.newClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
@@ -396,7 +398,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     clientFactory.addCollection(
         collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
     waitForCollection(collection);
-    clientFactory.addCollectionToAlias(QUERY_ALIAS, collection);
+    clientFactory.addCollectionToAlias(QUERY_ALIAS, collection, CATALOG_PREFIX);
   }
 
   private void waitForCollection(final String collection) {
@@ -461,9 +463,9 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     return updateRequests;
   }
 
-  private void ensureAliasExists(String alias) {
+  private void ensureAliasExists(String alias, String collectionPrefix) {
     for (IndexCollectionProvider provider : indexCollectionProviders) {
-      clientFactory.addCollectionToAlias(alias, provider.getCollection(null));
+      clientFactory.addCollectionToAlias(alias, provider.getCollection(null), collectionPrefix);
     }
   }
 

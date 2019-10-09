@@ -242,7 +242,7 @@ public class SolrCloudClientFactory implements SolrClientFactory {
   }
 
   @Override
-  public void addCollectionToAlias(String alias, String collection) {
+  public void addCollectionToAlias(String alias, String collection, String collectionPrefix) {
     if (StringUtils.isBlank(alias) || StringUtils.isBlank(collection)) {
       return;
     }
@@ -271,6 +271,23 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
           List<String> newAliases = new ArrayList<>(Arrays.asList(currentAliases));
           newAliases.add(collection);
+
+          if (StringUtils.isNotBlank(collectionPrefix)) {
+            // Find existing collections in case parallel operations are creating collections
+            CollectionAdminResponse response = new CollectionAdminRequest.List().process(client);
+
+            if (response.getResponse() != null) {
+              List<String> collections = (List<String>) response.getResponse().get("collections");
+              if (collections != null) {
+                for (String existingCollection : collections) {
+                  if (!newAliases.contains(existingCollection)) {
+                    newAliases.add(existingCollection);
+                  }
+                }
+              }
+            }
+          }
+
           newCollections = String.join(",", newAliases);
         }
       }

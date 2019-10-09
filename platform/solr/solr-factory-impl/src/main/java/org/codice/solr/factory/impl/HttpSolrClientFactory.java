@@ -189,7 +189,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
   }
 
   @Override
-  public void addCollectionToAlias(String alias, String collection) {
+  public void addCollectionToAlias(String alias, String collection, String collectionPrefix) {
     throw new IllegalStateException("addCollectionAlias not supported.");
   }
 

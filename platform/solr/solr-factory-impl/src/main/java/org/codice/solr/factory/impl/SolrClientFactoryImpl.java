@@ -85,8 +85,8 @@ public final class SolrClientFactoryImpl implements SolrClientFactory {
   }
 
   @Override
-  public void addCollectionToAlias(String alias, String collection) {
-    factory.addCollectionToAlias(alias, collection);
+  public void addCollectionToAlias(String alias, String collection, String collectionPrefix) {
+    factory.addCollectionToAlias(alias, collection, collectionPrefix);
   }
 
   @Override

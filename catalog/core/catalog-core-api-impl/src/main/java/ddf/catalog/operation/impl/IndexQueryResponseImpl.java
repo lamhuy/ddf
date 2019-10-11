@@ -14,6 +14,7 @@
 package ddf.catalog.operation.impl;
 
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceProcessingDetails;
 import java.io.Serializable;
@@ -31,17 +32,18 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
 
   ResponseImpl<Request> queryResponse;
 
-  private List<String> ids;
+  private List<IndexQueryResult> scoredResults;
 
   /**
    * Instantiates a new SourceResponseImpl. Use when the total amount of hits is known.
    *
    * @param request the original request
-   * @param ids the hits associated with the query
+   * @param scoredResults the hits associated with the query
    * @param totalHits the total results associated with the query.
    */
-  public IndexQueryResponseImpl(Request request, List<String> ids, Long totalHits) {
-    this(request, null, ids, totalHits != null ? totalHits.longValue() : 0);
+  public IndexQueryResponseImpl(
+      Request request, List<IndexQueryResult> scoredResults, Long totalHits) {
+    this(request, null, scoredResults, totalHits != null ? totalHits.longValue() : 0);
   }
 
   /**
@@ -49,11 +51,11 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
    *
    * @param request the original request
    * @param properties the properties associated with the operation
-   * @param ids the results associated with the query
+   * @param scoredResults the results associated with the query
    */
   public IndexQueryResponseImpl(
-      Request request, Map<String, Serializable> properties, List<String> ids) {
-    this(request, properties, ids, ids != null ? ids.size() : 0);
+      Request request, Map<String, Serializable> properties, List<IndexQueryResult> scoredResults) {
+    this(request, properties, scoredResults, scoredResults != null ? scoredResults.size() : 0);
   }
 
   /**
@@ -62,14 +64,17 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
    *
    * @param request the original request
    * @param properties the properties associated with the operation
-   * @param ids the results associated with the query
+   * @param scoredResults the results associated with the query
    * @param totalHits the total hits
    */
   public IndexQueryResponseImpl(
-      Request request, Map<String, Serializable> properties, List<String> ids, long totalHits) {
+      Request request,
+      Map<String, Serializable> properties,
+      List<IndexQueryResult> scoredResults,
+      long totalHits) {
     super(request, properties);
     queryResponse = new ResponseImpl<>(request, properties);
-    this.ids = ids;
+    this.scoredResults = scoredResults;
     this.hits = totalHits;
   }
 
@@ -107,8 +112,8 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
    * @see ddf.catalog.operation.SourceResponse#getResults()
    */
   @Override
-  public List<String> getIds() {
-    return ids;
+  public List<IndexQueryResult> getScoredResults() {
+    return scoredResults;
   }
 
   /*
@@ -128,7 +133,7 @@ public class IndexQueryResponseImpl extends ResponseImpl<Request> implements Ind
    */
   public void setWarnings(List<String> warnings) {
     if (warnings != null && !warnings.isEmpty()) {
-      sourceProcessingDetails = new HashSet<SourceProcessingDetails>();
+      sourceProcessingDetails = new HashSet<>();
       sourceProcessingDetails.add(new SourceProcessingDetailsImpl(warnings));
     }
   }

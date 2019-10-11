@@ -19,6 +19,7 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.ProcessingDetails;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
@@ -47,11 +48,13 @@ import java.io.Serializable;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -62,6 +65,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang.BooleanUtils;
@@ -89,6 +93,10 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private static final int MAX_Q_SIZE = 128;
 
+  private static final String GET_HANDLER_WORKAROUND_PROP = "getHandlerWorkaround";
+
+  private static final String COLLECTION_THREAD_WORKAROUND_PROP = "collectionThreadWorkaround";
+
   protected final Map<String, BaseSolrCatalogProvider> catalogProviders = new ConcurrentHashMap<>();
 
   protected final SolrClientFactory clientFactory;
@@ -104,6 +112,12 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   protected final List<SolrCollectionCreationPlugin> collectionCreationPlugins;
 
   private ThreadPoolExecutor queryExecutor;
+
+  private IndexQueryResultSorter sorter = new IndexQueryResultSorter();
+
+  private boolean getHandlerWorkaround = true;
+
+  private boolean collectionThreadWorkaround = true;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -209,14 +223,23 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     Boolean doRealTimeGet = filterAdapter.adapt(queryRequest.getQuery(), new RealTimeGetDelegate());
     if (BooleanUtils.isTrue(doRealTimeGet)) {
       // Need to call get handler on every index core
-      List<String> ids = new ArrayList<>();
+      List<IndexQueryResult> ids = new ArrayList<>();
       long totalHits = 0;
 
+      if (!getHandlerWorkaround) {
+        LOGGER.trace("Query the alias directly for NRT (/get)");
+        ensureDefaultCollectionExists();
+        return catalogProviders
+            .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+            .queryIndex(queryRequest);
+      }
+
+      LOGGER.trace("Using custom query for /get handler workaround");
       for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias()) {
         long providerStart = System.currentTimeMillis();
 
         IndexQueryResponse response = provider.queryIndexCache(queryRequest);
-        ids.addAll(response.getIds());
+        ids.addAll(response.getScoredResults());
         totalHits += response.getHits();
 
         if (LOGGER.isTraceEnabled()) {
@@ -224,9 +247,13 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
           LOGGER.trace("Provider took {} ms to respond", total);
         }
       }
-      return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
+      List<IndexQueryResult> results =
+          getLimitedScoredResults(ids, queryRequest.getQuery().getPageSize());
+
+      return new IndexQueryResponseImpl(queryRequest, results, totalHits);
     } else {
-      if (catalogProviders.size() <= 2) {
+      if (catalogProviders.size() <= 2 || !collectionThreadWorkaround) {
+        LOGGER.trace("Querying the collection alias: {}", QUERY_ALIAS);
         // Query against the common index core/alias
         ensureDefaultCollectionExists();
         return catalogProviders
@@ -235,7 +262,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       }
 
       // TODO TROY -- implementation using manual parallel query
-      LOGGER.debug("Running custom parallel query");
+      LOGGER.trace("Running custom parallel query");
 
       List<Future<IndexQueryResponse>> futures = new ArrayList<>(catalogProviders.size());
       CompletionService<IndexQueryResponse> queryService =
@@ -244,20 +271,22 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         Callable queryCallable = () -> provider.queryIndex(queryRequest);
         futures.add(queryService.submit(queryCallable));
       }
-      List<String> ids = new ArrayList<>();
+      List<IndexQueryResult> ids = new ArrayList<>();
       long totalHits = 0;
 
       for (Future<IndexQueryResponse> completedQuery : futures) {
         try {
           IndexQueryResponse response = completedQuery.get();
           totalHits += response.getHits();
-          ids.addAll(response.getIds());
+          ids.addAll(response.getScoredResults());
         } catch (InterruptedException | ExecutionException e) {
           LOGGER.debug("Unable to get query response", e);
           Thread.currentThread().interrupt();
         }
       }
-      return new IndexQueryResponseImpl(queryRequest, ids, totalHits);
+      List<IndexQueryResult> results =
+          getLimitedScoredResults(ids, queryRequest.getQuery().getPageSize());
+      return new IndexQueryResponseImpl(queryRequest, results, totalHits);
     }
   }
 
@@ -279,9 +308,30 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     return false;
   }
 
+  public void setGetHandlerWorkaround(boolean getHandlerWorkaround) {
+    this.getHandlerWorkaround = getHandlerWorkaround;
+  }
+
+  public void setCollectionThreadWorkaround(boolean collectionThreadWorkaround) {
+    this.collectionThreadWorkaround = collectionThreadWorkaround;
+  }
+
   @Override
   public void setForceAutoCommit(boolean forceAutoCommit) {
     ConfigurationStore.getInstance().setForceAutoCommit(forceAutoCommit);
+  }
+
+  public void refresh(Map<String, Object> configuration) {
+    if (configuration == null) {
+      LOGGER.debug("Null configuration");
+      return;
+    }
+
+    setGetHandlerWorkaround(
+        BooleanUtils.toBoolean((Boolean) configuration.get(GET_HANDLER_WORKAROUND_PROP)));
+    setCollectionThreadWorkaround(
+        BooleanUtils.toBoolean((Boolean) configuration.get(COLLECTION_THREAD_WORKAROUND_PROP)));
+    initThreads();
   }
 
   protected Response executeRequest(Request request) throws IngestException {
@@ -499,23 +549,25 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     if (queryExecutor != null) {
       destroy();
     }
-    int numThreads =
-        NumberUtils.toInt(
-            AccessController.doPrivileged(
-                (PrivilegedAction<String>)
-                    () -> System.getProperty("org.codice.ddf.system.threadPoolSize")),
-            128);
-    queryExecutor =
-        new ThreadPoolExecutor(
-            numThreads,
-            numThreads,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingDeque<>(MAX_Q_SIZE),
-            StandardThreadFactoryBuilder.newThreadFactory(QUERY_POOL_NAME),
-            new ThreadPoolExecutor.CallerRunsPolicy());
+    if (collectionThreadWorkaround) {
+      int numThreads =
+          NumberUtils.toInt(
+              AccessController.doPrivileged(
+                  (PrivilegedAction<String>)
+                      () -> System.getProperty("org.codice.ddf.system.threadPoolSize")),
+              128);
+      queryExecutor =
+          new ThreadPoolExecutor(
+              numThreads,
+              numThreads,
+              0L,
+              TimeUnit.MILLISECONDS,
+              new LinkedBlockingDeque<>(MAX_Q_SIZE),
+              StandardThreadFactoryBuilder.newThreadFactory(QUERY_POOL_NAME),
+              new ThreadPoolExecutor.CallerRunsPolicy());
 
-    queryExecutor.prestartAllCoreThreads();
+      queryExecutor.prestartAllCoreThreads();
+    }
   }
 
   private void destroy() {
@@ -532,5 +584,24 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     }
 
     queryExecutor = null;
+  }
+
+  private List<IndexQueryResult> getLimitedScoredResults(List<IndexQueryResult> results, int num) {
+    results.sort(sorter);
+    return results.stream().limit(num).collect(Collectors.toList());
+  }
+
+  private static class IndexQueryResultSorter implements Comparator<IndexQueryResult> {
+
+    @Override
+    public int compare(IndexQueryResult o1, IndexQueryResult o2) {
+      if (o1.getScore() == null && o2.getScore() == null) {
+        return 0;
+      } else if (o1.getScore() == null && o2.getScore() != null) {
+        return 1;
+      } else if (o1.getScore() != null && o2.getScore() == null) {
+        return -1;
+      } else return Objects.requireNonNull(o1.getScore()).compareTo(o2.getScore());
+    }
   }
 }

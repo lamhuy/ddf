@@ -23,6 +23,7 @@ import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.Update;
@@ -150,12 +151,18 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     SourceResponse queryResponse =
         new QueryResponseImpl(
             queryRequest, Collections.emptyList(), true, numHits, queryRequest.getProperties());
+    List<String> ids = null;
     if (indexQueryResponse != null) {
       numHits = indexQueryResponse.getHits();
-      if (CollectionUtils.isNotEmpty(indexQueryResponse.getIds())) {
+      if (CollectionUtils.isNotEmpty(indexQueryResponse.getScoredResults())) {
+        ids =
+            indexQueryResponse
+                .getScoredResults()
+                .stream()
+                .map(IndexQueryResult::getId)
+                .collect(Collectors.toList());
         queryResponse =
-            storageProvider.queryByIds(
-                queryRequest, indexQueryResponse.getProperties(), indexQueryResponse.getIds());
+            storageProvider.queryByIds(queryRequest, indexQueryResponse.getProperties(), ids);
       } else {
         queryResponse =
             new QueryResponseImpl(
@@ -177,13 +184,11 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
             "Index query time was slow ({} ms): {}", indexElapsedTime, queryRequest.getQuery());
       }
 
-      if (queryElapsedTime > THRESHOLD
-          && indexQueryResponse != null
-          && indexQueryResponse.getIds() != null) {
+      if (queryElapsedTime > THRESHOLD && indexQueryResponse != null && ids != null) {
         LOGGER.trace(
             "Storage query time was slow ({} ms), num records requested: {}",
             queryElapsedTime,
-            indexQueryResponse.getIds().size());
+            ids.size());
       }
     }
 
@@ -264,7 +269,12 @@ public abstract class AbstractCatalogProvider extends MaskableImpl implements Ca
     QueryRequest queryRequest = new QueryRequestImpl(query);
     try {
       IndexQueryResponse queryResponse = indexProvider.query(queryRequest);
-      List<String> metacardsToUpdate = queryResponse.getIds();
+      List<String> metacardsToUpdate =
+          queryResponse
+              .getScoredResults()
+              .stream()
+              .map(IndexQueryResult::getId)
+              .collect(Collectors.toList());
       if (metacardsToUpdate.size() > updateRequest.getUpdates().size()) {
         throw new IngestException(
             "Found more metacards than updated metacards provided. Please ensure your attribute values match unique records.");

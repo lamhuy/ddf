@@ -37,7 +37,7 @@ public interface IndexQueryResponse extends Response<Request> {
    *
    * @return the index id
    */
-  public List<String> getIds();
+  public List<IndexQueryResult> getScoredResults();
 
   /**
    * Get any specific details about the execution of the {@link Request} associated with this {@link

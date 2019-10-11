@@ -28,6 +28,7 @@ import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.UpdateRequest;
 import ddf.catalog.operation.UpdateResponse;
@@ -36,6 +37,7 @@ import ddf.catalog.operation.impl.CreateResponseImpl;
 import ddf.catalog.operation.impl.DeleteRequestImpl;
 import ddf.catalog.operation.impl.DeleteResponseImpl;
 import ddf.catalog.operation.impl.IndexQueryResponseImpl;
+import ddf.catalog.operation.impl.IndexQueryResultImpl;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
@@ -115,7 +117,7 @@ public class SolrIndexProviderTest {
         .thenReturn(
             new IndexQueryResponseImpl(
                 request,
-                records.stream().map(Metacard::getId).collect(Collectors.toList()),
+                records.stream().map(m -> getScoredResult(m.getId())).collect(Collectors.toList()),
                 Long.valueOf(records.size())));
 
     IndexQueryResponse response = indexProvider.query(request);
@@ -135,7 +137,7 @@ public class SolrIndexProviderTest {
         .thenReturn(
             new IndexQueryResponseImpl(
                 request,
-                records.stream().map(Metacard::getId).collect(Collectors.toList()),
+                records.stream().map(m -> getScoredResult(m.getId())).collect(Collectors.toList()),
                 Long.valueOf(records.size())));
 
     IndexQueryResponse response = indexProvider.query(request);
@@ -222,6 +224,10 @@ public class SolrIndexProviderTest {
     return Arrays.asList(
         MockMetacard.createMetacard(Library.getFlagstaffRecord()),
         MockMetacard.createMetacard(Library.getTampaRecord()));
+  }
+
+  private IndexQueryResult getScoredResult(String id) {
+    return new IndexQueryResultImpl(id, 1.0);
   }
 
   @Test

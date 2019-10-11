@@ -32,6 +32,7 @@ import ddf.catalog.operation.CreateResponse;
 import ddf.catalog.operation.DeleteRequest;
 import ddf.catalog.operation.DeleteResponse;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.Request;
 import ddf.catalog.operation.SourceResponse;
@@ -41,6 +42,7 @@ import ddf.catalog.operation.UpdateResponse;
 import ddf.catalog.operation.impl.CreateResponseImpl;
 import ddf.catalog.operation.impl.DeleteResponseImpl;
 import ddf.catalog.operation.impl.IndexQueryResponseImpl;
+import ddf.catalog.operation.impl.IndexQueryResultImpl;
 import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.operation.impl.UpdateImpl;
 import ddf.catalog.operation.impl.UpdateRequestImpl;
@@ -92,7 +94,8 @@ public class AbstractCatalogProviderTest {
 
   @Test
   public void testQuery() throws UnsupportedQueryException {
-    List<String> ids = Arrays.asList(ID1, ID2);
+    List<IndexQueryResult> ids =
+        Arrays.asList(getQueryResult(ID1, 100.0), getQueryResult(ID2, 200.0));
     IndexQueryResponse indexResponse =
         new IndexQueryResponseImpl(mock(Request.class), ids, (long) ids.size());
     when(indexProvider.query(any())).thenReturn(indexResponse);
@@ -166,7 +169,8 @@ public class AbstractCatalogProviderTest {
     UpdateResponse updateResponse =
         new UpdateResponseImpl(mock(UpdateRequest.class), Collections.emptyMap(), updates);
     IndexQueryResponse indexResponse =
-        new IndexQueryResponseImpl(mock(Request.class), Collections.singletonList(ID1), 1L);
+        new IndexQueryResponseImpl(
+            mock(Request.class), Collections.singletonList(getQueryResult(ID1, 100.0)), 1L);
     List<Result> results = Collections.singletonList(getResult(getMetacard(ID1)));
     SourceResponse sourceResponse = new SourceResponseImpl(mock(QueryRequest.class), results);
     when(indexProvider.query(any())).thenReturn(indexResponse);
@@ -195,6 +199,10 @@ public class AbstractCatalogProviderTest {
 
   private Result getResult(Metacard metacard) {
     return new ResultImpl(metacard);
+  }
+
+  private IndexQueryResult getQueryResult(String id, Double score) {
+    return new IndexQueryResultImpl(id, score);
   }
 
   private Update getUpdate(Metacard metacard) {

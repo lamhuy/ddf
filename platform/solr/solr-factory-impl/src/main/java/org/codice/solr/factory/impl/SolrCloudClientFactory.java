@@ -280,8 +280,10 @@ public class SolrCloudClientFactory implements SolrClientFactory {
               List<String> collections = (List<String>) response.getResponse().get("collections");
               if (collections != null) {
                 for (String existingCollection : collections) {
-                  if (!newAliases.contains(existingCollection)) {
-                    newAliases.add(existingCollection);
+                  if (existingCollection.startsWith(collectionPrefix)) {
+                    if (!newAliases.contains(existingCollection)) {
+                      newAliases.add(existingCollection);
+                    }
                   }
                 }
               }

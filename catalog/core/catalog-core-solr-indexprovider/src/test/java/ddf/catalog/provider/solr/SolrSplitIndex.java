@@ -145,7 +145,7 @@ public class SolrSplitIndex {
 
   private void assertIdExists(String metacardId) throws UnsupportedQueryException {
     IndexQueryResponse queryResponse = getId(metacardId);
-    assertThat(queryResponse.getIds().iterator().next(), is(metacardId));
+    assertThat(queryResponse.getScoredResults().iterator().next().getId(), is(metacardId));
   }
 
   private void deleteAndValidate(String id) throws IngestException, UnsupportedQueryException {

@@ -38,7 +38,7 @@
 
 	<bean id="solrIndexProvider" class="ddf.catalog.provider.solr.SolrIndexProvider">
 		<cm:managed-properties persistent-id="ddf.catalog.provider.solr.SolrIndexProvider"
-			update-strategy="container-managed"/>
+			update-strategy="component-managed" update-method="refresh"/>
 		<argument ref="filterAdapter"/>
 		<argument ref="solrClientFactory" />
 		<argument>
@@ -46,6 +46,8 @@
 		</argument>
 		<argument ref="indexCollectionProviderList"/>
 		<argument ref="collectionCreationPluginsList"/>
+		<property name="getHandlerWorkaround" value="true"/>
+		<property name="collectionThreadWorkaround" value="true"/>
 	</bean>
 
 	<service ref="solrIndexProvider" interface="ddf.catalog.source.IndexProvider" />

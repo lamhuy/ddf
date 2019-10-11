@@ -8,6 +8,7 @@
     "mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-solr-storageprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-jdbc-storageprovider/${project.version}",
+    "mvn:ddf.catalog.core/catalog-core-solr-indexprovider/${project.version}",
     "mvn:ddf.catalog.core/catalog-core-provider/${project.version}"
   ]
 }

@@ -43,11 +43,13 @@ import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.FacetAttributeResult;
 import ddf.catalog.operation.IndexQueryResponse;
+import ddf.catalog.operation.IndexQueryResult;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.TermFacetProperties;
 import ddf.catalog.operation.impl.FacetAttributeResultImpl;
 import ddf.catalog.operation.impl.IndexQueryResponseImpl;
+import ddf.catalog.operation.impl.IndexQueryResultImpl;
 import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.source.UnsupportedQueryException;
@@ -173,7 +175,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
 
     long totalHits = 0;
     Map<String, Serializable> responseProps = new HashMap<>();
-    List<String> results = new ArrayList<>();
+    List<IndexQueryResult> results = new ArrayList<>();
 
     SolrFilterDelegate solrFilterDelegate =
         filterDelegateFactory.newInstance(resolver, request.getProperties());
@@ -222,7 +224,7 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
 
     long totalHits = 0;
     Map<String, Serializable> responseProps = new HashMap<>();
-    List<String> results = new ArrayList<>();
+    List<IndexQueryResult> results = new ArrayList<>();
 
     SolrFilterDelegate solrFilterDelegate =
         filterDelegateFactory.newInstance(resolver, request.getProperties());
@@ -465,21 +467,42 @@ public class SolrMetacardClientImpl implements SolrMetacardClient {
     }
   }
 
-  private void processDocsToIds(SolrDocumentList docs, List<String> ids) {
+  private void processDocsToIds(SolrDocumentList docs, List<IndexQueryResult> scoredResults) {
     String solrFieldName = Metacard.ID + SchemaFields.TEXT_SUFFIX;
-    for (SolrDocument doc : docs) {
+    for (final SolrDocument doc : docs) {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("SOLR DOC: {}", doc.getFieldValue(solrFieldName));
       }
       Collection<Object> fieldValues = doc.getFieldValues(solrFieldName);
-      List<String> values =
+      List<IndexQueryResult> values =
           resolver
               .getDocValues(solrFieldName, fieldValues)
               .stream()
               .map(Object::toString)
+              .map(id -> new IndexQueryResultImpl(id, getScore(doc)))
               .collect(Collectors.toList());
-      ids.addAll(values);
+      scoredResults.addAll(values);
     }
+  }
+
+  private static Double getScore(SolrDocument doc) {
+    if (doc.get(RELEVANCE_SORT_FIELD) != null) {
+      return ((Float) (doc.get(RELEVANCE_SORT_FIELD))).doubleValue();
+    }
+
+    if (doc.get(DISTANCE_SORT_FIELD) != null) {
+      Object distance = doc.getFieldValue(DISTANCE_SORT_FIELD);
+
+      if (distance != null) {
+        LOGGER.debug("Distance returned from Solr [{}]", distance);
+        double convertedDistance =
+            new Distance(Double.parseDouble(distance.toString()), Distance.LinearUnit.KILOMETER)
+                .getAs(Distance.LinearUnit.METER);
+
+        return convertedDistance;
+      }
+    }
+    return null;
   }
 
   private String addAttributeTypeSuffix(String attribute) {

@@ -231,7 +231,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         ensureDefaultCollectionExists();
         return catalogProviders
             .computeIfAbsent(QUERY_ALIAS, this::newProvider)
-            .queryIndex(queryRequest);
+            .queryIndexCache(queryRequest);
       }
 
       LOGGER.trace("Using custom query for /get handler workaround");

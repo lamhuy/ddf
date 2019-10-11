@@ -94,6 +94,8 @@ public class SolrIndexProviderTest {
             mock(DynamicSchemaResolver.class),
             Collections.singletonList(collectionProvider),
             Collections.emptyList());
+    indexProvider.setCollectionThreadWorkaround(false);
+    indexProvider.setGetHandlerWorkaround(false);
 
     catalogProvider = mock(BaseSolrCatalogProvider.class);
   }

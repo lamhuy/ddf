@@ -5,7 +5,7 @@ networks:
     driver: bridge
 
 services:
-  mysql_db:
+  postgres_db:
     networks:
     - db_network
     image: postgres:9.5.4

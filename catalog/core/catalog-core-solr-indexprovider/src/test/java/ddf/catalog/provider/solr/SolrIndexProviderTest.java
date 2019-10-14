@@ -13,11 +13,14 @@
  */
 package ddf.catalog.provider.solr;
 
+import static ddf.catalog.Constants.COLLECTION_HINT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import ddf.catalog.data.Metacard;
@@ -48,9 +51,12 @@ import ddf.catalog.source.solr.ConfigurationStore;
 import ddf.catalog.source.solr.DynamicSchemaResolver;
 import ddf.catalog.source.solr.SolrFilterDelegateFactory;
 import ddf.catalog.source.solr.api.IndexCollectionProvider;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.codice.solr.client.solrj.SolrClient;
 import org.codice.solr.factory.SolrClientFactory;
@@ -131,7 +137,7 @@ public class SolrIndexProviderTest {
     indexProvider.catalogProviders.put("catalog", catalogProvider);
     when(filterAdapter.adapt(any(), any())).thenReturn(true);
 
-    Filter filter = filterBuilder.attribute("anyText").is().like().text("*");
+    Filter filter = filterBuilder.attribute(Metacard.ID).is().like().text("1234");
     List<Metacard> records = getTestRecords();
 
     QueryRequest request = new QueryRequestImpl(new QueryImpl(filter));
@@ -207,6 +213,41 @@ public class SolrIndexProviderTest {
     indexProvider.catalogProviders.put("catalog_index", catalogProvider);
     when(cloudClientMock.isSolrCloud()).thenReturn(false);
     testUpdate();
+  }
+
+  @Test
+  public void testHintedCollectionQuery() throws Exception {
+    BaseSolrCatalogProvider provider2 = mock(BaseSolrCatalogProvider.class);
+
+    indexProvider.catalogProviders.put("catalog", catalogProvider);
+    indexProvider.catalogProviders.put("mycollection", provider2);
+
+    Filter filter = filterBuilder.attribute("anyText").is().like().text("*");
+
+    Map<String, Serializable> properties = new HashMap<>();
+    properties.put(COLLECTION_HINT, "mycollection");
+    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter), properties);
+
+    indexProvider.query(request);
+    verify(catalogProvider, times(0)).queryIndex(any());
+    verify(provider2, times(1)).queryIndex(any());
+  }
+
+  @Test
+  public void testHintedCollectionIndexQuery() throws Exception {
+    BaseSolrCatalogProvider provider2 = mock(BaseSolrCatalogProvider.class);
+
+    indexProvider.catalogProviders.put("catalog", catalogProvider);
+    indexProvider.catalogProviders.put("mycollection", provider2);
+
+    Filter filter = filterBuilder.attribute("anyText").is().like().text("*");
+    Map<String, Serializable> properties = new HashMap<>();
+    properties.put(COLLECTION_HINT, "mycollection");
+    QueryRequest request = new QueryRequestImpl(new QueryImpl(filter), properties);
+
+    indexProvider.query(request);
+    verify(catalogProvider, times(0)).queryIndex(any());
+    verify(provider2, times(1)).queryIndex(any());
   }
 
   private CreateResponse createRecord(IndexProvider provider) throws Exception {

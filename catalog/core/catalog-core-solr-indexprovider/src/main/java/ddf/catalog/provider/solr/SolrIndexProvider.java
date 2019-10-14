@@ -13,6 +13,8 @@
  */
 package ddf.catalog.provider.solr;
 
+import static ddf.catalog.Constants.COLLECTION_HINT;
+
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
@@ -48,6 +50,7 @@ import java.io.Serializable;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -226,6 +229,21 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       List<IndexQueryResult> ids = new ArrayList<>();
       long totalHits = 0;
 
+      // Query the only provided collection hint
+      String hintCollection = (String) queryRequest.getPropertyValue(COLLECTION_HINT);
+      if (StringUtils.isNotBlank(hintCollection)) {
+        LOGGER.trace(
+            "Querying /get handler collection provided via property ({}): {}",
+            COLLECTION_HINT,
+            hintCollection);
+        BaseSolrCatalogProvider provider = catalogProviders.get(hintCollection);
+        if (provider != null) {
+          return provider.queryIndexCache(queryRequest);
+        } else {
+          return new IndexQueryResponseImpl(queryRequest, Collections.emptyList(), 0L);
+        }
+      }
+
       if (!getHandlerWorkaround) {
         LOGGER.trace("Query the alias directly for NRT (/get)");
         ensureDefaultCollectionExists();
@@ -252,6 +270,20 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
       return new IndexQueryResponseImpl(queryRequest, results, totalHits);
     } else {
+      // Query the only provided collection hint
+      String hintCollection = (String) queryRequest.getPropertyValue(COLLECTION_HINT);
+      if (StringUtils.isNotBlank(hintCollection)) {
+        LOGGER.trace(
+            "Querying collection provided via property ({}): {}", COLLECTION_HINT, hintCollection);
+        BaseSolrCatalogProvider provider = catalogProviders.get(hintCollection);
+        if (provider != null) {
+          return provider.queryIndex(queryRequest);
+        } else {
+          return new IndexQueryResponseImpl(queryRequest, Collections.emptyList(), 0L);
+        }
+      }
+
+      // Query using alias
       if (catalogProviders.size() <= 2 || !collectionThreadWorkaround) {
         LOGGER.trace("Querying the collection alias: {}", QUERY_ALIAS);
         // Query against the common index core/alias
@@ -261,6 +293,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
             .queryIndex(queryRequest);
       }
 
+      // Workaround parallel query for alias
       // TODO TROY -- implementation using manual parallel query
       LOGGER.trace("Running custom parallel query");
 

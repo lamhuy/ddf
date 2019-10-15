@@ -86,11 +86,11 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrIndexProvider.class);
 
-  protected static final String DEFAULT_INDEX_CORE = "catalog_index";
+  protected static final String DEFAULT_INDEX_COLLECTION = "index";
 
-  protected static final String QUERY_ALIAS = "catalog";
+  protected static final String DEFAULT_QUERY_ALIAS = "catalog";
 
-  protected static final String CATALOG_PREFIX = "catalog_";
+  protected static final String CATALOG_PREFIX_SEPARATOR = "_";
 
   private static final String QUERY_POOL_NAME = "solr-indexprovider-query-pool";
 
@@ -99,6 +99,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   private static final String GET_HANDLER_WORKAROUND_PROP = "getHandlerWorkaround";
 
   private static final String COLLECTION_THREAD_WORKAROUND_PROP = "collectionThreadWorkaround";
+
+  private static final String COLLECTION_ALIAS_PROP = "collectionAlias";
 
   protected final Map<String, BaseSolrCatalogProvider> catalogProviders = new ConcurrentHashMap<>();
 
@@ -121,6 +123,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   private boolean getHandlerWorkaround = true;
 
   private boolean collectionThreadWorkaround = true;
+
+  private String collectionAlias = DEFAULT_QUERY_ALIAS;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -151,16 +155,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     this.collectionCreationPlugins = collectionCreationPlugins;
 
     initThreads();
-
-    // Always add default provider. Solr Cloud this will be an aggregate Alias,
-    // and standalone it will be the only index core
-    if (!clientFactory.isSolrCloud()) {
-      LOGGER.debug("Adding provider for core: {}", DEFAULT_INDEX_CORE);
-      catalogProviders.computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider);
-    } else {
-      ensureDefaultCollectionExists();
-      initializeKnownProviders();
-    }
+    initProviders();
   }
 
   /**
@@ -185,8 +180,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   }
 
   protected BaseSolrCatalogProvider newProvider(String core) {
-    if (clientFactory.isSolrCloud() && core.equals(QUERY_ALIAS)) {
-      ensureAliasExists(QUERY_ALIAS, CATALOG_PREFIX);
+    if (clientFactory.isSolrCloud() && core.equals(collectionAlias)) {
+      ensureAliasExists(getCollectionAlias(), getCatalogPrefix());
     }
     return new BaseSolrCatalogProvider(
         clientFactory.newClient(core), filterAdapter, solrFilterDelegateFactory, resolver);
@@ -219,7 +214,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   public IndexQueryResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
     if (!clientFactory.isSolrCloud()) {
       return catalogProviders
-          .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+          .computeIfAbsent(getDefaultCollection(), this::newProvider)
           .queryIndex(queryRequest);
     }
 
@@ -248,7 +243,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         LOGGER.trace("Query the alias directly for NRT (/get)");
         ensureDefaultCollectionExists();
         return catalogProviders
-            .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+            .computeIfAbsent(getCollectionAlias(), this::newProvider)
             .queryIndexCache(queryRequest);
       }
 
@@ -285,11 +280,11 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
       // Query using alias
       if (catalogProviders.size() <= 2 || !collectionThreadWorkaround) {
-        LOGGER.trace("Querying the collection alias: {}", QUERY_ALIAS);
+        LOGGER.trace("Querying the collection alias: {}", getCollectionAlias());
         // Query against the common index core/alias
         ensureDefaultCollectionExists();
         return catalogProviders
-            .computeIfAbsent(QUERY_ALIAS, this::newProvider)
+            .computeIfAbsent(getCollectionAlias(), this::newProvider)
             .queryIndex(queryRequest);
       }
 
@@ -349,6 +344,20 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     this.collectionThreadWorkaround = collectionThreadWorkaround;
   }
 
+  public void setCollectionAlias(String collectionAlias) {
+    if (StringUtils.isNotBlank(collectionAlias)) {
+      this.collectionAlias = collectionAlias;
+    }
+  }
+
+  public String getCollectionAlias() {
+    return collectionAlias;
+  }
+
+  private String getDefaultCollection() {
+    return getCatalogPrefix() + DEFAULT_INDEX_COLLECTION;
+  }
+
   @Override
   public void setForceAutoCommit(boolean forceAutoCommit) {
     ConfigurationStore.getInstance().setForceAutoCommit(forceAutoCommit);
@@ -364,19 +373,31 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         BooleanUtils.toBoolean((Boolean) configuration.get(GET_HANDLER_WORKAROUND_PROP)));
     setCollectionThreadWorkaround(
         BooleanUtils.toBoolean((Boolean) configuration.get(COLLECTION_THREAD_WORKAROUND_PROP)));
+
+    boolean reinitCollection = false;
+    String collectionAlias = (String) configuration.get(COLLECTION_ALIAS_PROP);
+    if (StringUtils.isNotBlank(collectionAlias)) {
+      setCollectionAlias(collectionAlias);
+      reinitCollection = true;
+    }
     initThreads();
+
+    if (reinitCollection) {
+      catalogProviders.clear();
+      initProviders();
+    }
   }
 
   protected Response executeRequest(Request request) throws IngestException {
     if (!clientFactory.isSolrCloud()) {
-      LOGGER.trace("Non SolrCloud instance using index core: {}", DEFAULT_INDEX_CORE);
+      LOGGER.trace("Non SolrCloud instance using index core: {}", getDefaultCollection());
       if (request instanceof CreateRequest) {
         return catalogProviders
-            .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+            .computeIfAbsent(getDefaultCollection(), this::newProvider)
             .create((CreateRequest) request);
       } else if (request instanceof UpdateRequest) {
         return catalogProviders
-            .computeIfAbsent(DEFAULT_INDEX_CORE, this::newProvider)
+            .computeIfAbsent(getDefaultCollection(), this::newProvider)
             .update((UpdateRequest) request);
       }
       return null;
@@ -436,13 +457,13 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     LOGGER.trace("Getting collection for metacard: {}", metacard);
 
     for (IndexCollectionProvider provider : indexCollectionProviders) {
-      String collection = provider.getCollection(metacard);
+      String collection = getCollectionName(provider.getCollection(metacard));
       if (collection != null) {
         createCollectionIfRequired(collection, provider);
         return collection;
       }
     }
-    return DEFAULT_INDEX_CORE;
+    return getDefaultCollection();
   }
 
   private void createCollectionIfRequired(String collection, IndexCollectionProvider provider) {
@@ -481,7 +502,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     clientFactory.addCollection(
         collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
     waitForCollection(collection);
-    clientFactory.addCollectionToAlias(QUERY_ALIAS, collection, CATALOG_PREFIX);
+    clientFactory.addCollectionToAlias(getCollectionAlias(), collection, getCatalogPrefix());
   }
 
   private void waitForCollection(final String collection) {
@@ -548,20 +569,21 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private void ensureAliasExists(String alias, String collectionPrefix) {
     for (IndexCollectionProvider provider : indexCollectionProviders) {
-      clientFactory.addCollectionToAlias(alias, provider.getCollection(null), collectionPrefix);
+      clientFactory.addCollectionToAlias(
+          alias, getCollectionName(provider.getCollection(null)), collectionPrefix);
     }
   }
 
   private void ensureDefaultCollectionExists() {
     for (IndexCollectionProvider provider : indexCollectionProviders) {
-      String collection = provider.getCollection(null);
+      String collection = getCollectionName(provider.getCollection(null));
       createCollectionIfRequired(collection, provider);
     }
   }
 
   private void initializeKnownProviders() {
-    catalogProviders.computeIfAbsent(QUERY_ALIAS, this::newProvider);
-    List<String> collections = clientFactory.getCollectionsForAlias(QUERY_ALIAS);
+    catalogProviders.computeIfAbsent(getCollectionAlias(), this::newProvider);
+    List<String> collections = clientFactory.getCollectionsForAlias(getCollectionAlias());
     for (String collection : collections) {
       catalogProviders.computeIfAbsent(collection, this::newProvider);
     }
@@ -570,12 +592,19 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   private List<BaseSolrCatalogProvider> getAliasProviderNonAlias() {
     List<BaseSolrCatalogProvider> providers = new ArrayList<>(catalogProviders.size());
     for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
-      if (!entry.getKey().equals(QUERY_ALIAS)) {
+      if (!entry.getKey().equals(getCollectionAlias())) {
         providers.add(entry.getValue());
       }
     }
 
     return providers;
+  }
+
+  private String getCollectionName(String collection) {
+    if (StringUtils.isBlank(collection)) {
+      return null;
+    }
+    return getCatalogPrefix() + collection;
   }
 
   private void initThreads() {
@@ -603,6 +632,18 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     }
   }
 
+  private void initProviders() {
+    // Always add default provider. Solr Cloud this will be an aggregate Alias,
+    // and standalone it will be the only index core
+    if (!clientFactory.isSolrCloud()) {
+      LOGGER.debug("Adding provider for core: {}", getDefaultCollection());
+      catalogProviders.computeIfAbsent(getDefaultCollection(), this::newProvider);
+    } else {
+      ensureDefaultCollectionExists();
+      initializeKnownProviders();
+    }
+  }
+
   private void destroy() {
     queryExecutor.shutdown();
 
@@ -622,6 +663,10 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   private List<IndexQueryResult> getLimitedScoredResults(List<IndexQueryResult> results, int num) {
     results.sort(sorter);
     return results.stream().limit(num).collect(Collectors.toList());
+  }
+
+  private String getCatalogPrefix() {
+    return getCollectionAlias() + CATALOG_PREFIX_SEPARATOR;
   }
 
   private static class IndexQueryResultSorter implements Comparator<IndexQueryResult> {

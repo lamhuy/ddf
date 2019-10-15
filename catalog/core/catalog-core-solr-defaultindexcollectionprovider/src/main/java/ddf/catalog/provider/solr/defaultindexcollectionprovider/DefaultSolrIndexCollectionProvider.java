@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 /** This is the default collection provider and will always return `catalog_index` */
 public class DefaultSolrIndexCollectionProvider extends AbstractIndexCollectionProvider {
-  static final String DEFAULT_INDEX_COLLECTION = "catalog_index";
+  static final String DEFAULT_INDEX_COLLECTION = "index";
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger(DefaultSolrIndexCollectionProvider.class);

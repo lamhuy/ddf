@@ -48,6 +48,7 @@
 		<argument ref="collectionCreationPluginsList"/>
 		<property name="getHandlerWorkaround" value="true"/>
 		<property name="collectionThreadWorkaround" value="true"/>
+		<property name="collectionAlias" value="catalog"/>
 	</bean>
 
 	<service ref="solrIndexProvider" interface="ddf.catalog.source.IndexProvider" />

@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /** This is the default collection provider and will always return `catalog_index` */
 public class SolrResourceIndexCollectionProvider extends AbstractIndexCollectionProvider {
-  static final String COLLECTION = "catalog_resource";
+  static final String COLLECTION = "resource";
 
   @Override
   protected String getCollectionName() {

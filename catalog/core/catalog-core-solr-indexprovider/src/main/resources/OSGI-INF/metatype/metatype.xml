@@ -24,6 +24,10 @@
     <AD description="Enable collection alias threaded query workaround"
       name="Collection alias workaround" id="collectionThreadWorkaround"
       type="Boolean" default="true"/>
+
+    <AD description="Alias to use for catalog collection. Default: catalog"
+      name="Catalog Collection Alias" id="collectionAlias"
+      type="String" default="catalog"/>
   </OCD>
 
   <Designate pid="ddf.catalog.provider.solr.SolrIndexProvider">

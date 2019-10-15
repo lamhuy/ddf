@@ -22,7 +22,7 @@ import java.util.List;
 import org.springframework.util.CollectionUtils;
 
 public class NrtIndexCollectionProvider extends AbstractIndexCollectionProvider {
-  static final String COLLECTION = "catalog_nrt";
+  static final String COLLECTION = "nrt";
 
   private List<String> nrtMetacardTypes;
 

@@ -15,6 +15,7 @@ package ddf.catalog.provider.solr;
 
 import static ddf.catalog.Constants.COLLECTION_HINT;
 
+import com.google.common.annotations.VisibleForTesting;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.CreateRequest;
@@ -96,11 +97,12 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private static final int MAX_Q_SIZE = 128;
 
-  private static final String GET_HANDLER_WORKAROUND_PROP = "getHandlerWorkaround";
+  @VisibleForTesting static final String GET_HANDLER_WORKAROUND_PROP = "getHandlerWorkaround";
 
-  private static final String COLLECTION_THREAD_WORKAROUND_PROP = "collectionThreadWorkaround";
+  @VisibleForTesting
+  static final String COLLECTION_THREAD_WORKAROUND_PROP = "collectionThreadWorkaround";
 
-  private static final String COLLECTION_ALIAS_PROP = "collectionAlias";
+  @VisibleForTesting static final String COLLECTION_ALIAS_PROP = "collectionAlias";
 
   protected final Map<String, BaseSolrCatalogProvider> catalogProviders = new ConcurrentHashMap<>();
 
@@ -348,6 +350,14 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     if (StringUtils.isNotBlank(collectionAlias)) {
       this.collectionAlias = collectionAlias;
     }
+  }
+
+  public boolean isGetHandlerWorkaround() {
+    return getHandlerWorkaround;
+  }
+
+  public boolean isCollectionThreadWorkaround() {
+    return collectionThreadWorkaround;
   }
 
   public String getCollectionAlias() {

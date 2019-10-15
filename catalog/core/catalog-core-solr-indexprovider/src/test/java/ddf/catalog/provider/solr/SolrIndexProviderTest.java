@@ -250,6 +250,20 @@ public class SolrIndexProviderTest {
     verify(provider2, times(1)).queryIndex(any());
   }
 
+  @Test
+  public void testRefresh() {
+    final String alias = "mycatalog";
+    Map<String, Object> props = new HashMap<>();
+    props.put(SolrIndexProvider.COLLECTION_THREAD_WORKAROUND_PROP, Boolean.TRUE);
+    props.put(SolrIndexProvider.GET_HANDLER_WORKAROUND_PROP, Boolean.TRUE);
+    props.put(SolrIndexProvider.COLLECTION_ALIAS_PROP, alias);
+    indexProvider.refresh(props);
+
+    assertThat(indexProvider.isGetHandlerWorkaround(), is(true));
+    assertThat(indexProvider.isCollectionThreadWorkaround(), is(true));
+    assertThat(indexProvider.getCollectionAlias(), is(alias));
+  }
+
   private CreateResponse createRecord(IndexProvider provider) throws Exception {
     List<Metacard> list =
         Arrays.asList(

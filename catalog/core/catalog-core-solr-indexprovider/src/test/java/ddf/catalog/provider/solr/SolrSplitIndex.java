@@ -62,9 +62,9 @@ public class SolrSplitIndex {
 
   private static SolrClientFactory solrClientFactory;
 
-  private static final String TEST_COLLECTION = "catalog_test";
+  private static final String TEST_COLLECTION = "test";
 
-  private static final String TEST_ALT_COLLECTION = "catalog_alt";
+  private static final String TEST_ALT_COLLECTION = "alt";
 
   private static final String CATALOG_ALIAS = "catalog";
 
@@ -102,6 +102,7 @@ public class SolrSplitIndex {
   @Before
   public void setUp() {
     filterBuilder = new GeotoolsFilterBuilder();
+    provider.setCollectionAlias(CATALOG_ALIAS);
   }
 
   @Test
@@ -111,7 +112,7 @@ public class SolrSplitIndex {
     metacard.setAttribute(new AttributeImpl(Metacard.CONTENT_TYPE, SIMPLE_CONTENT_TYPE));
     CreateRequest createRequest = new CreateRequestImpl(metacard);
     CreateResponse response = provider.create(createRequest);
-    assertThat(solrClientFactory.collectionExists(TEST_COLLECTION), is(true));
+    assertThat(solrClientFactory.collectionExists(CATALOG_ALIAS + "_" + TEST_COLLECTION), is(true));
 
     assertIdExists(metacard.getId());
     deleteAndValidate(metacard.getId());
@@ -133,8 +134,9 @@ public class SolrSplitIndex {
     createRequest = new CreateRequestImpl(metacardAlt);
     provider.create(createRequest);
 
-    assertThat(solrClientFactory.collectionExists(TEST_COLLECTION), is(true));
-    assertThat(solrClientFactory.collectionExists(TEST_ALT_COLLECTION), is(true));
+    assertThat(solrClientFactory.collectionExists(CATALOG_ALIAS + "_" + TEST_COLLECTION), is(true));
+    assertThat(
+        solrClientFactory.collectionExists(CATALOG_ALIAS + "_" + TEST_ALT_COLLECTION), is(true));
 
     assertIdExists(metacardSimple.getId());
     assertIdExists(metacardAlt.getId());

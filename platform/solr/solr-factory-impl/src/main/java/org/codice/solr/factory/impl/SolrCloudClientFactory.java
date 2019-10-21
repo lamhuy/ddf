@@ -68,6 +68,8 @@ public class SolrCloudClientFactory implements SolrClientFactory {
 
   private static final String CONF_DIR = "conf";
 
+  private static final String SOLR_CLOUD_PROP_PREFIX = "solr.cloud";
+
   private final int shardCount = NumberUtils.toInt(System.getProperty("solr.cloud.shardCount"), 2);
 
   private final int replicationFactor =
@@ -93,15 +95,16 @@ public class SolrCloudClientFactory implements SolrClientFactory {
       for (String collection : collectionList.split(",")) {
         shardCountMap.put(
             collection,
-            NumberUtils.toInt(System.getProperty("solr.cloud." + collection + ".shardCount"), 2));
+            NumberUtils.toInt(
+                System.getProperty(SOLR_CLOUD_PROP_PREFIX + collection + ".shardCount"), 2));
         replicationFactorMap.put(
             collection,
             NumberUtils.toInt(
-                System.getProperty("solr.cloud." + collection + ".replicationFactor"), 2));
+                System.getProperty(SOLR_CLOUD_PROP_PREFIX + collection + ".replicationFactor"), 2));
         maximumShardsPerNodeMap.put(
             collection,
             NumberUtils.toInt(
-                System.getProperty("solr.cloud." + collection + ".maxShardPerNode"), 2));
+                System.getProperty(SOLR_CLOUD_PROP_PREFIX + collection + ".maxShardPerNode"), 2));
       }
     }
     zookeeperHosts = System.getProperty("solr.cloud.zookeeper");

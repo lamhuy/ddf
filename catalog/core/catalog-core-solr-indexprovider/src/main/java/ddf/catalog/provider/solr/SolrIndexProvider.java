@@ -126,7 +126,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   private boolean collectionThreadWorkaround = true;
 
-  private String collectionAlias = DEFAULT_QUERY_ALIAS;
+  private String collectionAlias = null;
 
   /**
    * Constructor that creates a new instance and allows for a custom {@link DynamicSchemaResolver}
@@ -157,7 +157,6 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     this.collectionCreationPlugins = collectionCreationPlugins;
 
     initThreads();
-    initProviders();
   }
 
   /**
@@ -241,7 +240,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
         }
       }
 
-      if (!getHandlerWorkaround) {
+      if (!getHandlerWorkaround && StringUtils.isNotBlank(getCollectionAlias())) {
         LOGGER.trace("Query the alias directly for NRT (/get)");
         ensureDefaultCollectionExists();
         return catalogProviders
@@ -281,7 +280,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       }
 
       // Query using alias
-      if (catalogProviders.size() <= 2 || !collectionThreadWorkaround) {
+      if (catalogProviders.size() <= 2
+          || !collectionThreadWorkaround && StringUtils.isNotBlank(getCollectionAlias())) {
         LOGGER.trace("Querying the collection alias: {}", getCollectionAlias());
         // Query against the common index core/alias
         ensureDefaultCollectionExists();
@@ -347,8 +347,12 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   }
 
   public void setCollectionAlias(String collectionAlias) {
+    LOGGER.error("Setting collection alias to: {}", collectionAlias);
+
     if (StringUtils.isNotBlank(collectionAlias)) {
       this.collectionAlias = collectionAlias;
+      catalogProviders.clear();
+      initProviders();
     }
   }
 
@@ -388,14 +392,8 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     String collectionAlias = (String) configuration.get(COLLECTION_ALIAS_PROP);
     if (StringUtils.isNotBlank(collectionAlias)) {
       setCollectionAlias(collectionAlias);
-      reinitCollection = true;
     }
     initThreads();
-
-    if (reinitCollection) {
-      catalogProviders.clear();
-      initProviders();
-    }
   }
 
   protected Response executeRequest(Request request) throws IngestException {
@@ -498,7 +496,6 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       if (clientFactory.collectionExists(collection)) {
         catalogProviders.put(collection, newProvider(collection));
         return true;
-
       } else {
         return false;
       }
@@ -512,7 +509,9 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     clientFactory.addCollection(
         collection, configuration.getDefaultNumShards(), configuration.getConfigurationName());
     waitForCollection(collection);
-    clientFactory.addCollectionToAlias(getCollectionAlias(), collection, getCatalogPrefix());
+    if (StringUtils.isNotBlank(collectionAlias)) {
+      clientFactory.addCollectionToAlias(getCollectionAlias(), collection, getCatalogPrefix());
+    }
   }
 
   private void waitForCollection(final String collection) {
@@ -592,10 +591,13 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   }
 
   private void initializeKnownProviders() {
-    catalogProviders.computeIfAbsent(getCollectionAlias(), this::newProvider);
-    List<String> collections = clientFactory.getCollectionsForAlias(getCollectionAlias());
-    for (String collection : collections) {
-      catalogProviders.computeIfAbsent(collection, this::newProvider);
+    String collectionAlias = getCollectionAlias();
+    if (StringUtils.isNotBlank(collectionAlias)) {
+      catalogProviders.computeIfAbsent(collectionAlias, this::newProvider);
+      List<String> collections = clientFactory.getCollectionsForAlias(collectionAlias);
+      for (String collection : collections) {
+        catalogProviders.computeIfAbsent(collection, this::newProvider);
+      }
     }
   }
 

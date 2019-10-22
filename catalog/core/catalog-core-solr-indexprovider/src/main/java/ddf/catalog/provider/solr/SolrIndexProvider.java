@@ -434,10 +434,9 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       List<Metacard> oldMetacards = new ArrayList<>();
       Set<ProcessingDetails> errors = new HashSet<>();
       for (Map.Entry<String, UpdateRequest> entry : requests.entrySet()) {
-        UpdateResponse response =
-            catalogProviders
-                .computeIfAbsent(entry.getKey(), this::newProvider)
-                .update(entry.getValue());
+        BaseSolrCatalogProvider provider =
+            catalogProviders.computeIfAbsent(entry.getKey(), this::newProvider);
+        UpdateResponse response = provider.update(entry.getValue());
         if (response.getProperties() != null) {
           props.putAll(response.getProperties());
         }

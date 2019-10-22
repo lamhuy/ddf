@@ -24,6 +24,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.impl.AttributeImpl;
+import ddf.catalog.data.types.Core;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
@@ -102,6 +104,7 @@ public class SolrIndexProviderTest {
             Collections.emptyList());
     indexProvider.setCollectionThreadWorkaround(false);
     indexProvider.setGetHandlerWorkaround(false);
+    indexProvider.setCollectionAlias("catalog");
 
     catalogProvider = mock(BaseSolrCatalogProvider.class);
   }
@@ -278,9 +281,11 @@ public class SolrIndexProviderTest {
   }
 
   private List<Metacard> getTestRecords() {
-    return Arrays.asList(
-        MockMetacard.createMetacard(Library.getFlagstaffRecord()),
-        MockMetacard.createMetacard(Library.getTampaRecord()));
+    Metacard metacard1 = MockMetacard.createMetacard(Library.getFlagstaffRecord());
+    metacard1.setAttribute(new AttributeImpl(Core.ID, "1"));
+    Metacard metacard2 = MockMetacard.createMetacard(Library.getTampaRecord());
+    metacard2.setAttribute(new AttributeImpl(Core.ID, "2"));
+    return Arrays.asList(metacard1, metacard2);
   }
 
   private IndexQueryResult getScoredResult(String id) {

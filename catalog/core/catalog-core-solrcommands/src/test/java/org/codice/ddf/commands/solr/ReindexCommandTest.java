@@ -13,6 +13,8 @@
  */
 package org.codice.ddf.commands.solr;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -29,6 +31,7 @@ import ddf.catalog.source.solr.SolrMetacardClientImpl;
 import ddf.security.Subject;
 import java.util.concurrent.Callable;
 import org.apache.shiro.util.ThreadContext;
+import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.SolrPingResponse;
@@ -105,6 +108,34 @@ public class ReindexCommandTest extends SolrCommandTest {
     command.execute();
 
     verify(catalogFramework, times(1)).create(any(CreateRequest.class));
+  }
+
+  @Test
+  public void testQueryOptions() {
+    ReindexCommand command = new ReindexCommand();
+    command.setAfterDate("2019-01-01T00:00:00.000Z");
+    command.setBeforeDate(null);
+    SolrQuery query = command.getQuery();
+    assertThat(query.getQuery(), containsString("2019-01-01T00:00:00.000Z TO NOW"));
+
+    command.setAfterDate("2019-01-01T00:00:00.000Z");
+    command.setBeforeDate("2020-01-01T00:00:00.000Z");
+    query = command.getQuery();
+    assertThat(
+        query.getQuery(), containsString("2019-01-01T00:00:00.000Z TO 2020-01-01T00:00:00.000Z"));
+
+    command.setAfterDate(null);
+    command.setBeforeDate("2020-01-01T00:00:00.000Z");
+    query = command.getQuery();
+    assertThat(
+        query.getQuery(),
+        containsString(ReindexCommand.EARLY_TIME + " TO 2020-01-01T00:00:00.000Z"));
+
+    command.setField("metacard_modified_tdt");
+    command.setAfterDate("2019-01-01T00:00:00.000Z");
+    command.setBeforeDate(null);
+    query = command.getQuery();
+    assertThat(query.getQuery(), containsString("metacard_modified_tdt"));
   }
 
   private MetacardImpl getTestMetacard() {

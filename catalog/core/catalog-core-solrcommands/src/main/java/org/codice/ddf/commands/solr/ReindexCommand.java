@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
@@ -51,7 +52,6 @@ import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
-import org.apache.solr.common.StringUtils;
 import org.apache.solr.common.params.CursorMarkParams;
 import org.codice.ddf.security.common.Security;
 import org.codice.solr.factory.impl.SolrClientAdapter;
@@ -67,6 +67,8 @@ public class ReindexCommand extends SolrCommands {
   private static final int PAGE_SIZE = 200;
 
   private static final int WRITE_TXN_SIZE = 100;
+
+  @VisibleForTesting protected static final String EARLY_TIME = "1900-01-01T00:00:00.000Z";
 
   private Security security = Security.getInstance();
 
@@ -105,6 +107,15 @@ public class ReindexCommand extends SolrCommands {
     required = true
   )
   private String sourceCollection;
+
+  @Option(
+    name = "-f",
+    aliases = {"--field"},
+    description =
+        "Field used for date comparisons. Default (Date of indexing): metacard.created_tdt",
+    required = false
+  )
+  private String field = "metacard.created_tdt";
 
   @Option(
     name = "-a",
@@ -221,6 +232,21 @@ public class ReindexCommand extends SolrCommands {
     this.catalogFramework = catalogFramework;
   }
 
+  @VisibleForTesting
+  protected void setAfterDate(String afterDate) {
+    this.afterDate = afterDate;
+  }
+
+  @VisibleForTesting
+  protected void setBeforeDate(String beforeDate) {
+    this.beforeDate = beforeDate;
+  }
+
+  @VisibleForTesting
+  protected void setField(String field) {
+    this.field = field;
+  }
+
   protected CloudSolrClient initSolrjClient() {
     CloudSolrClient solrjClient =
         new CloudSolrClient.Builder(
@@ -326,9 +352,25 @@ public class ReindexCommand extends SolrCommands {
     return data;
   }
 
-  private SolrQuery getQuery() {
-    SolrQuery query = new SolrQuery("*:*");
-    SortClause sort = new SortClause("modified_tdt", ORDER.desc);
+  @VisibleForTesting
+  SolrQuery getQuery() {
+    StringBuilder querySB = new StringBuilder();
+    if (StringUtils.isNotBlank(afterDate) && StringUtils.isNotBlank(beforeDate)) {
+      querySB.append("[").append(afterDate).append(" TO ").append(beforeDate).append("]");
+    } else if (StringUtils.isNotBlank(afterDate) && StringUtils.isBlank(beforeDate)) {
+      querySB.append("[").append(afterDate).append(" TO NOW").append("]");
+    } else if (StringUtils.isBlank(afterDate) && StringUtils.isNotBlank(beforeDate)) {
+      querySB.append("[").append(EARLY_TIME).append(" TO ").append(beforeDate).append("]");
+    }
+
+    SolrQuery query;
+    if (querySB.length() > 0) {
+      query = new SolrQuery(field + ":" + querySB.toString());
+    } else {
+      query = new SolrQuery("*:*");
+    }
+
+    SortClause sort = new SortClause("metacard.created_tdt", ORDER.desc);
     query.setSort(sort);
     query.addSort(new SortClause("id_txt", ORDER.desc));
     query.setParam(CursorMarkParams.CURSOR_MARK_PARAM, cursorMark);

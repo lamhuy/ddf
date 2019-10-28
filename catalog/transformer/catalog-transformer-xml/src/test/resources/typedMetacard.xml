@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- /**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ **/ -->
+<metacard xmlns="urn:catalog:metacard" xmlns:gml="http://www.opengis.net/gml" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:smil="http://www.w3.org/2001/SMIL20/" xmlns:smillang="http://www.w3.org/2001/SMIL20/Language" gml:id="1234567890987654321">
+  <type>eyJuYW1lIjoidGVzdENhcmQiLCJhdHRyaWJ1dGVEZXNjcmlwdG9ycyI6W3sibmFtZSI6InJlc291cmNlLXVyaSIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoidGl0bGUiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6dHJ1ZSwibXVsdGlWYWx1ZWQiOmZhbHNlLCJhdHRyaWJ1dGVGb3JtYXQiOiJTVFJJTkciLCJiaW5kaW5nIjoiamF2YS5sYW5nLlN0cmluZyJ9LHsibmFtZSI6ImNoZWNrc3VtIiwiaW5kZXhlZCI6dHJ1ZSwic3RvcmVkIjp0cnVlLCJ0b2tlbml6ZWQiOmZhbHNlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoiZGF0YXR5cGUiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6dHJ1ZSwibXVsdGlWYWx1ZWQiOnRydWUsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoiY3JlYXRlZCIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjpmYWxzZSwibXVsdGlWYWx1ZWQiOmZhbHNlLCJhdHRyaWJ1dGVGb3JtYXQiOiJEQVRFIiwiYmluZGluZyI6ImphdmEudXRpbC5EYXRlIn0seyJuYW1lIjoicmVzb3VyY2UtZG93bmxvYWQtdXJsIiwiaW5kZXhlZCI6dHJ1ZSwic3RvcmVkIjp0cnVlLCJ0b2tlbml6ZWQiOnRydWUsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJzb3VyY2UtaWQiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6dHJ1ZSwibXVsdGlWYWx1ZWQiOmZhbHNlLCJhdHRyaWJ1dGVGb3JtYXQiOiJTVFJJTkciLCJiaW5kaW5nIjoiamF2YS5sYW5nLlN0cmluZyJ9LHsibmFtZSI6InJlc291cmNlLXNpemUiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6ZmFsc2UsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJkZXNjcmlwdGlvbiIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoiaWQiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6ZmFsc2UsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJtZXRhY2FyZC10YWdzIiwiaW5kZXhlZCI6dHJ1ZSwic3RvcmVkIjp0cnVlLCJ0b2tlbml6ZWQiOmZhbHNlLCJtdWx0aVZhbHVlZCI6dHJ1ZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJtZXRhY2FyZC5tb2RpZmllZCIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjpmYWxzZSwibXVsdGlWYWx1ZWQiOmZhbHNlLCJhdHRyaWJ1dGVGb3JtYXQiOiJEQVRFIiwiYmluZGluZyI6ImphdmEudXRpbC5EYXRlIn0seyJuYW1lIjoibW9kaWZpZWQiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6ZmFsc2UsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiREFURSIsImJpbmRpbmciOiJqYXZhLnV0aWwuRGF0ZSJ9LHsibmFtZSI6ImV4cGlyYXRpb24iLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6ZmFsc2UsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiREFURSIsImJpbmRpbmciOiJqYXZhLnV0aWwuRGF0ZSJ9LHsibmFtZSI6Im1ldGFjYXJkLmNyZWF0ZWQiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6ZmFsc2UsIm11bHRpVmFsdWVkIjpmYWxzZSwiYXR0cmlidXRlRm9ybWF0IjoiREFURSIsImJpbmRpbmciOiJqYXZhLnV0aWwuRGF0ZSJ9LHsibmFtZSI6ImxvY2F0aW9uIiwiaW5kZXhlZCI6dHJ1ZSwic3RvcmVkIjp0cnVlLCJ0b2tlbml6ZWQiOmZhbHNlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IkdFT01FVFJZIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJyZXNvdXJjZS5kZXJpdmVkLXVyaSIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6dHJ1ZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJtZXRhZGF0YSIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlhNTCIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoidGh1bWJuYWlsIiwiaW5kZXhlZCI6ZmFsc2UsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjpmYWxzZSwibXVsdGlWYWx1ZWQiOmZhbHNlLCJhdHRyaWJ1dGVGb3JtYXQiOiJCSU5BUlkiLCJiaW5kaW5nIjoiW0IifSx7Im5hbWUiOiJyZXNvdXJjZS5kZXJpdmVkLWRvd25sb2FkLXVybCIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6dHJ1ZSwiYXR0cmlidXRlRm9ybWF0IjoiU1RSSU5HIiwiYmluZGluZyI6ImphdmEubGFuZy5TdHJpbmcifSx7Im5hbWUiOiJtZXRhY2FyZC5vd25lciIsImluZGV4ZWQiOnRydWUsInN0b3JlZCI6dHJ1ZSwidG9rZW5pemVkIjp0cnVlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoiY2hlY2tzdW0tYWxnb3JpdGhtIiwiaW5kZXhlZCI6dHJ1ZSwic3RvcmVkIjp0cnVlLCJ0b2tlbml6ZWQiOmZhbHNlLCJtdWx0aVZhbHVlZCI6ZmFsc2UsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn0seyJuYW1lIjoibGFuZ3VhZ2UiLCJpbmRleGVkIjp0cnVlLCJzdG9yZWQiOnRydWUsInRva2VuaXplZCI6dHJ1ZSwibXVsdGlWYWx1ZWQiOnRydWUsImF0dHJpYnV0ZUZvcm1hdCI6IlNUUklORyIsImJpbmRpbmciOiJqYXZhLmxhbmcuU3RyaW5nIn1dfQ==</type>
+  <source>FooBarSource</source>
+  <string name="title">
+    <value>Title!</value>
+  </string>
+  <dateTime name="expiration">
+    <value>2019-10-23T18:33:08.768+00:00</value>
+  </dateTime>
+  <stringxml name="metadata">
+    <value>
+      <!-- /**
+       * Copyright (c) Codice Foundation
+       *
+       * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either
+       * version 3 of the License, or any later version.
+       *
+       * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+       * See the GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+       * <http://www.gnu.org/licenses/lgpl.html>.
+       *
+       **/ -->
+      <ns3:metacard xmlns:ns1="http://www.opengis.net/gml"
+        xmlns:ns3="urn:catalog:metacard"
+        ns1:id="1234567890987654321">
+        <ns3:type>extensible.metacard</ns3:type>
+        <ns3:source>foobar</ns3:source>
+        <ns3:string name="title">
+          <ns3:value>Title!</ns3:value>
+        </ns3:string>
+        <ns3:dateTime name="modified"/>
+        <ns3:string name="metadata-content-type-version"/>
+        <ns3:base64Binary name="thumbnail">
+          <ns3:value>AAABAAABAQEAAQAAAQEBAAEAAAEBAQABAAABAQEAAQAAAQEBAAEAAAEBAQABAAABAQE=</ns3:value>
+        </ns3:base64Binary>
+        <ns3:dateTime name="expiration">
+          <ns3:value>2012-12-27T16:31:01.641-07:00</ns3:value>
+        </ns3:dateTime>
+        <ns3:string name="metadata-target-namespace"/>
+        <ns3:dateTime name="created"/>
+        <ns3:stringxml name="metadata">
+          <ns3:value>
+            <foo xmlns="http://foo.com">
+              <bar/>
+            </foo>
+          </ns3:value>
+        </ns3:stringxml>
+        <ns3:string name="resource-size"/>
+        <ns3:string name="metadata-content-type"/>
+        <ns3:geometry name="location">
+          <ns3:value>
+            <ns1:Polygon>
+              <ns1:exterior>
+                <ns1:LinearRing>
+                  <ns1:pos>35.0 10.0</ns1:pos>
+                  <ns1:pos>10.0 20.0</ns1:pos>
+                  <ns1:pos>15.0 40.0</ns1:pos>
+                  <ns1:pos>45.0 45.0</ns1:pos>
+                  <ns1:pos>35.0 10.0</ns1:pos>
+                </ns1:LinearRing>
+              </ns1:exterior>
+              <ns1:interior>
+                <ns1:LinearRing>
+                  <ns1:pos>20.0 30.0</ns1:pos>
+                  <ns1:pos>35.0 35.0</ns1:pos>
+                  <ns1:pos>30.0 20.0</ns1:pos>
+                  <ns1:pos>20.0 30.0</ns1:pos>
+                </ns1:LinearRing>
+              </ns1:interior>
+            </ns1:Polygon>
+          </ns3:value>
+        </ns3:geometry>
+        <ns3:string name="resource-uri"/>
+        <ns3:dateTime name="effective"/>
+      </ns3:metacard></value>
+  </stringxml>
+</metacard>

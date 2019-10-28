@@ -114,6 +114,31 @@
             <artifactId>Saxon-HE</artifactId>
             <version>${saxon.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>catalog-core-solr</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ddf.platform.solr</groupId>
+                    <artifactId>solr-dependencies</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>ddf.platform.solr</groupId>
+                    <artifactId>solr-xpath</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -129,7 +154,9 @@
                             jaxb2-basics-runtime,
                             gml-v_3_1_1-schema;inline=true,
                             commons-lang3,
-                            platform-util
+                            platform-util,
+                            catalog-core-solr,
+                            catalog-core-api-impl
                         </Embed-Dependency>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
@@ -139,11 +166,17 @@
                             ddf.catalog.transformer.thread,
                             ddf.catalog.data.impl.*,
                             ddf.catalog.operation.impl,
-                            ddf.catalog.util.impl
+                            ddf.catalog.util.impl,
+                            ddf.catalog.source.solr.json
                         </Private-Package>
                         <Export-Package>
                             ddf.catalog.transformer.api
                         </Export-Package>
+                        <Import-Package>
+                            !ddf.catalog.source.solr.metacardtypecache.impl,
+                            !lux.*,
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

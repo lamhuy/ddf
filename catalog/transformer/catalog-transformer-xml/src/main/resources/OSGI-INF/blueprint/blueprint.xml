@@ -60,6 +60,21 @@
         </bean>
     </service>
 
+    <service interface="ddf.catalog.transform.MetacardTransformer">
+        <service-properties>
+            <entry key="id" value="typedxml"/>
+            <entry key="mime-type" value="text/xml"/>
+            <entry key="title" value="View as XML..."/>
+            <!-- deprecated -->
+            <entry key="shortname" value="xml"/>
+            <entry key="schema" value="urn:catalog:metacard"/>
+            <entry key="displayName" value="OGC GML"/>
+        </service-properties>
+        <bean class="ddf.catalog.transformer.xml.XmlMetacardTransformer">
+            <argument ref="typedMcMarshaller"/>
+        </bean>
+    </service>
+
     <bean id="xmlResponseQueueTransformer"
           class="ddf.catalog.transformer.xml.XmlResponseQueueTransformer">
         <cm:managed-properties
@@ -92,6 +107,11 @@
     </service>
 
     <bean id="mcMarshaller" class="ddf.catalog.transformer.xml.MetacardMarshallerImpl">
+        <argument ref="xmlParser"/>
+        <argument ref="writerProvider"/>
+    </bean>
+
+    <bean id="typedMcMarshaller" class="ddf.catalog.transformer.xml.TypedMetacardMarshallerImpl">
         <argument ref="xmlParser"/>
         <argument ref="writerProvider"/>
     </bean>

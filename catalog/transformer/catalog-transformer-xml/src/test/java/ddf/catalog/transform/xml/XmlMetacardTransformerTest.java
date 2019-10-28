@@ -23,9 +23,12 @@ import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.data.impl.MetacardTypeImpl;
+import ddf.catalog.data.impl.types.CoreAttributes;
 import ddf.catalog.transformer.api.MetacardMarshaller;
 import ddf.catalog.transformer.xml.MetacardMarshallerImpl;
 import ddf.catalog.transformer.xml.PrintWriterProviderImpl;
+import ddf.catalog.transformer.xml.TypedMetacardMarshallerImpl;
 import ddf.catalog.transformer.xml.XmlMetacardTransformer;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -49,6 +52,8 @@ public class XmlMetacardTransformerTest {
 
   private XmlMetacardTransformer transformer;
 
+  private XmlMetacardTransformer typedTransformer;
+
   private Map<String, Serializable> emptyArgs = Collections.EMPTY_MAP;
 
   @Before
@@ -57,6 +62,10 @@ public class XmlMetacardTransformerTest {
     MetacardMarshaller metacardMarshaller =
         new MetacardMarshallerImpl(parser, new PrintWriterProviderImpl());
     transformer = new XmlMetacardTransformer(metacardMarshaller);
+
+    MetacardMarshaller typedMarshaller =
+        new TypedMetacardMarshallerImpl(parser, new PrintWriterProviderImpl());
+    typedTransformer = new XmlMetacardTransformer(typedMarshaller);
   }
 
   @Before
@@ -70,6 +79,11 @@ public class XmlMetacardTransformerTest {
 
   private String transform(Metacard mc) throws Exception {
     BinaryContent bc = transformer.transform(mc, emptyArgs);
+    return new String(bc.getByteArray());
+  }
+
+  private String transformTyped(Metacard mc) throws Exception {
+    BinaryContent bc = typedTransformer.transform(mc, emptyArgs);
     return new String(bc.getByteArray());
   }
 
@@ -195,5 +209,33 @@ public class XmlMetacardTransformerTest {
         "/m:metacard/m:string[@name='metacard-tags']/m:value[text()='basic-tag']", outputXml);
     assertXpathExists(
         "/m:metacard/m:string[@name='metacard-tags']/m:value[text()='another-tag']", outputXml);
+  }
+
+  @Test
+  public void testTypedXmlMetacardTransformer() throws Exception {
+    CoreAttributes coreAttributes = new CoreAttributes();
+    MetacardType type = new MetacardTypeImpl("testCard", coreAttributes.getAttributeDescriptors());
+    MetacardImpl mc = new MetacardImpl(type);
+
+    final String testId = "1234567890987654321";
+    final String testSource = "FooBarSource";
+    final String testTitle = "Title!";
+    final Date testDate = new Date();
+
+    mc.setId(testId);
+    mc.setSourceId(testSource);
+    mc.setTitle(testTitle);
+    mc.setExpirationDate(testDate);
+
+    InputStream input = getClass().getResourceAsStream("/extensibleMetacard.xml");
+    String metadata = IOUtils.toString(input);
+    mc.setMetadata(metadata);
+
+    String outputXml = transformTyped(mc);
+
+    assertXpathEvaluatesTo(testId, "/m:metacard/@gml:id", outputXml);
+    assertXpathEvaluatesTo(testSource, "/m:metacard/m:source", outputXml);
+    assertXpathEvaluatesTo(testTitle, "/m:metacard/m:string[@name='title']/m:value", outputXml);
+    assertXpathExists("/m:metacard/m:type", outputXml);
   }
 }

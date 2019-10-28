@@ -13,9 +13,13 @@
  */
 package ddf.catalog.transformer.xml.adapter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.source.solr.json.MetacardTypeMapperFactory;
 import ddf.catalog.transform.CatalogTransformerException;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import org.apache.commons.collections.CollectionUtils;
@@ -26,6 +30,9 @@ import org.slf4j.LoggerFactory;
 public class MetacardTypeAdapter extends XmlAdapter<String, MetacardType> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MetacardTypeAdapter.class);
+
+  private static final ObjectMapper METACARD_TYPE_MAPPER =
+      MetacardTypeMapperFactory.newObjectMapper();
 
   private List<MetacardType> types;
 
@@ -52,6 +59,11 @@ public class MetacardTypeAdapter extends XmlAdapter<String, MetacardType> {
     LOGGER.debug("typeName: '{}'", typeName);
     LOGGER.debug("types: {}", types);
 
+    MetacardType metacardType = deserializeType(typeName);
+    if (metacardType != null) {
+      return metacardType;
+    }
+
     if (StringUtils.isEmpty(typeName)
         || CollectionUtils.isEmpty(types)
         || typeName.equals(MetacardImpl.BASIC_METACARD.getName())) {
@@ -71,5 +83,20 @@ public class MetacardTypeAdapter extends XmlAdapter<String, MetacardType> {
         MetacardImpl.BASIC_METACARD.getName());
 
     return MetacardImpl.BASIC_METACARD;
+  }
+
+  private MetacardType deserializeType(String type) {
+    try {
+      if (StringUtils.isNotBlank(type)) {
+        byte[] typeData = Base64.getDecoder().decode(type);
+        if (typeData != null) {
+          MetacardType metacardType = METACARD_TYPE_MAPPER.readValue(typeData, MetacardType.class);
+          return metacardType;
+        }
+      }
+    } catch (IOException | IllegalArgumentException e) {
+      LOGGER.trace("Unable to read metacard type info", e);
+    }
+    return null;
   }
 }

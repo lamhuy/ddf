@@ -207,4 +207,11 @@ public class XmlInputTransformerTest {
 
     assertThat(metacard.getAttribute(Metacard.GEOGRAPHY), nullValue());
   }
+
+  @Test
+  public void testTransformTypedMetacardType() throws IOException, CatalogTransformerException {
+    Metacard metacard = xit.transform(new FileInputStream("src/test/resources/typedMetacard.xml"));
+
+    assertThat(metacard.getMetacardType().getName(), is("testCard"));
+  }
 }

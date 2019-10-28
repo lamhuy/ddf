@@ -61,11 +61,11 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
   private static final Map<AttributeType.AttributeFormat, String> TYPE_NAME_LOOKUP;
 
   // see https://en.wikipedia.org/wiki/ISO_8601
-  private static final String DF_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSZZ";
+  protected static final String DF_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSZZ";
 
-  private static final String GML_PREFIX = "gml";
+  protected static final String GML_PREFIX = "gml";
 
-  private static final Map<String, String> NAMESPACE_MAP;
+  protected static final Map<String, String> NAMESPACE_MAP;
 
   public static final String OMIT_XML_DECL = "OMIT_XML_DECLARATION";
 
@@ -100,9 +100,9 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
 
   private final GeometryTransformer geometryTransformer;
 
-  private final PrintWriterProvider writerProvider;
+  protected final PrintWriterProvider writerProvider;
 
-  private static final String XML_DECL = "<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n";
+  protected static final String XML_DECL = "<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n";
 
   public MetacardMarshallerImpl(Parser parser, PrintWriterProvider writerProvider) {
     this.geometryTransformer = new GeometryTransformer(parser);
@@ -129,6 +129,14 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
     }
 
     writer.startNode("metacard");
+    writeMetacardId(writer, metacard);
+    writeMetacardType(writer, metacard);
+    writeMetacard(writer, metacard);
+    writer.endNode();
+    return writer.makeString();
+  }
+
+  protected void writeMetacardId(PrintWriter writer, Metacard metacard) {
     for (Map.Entry<String, String> nsRow : NAMESPACE_MAP.entrySet()) {
       writer.addAttribute(nsRow.getKey(), nsRow.getValue());
     }
@@ -136,7 +144,9 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
     if (metacard.getId() != null) {
       writer.addAttribute(GML_PREFIX + ":id", metacard.getId());
     }
+  }
 
+  protected void writeMetacardType(PrintWriter writer, Metacard metacard) {
     writer.startNode("type");
     if (StringUtils.isBlank(metacard.getMetacardType().getName())) {
       writer.setValue(MetacardType.DEFAULT_METACARD_TYPE_NAME);
@@ -144,7 +154,10 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
       writer.setValue(metacard.getMetacardType().getName());
     }
     writer.endNode(); // type
+  }
 
+  protected void writeMetacard(PrintWriter writer, Metacard metacard)
+      throws XmlPullParserException, IOException, CatalogTransformerException {
     if (StringUtils.isNotBlank(metacard.getSourceId())) {
       writer.startNode("source");
       writer.setValue(metacard.getSourceId());
@@ -171,8 +184,6 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
         writeAttributeToXml(writer, xmlPullParser, attribute, format);
       }
     }
-    writer.endNode(); // metacard
-    return writer.makeString();
   }
 
   private String getStringValue(
@@ -211,7 +222,7 @@ public class MetacardMarshallerImpl implements MetacardMarshaller {
     }
   }
 
-  private void writeAttributeToXml(
+  protected void writeAttributeToXml(
       PrintWriter writer,
       XmlPullParser parser,
       Attribute attribute,

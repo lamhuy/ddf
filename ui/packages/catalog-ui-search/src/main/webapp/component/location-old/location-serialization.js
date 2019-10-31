@@ -163,15 +163,11 @@ const Polygon = {
 const BoundingBox = {
   'json->location': json => {
     const {
-      geometry: { coordinates },
       properties: { north, east, south, west },
     } = json
 
-    const [polygon] = coordinates
-
     return {
       mode: 'bbox',
-      polygon,
       north,
       east,
       south,

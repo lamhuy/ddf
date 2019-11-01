@@ -249,7 +249,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       }
 
       LOGGER.trace("Using custom query for /get handler workaround");
-      for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias()) {
+      for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias().values()) {
         long providerStart = System.currentTimeMillis();
 
         IndexQueryResponse response = provider.queryIndexCache(queryRequest);
@@ -294,28 +294,57 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       // TODO TROY -- implementation using manual parallel query
       LOGGER.trace("Running custom parallel query");
 
-      List<Future<IndexQueryResponse>> futures = new ArrayList<>(catalogProviders.size());
+      Map<Future<IndexQueryResponse>, String> futures = new HashMap<>(catalogProviders.size());
       CompletionService<IndexQueryResponse> queryService =
           new ExecutorCompletionService<>(queryExecutor);
-      for (BaseSolrCatalogProvider provider : getAliasProviderNonAlias()) {
+      Map<String, BaseSolrCatalogProvider> nonAliasProvider = getAliasProviderNonAlias();
+      for (String providerName : nonAliasProvider.keySet()) {
+        BaseSolrCatalogProvider provider = nonAliasProvider.get(providerName);
         Callable queryCallable = () -> provider.queryIndex(queryRequest);
-        futures.add(queryService.submit(queryCallable));
+        futures.put(queryService.submit(queryCallable), providerName);
       }
       List<IndexQueryResult> ids = new ArrayList<>();
       long totalHits = 0;
 
-      for (Future<IndexQueryResponse> completedQuery : futures) {
+      long startTime = System.currentTimeMillis();
+      while (!futures.isEmpty()) {
         try {
-          IndexQueryResponse response = completedQuery.get();
-          totalHits += response.getHits();
-          ids.addAll(response.getScoredResults());
-        } catch (InterruptedException | ExecutionException e) {
-          LOGGER.debug("Unable to get query response", e);
+          Future<IndexQueryResponse> completedFuture = queryService.take();
+          String providerName = futures.get(completedFuture);
+          try {
+            IndexQueryResponse response = completedFuture.get();
+            totalHits += response.getHits();
+            ids.addAll(response.getScoredResults());
+            LOGGER.debug(
+                "Getting {} results from {}, after {} ms",
+                response.getHits(),
+                providerName,
+                System.currentTimeMillis() - startTime);
+          } catch (ExecutionException e) {
+            LOGGER.debug("Unable to get query response", e);
+            Thread.currentThread().interrupt();
+          } finally {
+            futures.remove(completedFuture);
+          }
+        } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
       }
+      long futureElapsedTime = System.currentTimeMillis() - startTime;
+
       List<IndexQueryResult> results =
           getLimitedScoredResults(ids, queryRequest.getQuery().getPageSize());
+
+      if (LOGGER.isTraceEnabled()) {
+        long totalElapsedTime = System.currentTimeMillis() - startTime;
+        long sortElapsedTime = totalElapsedTime - futureElapsedTime;
+
+        LOGGER.trace(
+            "Future Query Index elapsed time {} ms and result merging elapsed time {} ms",
+            futureElapsedTime,
+            sortElapsedTime);
+        LOGGER.trace("Total hit {}, result size {}", totalHits, results.size());
+      }
       return new IndexQueryResponseImpl(queryRequest, results, totalHits);
     }
   }
@@ -600,11 +629,11 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
     }
   }
 
-  private List<BaseSolrCatalogProvider> getAliasProviderNonAlias() {
-    List<BaseSolrCatalogProvider> providers = new ArrayList<>(catalogProviders.size());
+  private Map<String, BaseSolrCatalogProvider> getAliasProviderNonAlias() {
+    Map<String, BaseSolrCatalogProvider> providers = new HashMap<>(catalogProviders.size());
     for (Map.Entry<String, BaseSolrCatalogProvider> entry : catalogProviders.entrySet()) {
       if (!entry.getKey().equals(getCollectionAlias())) {
-        providers.add(entry.getValue());
+        providers.put(entry.getKey(), entry.getValue());
       }
     }
 
@@ -628,7 +657,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
               AccessController.doPrivileged(
                   (PrivilegedAction<String>)
                       () -> System.getProperty("org.codice.ddf.system.threadPoolSize")),
-              128);
+              Runtime.getRuntime().availableProcessors());
       queryExecutor =
           new ThreadPoolExecutor(
               numThreads,

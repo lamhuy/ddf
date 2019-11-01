@@ -573,6 +573,7 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
 
     List<Metacard> metacards = new ArrayList<>(ids.size());
     ResultSet rs = null;
+    long startTime = System.currentTimeMillis();
     try (Connection conn = ds.getConnection();
         PreparedStatement ps = conn.prepareStatement(getQuery(ids.size()))) {
       int index = 1;
@@ -582,12 +583,25 @@ public class JdbcStorageProvider extends MaskableImpl implements StorageProvider
         index++;
       }
       rs = ps.executeQuery();
+
+      long psExecuteElapsedTime = System.currentTimeMillis() - startTime;
       while (rs.next()) {
         String id = rs.getString("ID");
         String metacardXml = rs.getString("METACARD_DATA");
         Metacard metacard = getMetacard(id, metacardXml);
         metacards.add(metacard);
       }
+
+      if (LOGGER.isTraceEnabled()) {
+        long totalElapsedTime = System.currentTimeMillis() - startTime;
+        long xmlDecodeElapsedTime = totalElapsedTime - psExecuteElapsedTime;
+
+        LOGGER.trace(
+            "PS Execute elapsed time {} ms and XML Decode elapsed time {} ms",
+            psExecuteElapsedTime,
+            xmlDecodeElapsedTime);
+      }
+
     } catch (SQLException e) {
       throw new UnsupportedQueryException("Unable to get DB connection: " + dbUrl, e);
     } finally {

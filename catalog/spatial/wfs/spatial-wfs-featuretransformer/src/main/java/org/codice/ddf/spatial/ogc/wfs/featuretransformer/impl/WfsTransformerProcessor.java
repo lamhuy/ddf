@@ -63,7 +63,7 @@ public final class WfsTransformerProcessor {
           return metacardOptional.map(this::removeExternalWfsAttributes);
         }
       } catch (IOException e) {
-        LOGGER.error(
+        LOGGER.debug(
             "Error transforming feature member:{}, with feature transformer: {}",
             featureMember,
             featureTransformer);

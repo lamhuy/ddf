@@ -17,6 +17,7 @@ import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -34,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import javax.xml.namespace.QName;
 import javax.xml.transform.stream.StreamSource;
 import org.apache.camel.CamelContext;
@@ -45,7 +45,9 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.SimpleRegistry;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.codice.ddf.spatial.ogc.wfs.catalog.WfsFeatureCollection;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.FeatureMetacardType;
+import org.codice.ddf.spatial.ogc.wfs.featuretransformer.FeatureTransformationService;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.FeatureTransformer;
 import org.codice.ddf.spatial.ogc.wfs.featuretransformer.WfsMetadata;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -61,7 +63,7 @@ public class FeatureTransformationServiceTest {
 
   private CamelContext camelContext;
 
-  private BiFunction<InputStream, WfsMetadata, List<Metacard>> featureTransformationService;
+  private FeatureTransformationService featureTransformationService;
 
   private List<FeatureTransformer> transformerList;
 
@@ -77,7 +79,8 @@ public class FeatureTransformationServiceTest {
     camelContext.setErrorHandlerBuilder(new NoErrorHandlerBuilder());
 
     Endpoint endpoint = camelContext.getEndpoint(WfsRouteBuilder.FEATURECOLLECTION_ENDPOINT_URL);
-    featureTransformationService = ProxyHelper.createProxy(endpoint, BiFunction.class);
+    featureTransformationService =
+        ProxyHelper.createProxy(endpoint, FeatureTransformationService.class);
     camelContext.start();
   }
 
@@ -105,7 +108,8 @@ public class FeatureTransformationServiceTest {
     when(wfsMetadata.getFeatureMemberNodeNames())
         .thenReturn(Collections.singletonList(featureNodeName));
 
-    List<Metacard> metacards = featureTransformationService.apply(inputStream, wfsMetadata);
+    WfsFeatureCollection wfsFeatureCollection =
+        featureTransformationService.apply(inputStream, wfsMetadata);
     ArgumentCaptor<InputStream> inputStreamArgumentCaptor =
         ArgumentCaptor.forClass(InputStream.class);
     ArgumentCaptor<WfsMetadata> wfsMetadataArgumentCaptor =
@@ -118,8 +122,9 @@ public class FeatureTransformationServiceTest {
       assertThat(wfsMetadataArgumentCaptor.getAllValues().get(i), notNullValue());
     }
 
-    assertThat(metacards, hasSize(10));
-    assertThat(metacards, everyItem(hasNoExternalWfsAttributes()));
+    assertThat(wfsFeatureCollection.getNumberOfFeatures(), is(10L));
+    assertThat(wfsFeatureCollection.getFeatureMembers(), hasSize(10));
+    assertThat(wfsFeatureCollection.getFeatureMembers(), everyItem(hasNoExternalWfsAttributes()));
   }
 
   @Test
@@ -132,7 +137,8 @@ public class FeatureTransformationServiceTest {
     when(wfsMetadata.getFeatureMemberNodeNames())
         .thenReturn(Collections.singletonList("featureMember"));
 
-    List<Metacard> metacards = featureTransformationService.apply(inputStream, wfsMetadata);
+    WfsFeatureCollection wfsFeatureCollection =
+        featureTransformationService.apply(inputStream, wfsMetadata);
     ArgumentCaptor<InputStream> inputStreamArgumentCaptor =
         ArgumentCaptor.forClass(InputStream.class);
     ArgumentCaptor<WfsMetadata> wfsMetadataArgumentCaptor =
@@ -140,7 +146,25 @@ public class FeatureTransformationServiceTest {
     verify(transformerList.get(0), times(0))
         .apply(inputStreamArgumentCaptor.capture(), wfsMetadataArgumentCaptor.capture());
 
-    assertThat(metacards, hasSize(0));
+    assertThat(wfsFeatureCollection.getNumberOfFeatures(), is(10L));
+    assertThat(wfsFeatureCollection.getFeatureMembers(), hasSize(0));
+  }
+
+  @Test
+  public void testFeatureMembersWithNoNumberOfFeaturesAttribute() throws Exception {
+    try (final InputStream inputStream =
+        getClass().getResourceAsStream("/NeverlandNoNumberOfFeaturesAttribute.xml")) {
+
+      final WfsMetadata wfsMetadata = mock(WfsMetadata.class);
+      when(wfsMetadata.getFeatureMemberNodeNames())
+          .thenReturn(Collections.singletonList("featureMember"));
+
+      final WfsFeatureCollection wfsFeatureCollection =
+          featureTransformationService.apply(inputStream, wfsMetadata);
+
+      assertThat(wfsFeatureCollection.getNumberOfFeatures(), is(10L));
+      assertThat(wfsFeatureCollection.getFeatureMembers(), hasSize(10));
+    }
   }
 
   private void setupTransformers() throws Exception {

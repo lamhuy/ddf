@@ -73,6 +73,7 @@ import net.opengis.wfs.v_1_1_0.FeatureTypeType;
 import net.opengis.wfs.v_1_1_0.GetFeatureType;
 import net.opengis.wfs.v_1_1_0.ObjectFactory;
 import net.opengis.wfs.v_1_1_0.QueryType;
+import net.opengis.wfs.v_1_1_0.ResultTypeType;
 import net.opengis.wfs.v_1_1_0.WFSCapabilitiesType;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -86,10 +87,10 @@ import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityCommand;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityTask;
 import org.codice.ddf.spatial.ogc.catalog.common.ContentTypeFilterDelegate;
 import org.codice.ddf.spatial.ogc.wfs.catalog.MetacardTypeEnhancer;
+import org.codice.ddf.spatial.ogc.wfs.catalog.WfsFeatureCollection;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.AbstractWfsSource;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.FeatureMetacardType;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.WfsException;
-import org.codice.ddf.spatial.ogc.wfs.catalog.common.WfsFeatureCollection;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.WfsMetadataImpl;
 import org.codice.ddf.spatial.ogc.wfs.catalog.mapper.MetacardMapper;
 import org.codice.ddf.spatial.ogc.wfs.catalog.mapper.impl.MetacardMapperImpl;
@@ -112,8 +113,6 @@ import org.slf4j.LoggerFactory;
 public class WfsSource extends AbstractWfsSource {
 
   static final int WFS_MAX_FEATURES_RETURNED = 1000;
-
-  static final int WFS_QUERY_PAGE_SIZE_MULTIPLIER = 3;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WfsSource.class);
 
@@ -626,8 +625,6 @@ public class WfsSource extends AbstractWfsSource {
               + "]");
     }
 
-    SourceResponseImpl simpleResponse;
-
     int origPageSize = query.getPageSize();
     if (origPageSize <= 0 || origPageSize > WFS_MAX_FEATURES_RETURNED) {
       origPageSize = WFS_MAX_FEATURES_RETURNED;
@@ -636,17 +633,22 @@ public class WfsSource extends AbstractWfsSource {
 
     int pageNumber = query.getStartIndex() / origPageSize + 1;
 
-    int modifiedPageSize =
-        Math.min(
-            pageNumber * origPageSize * WFS_QUERY_PAGE_SIZE_MULTIPLIER, WFS_MAX_FEATURES_RETURNED);
+    int modifiedPageSize = Math.min(pageNumber * origPageSize, WFS_MAX_FEATURES_RETURNED);
     LOGGER.debug("WFS Source {}: modified page size = {}", getId(), modifiedPageSize);
     modifiedQuery.setPageSize(modifiedPageSize);
 
-    GetFeatureType getFeature = buildGetFeatureRequest(modifiedQuery);
+    final GetFeatureType getHits = buildGetFeatureRequestHits(modifiedQuery);
+    final GetFeatureType getResults = buildGetFeatureRequestResults(modifiedQuery);
 
     try {
+      LOGGER.debug("WFS Source {}: Getting hits.", getId());
+      final WfsFeatureCollection hitsResponse = wfs.getFeature(getHits);
+      final long totalHits = hitsResponse.getNumberOfFeatures();
+
+      LOGGER.debug("The query has {} hits.", totalHits);
+
       LOGGER.debug("WFS Source {}: Sending query ...", getId());
-      WfsFeatureCollection featureCollection = wfs.getFeature(getFeature);
+      final WfsFeatureCollection featureCollection = wfs.getFeature(getResults);
 
       if (featureCollection == null) {
         throw new UnsupportedQueryException("Invalid results returned from server");
@@ -666,7 +668,7 @@ public class WfsSource extends AbstractWfsSource {
 
       int stopIndex =
           Math.min(
-              (origPageSize * pageNumber) + query.getStartIndex(),
+              origPageSize + query.getStartIndex(),
               featureCollection.getFeatureMembers().size() + 1);
 
       LOGGER.debug(
@@ -684,8 +686,7 @@ public class WfsSource extends AbstractWfsSource {
         results.add(result);
         debugResult(result);
       }
-      Long totalHits = (long) featureCollection.getFeatureMembers().size();
-      simpleResponse = new SourceResponseImpl(request, results, totalHits);
+      return new SourceResponseImpl(request, results, totalHits);
     } catch (WfsException wfse) {
       LOGGER.debug(WFS_ERROR_MESSAGE, wfse);
       throw new UnsupportedQueryException("Error received from WFS Server", wfse);
@@ -693,11 +694,22 @@ public class WfsSource extends AbstractWfsSource {
       String msg = handleClientException(ce);
       throw new UnsupportedQueryException(msg, ce);
     }
-
-    return simpleResponse;
   }
 
-  private GetFeatureType buildGetFeatureRequest(Query query) throws UnsupportedQueryException {
+  private GetFeatureType buildGetFeatureRequestHits(final Query query)
+      throws UnsupportedQueryException {
+    return buildGetFeatureRequest(query, ResultTypeType.HITS, null);
+  }
+
+  private GetFeatureType buildGetFeatureRequestResults(final Query query)
+      throws UnsupportedQueryException {
+    return buildGetFeatureRequest(
+        query, ResultTypeType.RESULTS, BigInteger.valueOf(query.getPageSize()));
+  }
+
+  private GetFeatureType buildGetFeatureRequest(
+      Query query, ResultTypeType resultType, BigInteger maxFeatures)
+      throws UnsupportedQueryException {
     List<ContentType> contentTypes = getContentTypesFromQuery(query);
     List<QueryType> queries = new ArrayList<>();
 
@@ -722,12 +734,12 @@ public class WfsSource extends AbstractWfsSource {
       }
     }
     if (!queries.isEmpty()) {
-
       GetFeatureType getFeatureType = new GetFeatureType();
-      getFeatureType.setMaxFeatures(BigInteger.valueOf(query.getPageSize()));
+      getFeatureType.setMaxFeatures(maxFeatures);
       getFeatureType.getQuery().addAll(queries);
       getFeatureType.setService(Wfs11Constants.WFS);
       getFeatureType.setVersion(Wfs11Constants.VERSION_1_1_0);
+      getFeatureType.setResultType(resultType);
       logMessage(getFeatureType);
       return getFeatureType;
     } else {
@@ -924,10 +936,6 @@ public class WfsSource extends AbstractWfsSource {
 
   public void setMetacardTypeEnhancers(List<MetacardTypeEnhancer> metacardTypeEnhancers) {
     this.metacardTypeEnhancers = metacardTypeEnhancers;
-  }
-
-  public void setFilterDelgates(Map<QName, WfsFilterDelegate> delegates) {
-    this.featureTypeFilters = delegates;
   }
 
   public void setContext(BundleContext context) {

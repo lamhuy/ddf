@@ -63,7 +63,6 @@
         <dependency>
             <groupId>org.codice.ddf.spatial</groupId>
             <artifactId>spatial-wfs-common</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -88,7 +87,8 @@
                         </Import-Package>
                         <Embed-Dependency>
                             catalog-core-api-impl,
-                            platform-util
+                            platform-util,
+                            spatial-wfs-common
                         </Embed-Dependency>
                     </instructions>
                 </configuration>
@@ -111,17 +111,17 @@
                                         <limit implementation="org.codice.jacoco.LenientLimit">
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.40</minimum>
+                                            <minimum>0.89</minimum>
                                         </limit>
                                         <limit implementation="org.codice.jacoco.LenientLimit">
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.55</minimum>
+                                            <minimum>0.62</minimum>
                                         </limit>
                                         <limit implementation="org.codice.jacoco.LenientLimit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.35</minimum>
+                                            <minimum>0.71</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

@@ -312,7 +312,8 @@ public class CswQueryResponseTransformer implements QueryResponseTransformer {
     if (LOGGER.isTraceEnabled()) {
       long cswTransformeTime = System.currentTimeMillis() - startTime;
 
-      LOGGER.trace("CSW Response Transform elapsed time {} ms", cswTransformeTime);
+      LOGGER.trace(
+          "CSW Response Transform for {} results elapsed {} ms", results.size(), cswTransformeTime);
     }
 
     CharArrayWriter accum = new CharArrayWriter(ACCUM_INITIAL_SIZE);
@@ -446,7 +447,7 @@ public class CswQueryResponseTransformer implements QueryResponseTransformer {
   }
 
   public void init() {
-    int numThreads = Runtime.getRuntime().availableProcessors() / 2;
+    int numThreads = Runtime.getRuntime().availableProcessors();
     LOGGER.debug("{} size: {}", QUERY_POOL_NAME, numThreads);
 
     /*

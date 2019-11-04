@@ -89,7 +89,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
   protected static final String DEFAULT_INDEX_COLLECTION = "index";
 
-  protected static final String DEFAULT_QUERY_ALIAS = "catalog";
+  private static final int THRESHOLD = 1000;
 
   protected static final String CATALOG_PREFIX_SEPARATOR = "_";
 
@@ -315,11 +315,16 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
             IndexQueryResponse response = completedFuture.get();
             totalHits += response.getHits();
             ids.addAll(response.getScoredResults());
-            LOGGER.debug(
-                "Getting {} results from {}, after {} ms",
-                response.getHits(),
-                providerName,
-                System.currentTimeMillis() - startTime);
+            if (LOGGER.isTraceEnabled()) {
+              long elapsedTime = System.currentTimeMillis() - startTime;
+              if (elapsedTime > THRESHOLD) {
+                LOGGER.debug(
+                    "Getting {} results from {}, after {} ms",
+                    response.getScoredResults().size(),
+                    providerName,
+                    elapsedTime);
+              }
+            }
           } catch (ExecutionException e) {
             LOGGER.debug("Unable to get query response", e);
             Thread.currentThread().interrupt();
@@ -338,12 +343,13 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
       if (LOGGER.isTraceEnabled()) {
         long totalElapsedTime = System.currentTimeMillis() - startTime;
         long sortElapsedTime = totalElapsedTime - futureElapsedTime;
-
-        LOGGER.trace(
-            "Future Query Index elapsed time {} ms and result merging elapsed time {} ms",
-            futureElapsedTime,
-            sortElapsedTime);
-        LOGGER.trace("Total hit {}, result size {}", totalHits, results.size());
+        if (totalElapsedTime > THRESHOLD) {
+          LOGGER.trace(
+              "Future Query Index elapsed time {} ms and result merging elapsed time {} ms",
+              futureElapsedTime,
+              sortElapsedTime);
+          LOGGER.trace("Total hit {}, result size {}", totalHits, results.size());
+        }
       }
       return new IndexQueryResponseImpl(queryRequest, results, totalHits);
     }

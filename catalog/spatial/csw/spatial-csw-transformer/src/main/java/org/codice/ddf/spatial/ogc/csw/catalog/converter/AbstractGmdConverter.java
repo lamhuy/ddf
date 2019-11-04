@@ -97,10 +97,20 @@ public abstract class AbstractGmdConverter implements Converter {
     PathTracker tracker = new PathTracker();
     PathTrackingWriter trackingWriter = new PathTrackingWriter(inWriter, tracker);
 
+    long startTime = System.currentTimeMillis();
     XstreamPathValueTracker pathValueTracker = buildPaths(metacard);
+    long buildPathsTime = System.currentTimeMillis() - startTime;
     XmlTree tree = buildTree(pathValueTracker.getPaths());
+    long buildTreeTime = System.currentTimeMillis() - buildPathsTime;
 
     tree.accept(new XstreamTreeWriter(trackingWriter, tracker, pathValueTracker));
+    long acceptTime = System.currentTimeMillis() - buildTreeTime;
+
+    LOGGER.trace(
+        "Marshaling path {} ms, tree {} ms, accept {} ms",
+        buildPathsTime,
+        buildTreeTime,
+        acceptTime);
   }
 
   /**

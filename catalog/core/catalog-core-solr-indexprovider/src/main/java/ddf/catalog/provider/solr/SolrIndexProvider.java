@@ -292,7 +292,6 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
 
       // Workaround parallel query for alias
       // TODO TROY -- implementation using manual parallel query
-      LOGGER.trace("Running custom parallel query");
 
       Map<Future<IndexQueryResponse>, String> futures = new HashMap<>(catalogProviders.size());
       CompletionService<IndexQueryResponse> queryService =
@@ -382,7 +381,7 @@ public class SolrIndexProvider extends MaskableImpl implements IndexProvider {
   }
 
   public void setCollectionAlias(String collectionAlias) {
-    LOGGER.error("Setting collection alias to: {}", collectionAlias);
+    LOGGER.info("Setting collection alias to: {}", collectionAlias);
 
     if (StringUtils.isNotBlank(collectionAlias)) {
       this.collectionAlias = collectionAlias;

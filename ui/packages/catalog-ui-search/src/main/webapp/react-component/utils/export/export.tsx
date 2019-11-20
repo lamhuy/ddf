@@ -24,6 +24,20 @@ export type ResultSet = {
   args?: Object
 }
 
+export interface ExportCountInfo {
+  exportSize: string
+  selectionInterface: any
+  customExportCount: number
+}
+
+export type DownloadInfo = {
+  exportFormat: string
+  exportSize: string
+  customExportCount: number
+  selectionInterface: any
+  filteredAttributes: any[]
+}
+
 export const getExportOptions = async (type: Transformer) => {
   const response = await fetch(`./internal/transformers/${type}`)
   return await response.json()

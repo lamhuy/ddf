@@ -18,10 +18,174 @@ import {
   getExportOptions,
   Transformer,
 } from '../../react-component/utils/export'
+const user = require('../../component/singletons/user-instance.js')
+const Sources = require('../../component/singletons/sources-instance.js')
+import {
+  exportResultSet,
+  ExportCountInfo,
+  DownloadInfo,
+} from '../../react-component/utils/export'
+import saveFile from '../../react-component/utils/save-file'
+const _ = require('underscore')
+const announcement = require('../../component/announcement/index.jsx')
+const properties = require('../../js/properties.js')
+const contentDisposition = require('content-disposition')
 
-type Option = {
-  label: string
-  value: string
+export function buildCqlQueryFromMetacards(metacards: any, count: any) {
+  let queryParts = metacards.map((metacard: any) => {
+    return `(("id" ILIKE '${metacard.metacard.id}'))`
+  })
+  if (count && queryParts.length > count) {
+    queryParts = queryParts.slice(0, count)
+  }
+  return `(${queryParts.join(' OR ')})`
+}
+const visibleData = (selectionInterface: any) =>
+  buildCqlQueryFromMetacards(
+    selectionInterface.getActiveSearchResults().toJSON(),
+    null
+  )
+const allData = (selectionInterface: any) =>
+  selectionInterface.getCurrentQuery().get('cql')
+function getCqlForSize(exportSize: string, selectionInterface: any) {
+  return exportSize === 'visible'
+    ? visibleData(selectionInterface)
+    : allData(selectionInterface)
+}
+function getSrcs(selectionInterface: any) {
+  const srcs = selectionInterface.getCurrentQuery().get('src')
+  return srcs === undefined ? _.pluck(Sources.toJSON(), 'id') : srcs
+}
+function getColumnOrder(): string[] {
+  return user
+    .get('user')
+    .get('preferences')
+    .get('columnOrder')
+}
+function getHiddenFields(): string[] {
+  return user
+    .get('user')
+    .get('preferences')
+    .get('columnHide')
+}
+function getHits(sources: Source[]): number {
+  return sources
+    .filter(source => source.id !== 'cache')
+    .reduce((hits, source) => (source.hits ? hits + source.hits : hits), 0)
+}
+function getExportCount({
+  exportSize,
+  selectionInterface,
+  customExportCount,
+}: ExportCountInfo): number {
+  if (exportSize === 'custom') {
+    return customExportCount
+  }
+  const result = selectionInterface.getCurrentQuery().get('result')
+  return exportSize === 'all'
+    ? getHits(result.get('status').toJSON())
+    : result.get('results').length
+}
+function getSorts(selectionInterface: any) {
+  return selectionInterface.getCurrentQuery().get('sorts')
+}
+export const getWarning = (exportCountInfo: ExportCountInfo): string => {
+  const exportCount = getExportCount(exportCountInfo)
+  const result = exportCountInfo.selectionInterface
+    .getCurrentQuery()
+    .get('result')
+  const totalHits = getHits(result.get('status').toJSON())
+  const limitWarning = `You cannot export more than the administrator configured limit of ${
+    properties.exportResultLimit
+  }.`
+  let warningMessage = ''
+  if (exportCount > properties.exportResultLimit) {
+    if (exportCountInfo.exportSize === 'custom') {
+      return limitWarning
+    }
+    warningMessage =
+      limitWarning +
+      `  Only ${properties.exportResultLimit} ${
+        properties.exportResultLimit === 1 ? `result` : `results`
+      } will be exported.`
+  }
+  if (exportCountInfo.exportSize === 'custom') {
+    if (exportCount > totalHits) {
+      warningMessage = `You are trying to export ${exportCount} results but there ${
+        totalHits === 1 ? `is` : `are`
+      } only ${totalHits}.  Only ${totalHits} ${
+        totalHits === 1 ? `result` : `results`
+      } will be exported.`
+    }
+  }
+  if (
+    totalHits > 100 &&
+    exportCount > 100 &&
+    properties.exportResultLimit > 100
+  ) {
+    warningMessage += `  This may take a long time.`
+  }
+  return warningMessage
+}
+
+export const getDownloadBody = (downloadInfo: DownloadInfo) => {
+  const {
+    exportSize,
+    customExportCount,
+    selectionInterface,
+    filteredAttributes,
+  } = downloadInfo
+  const hiddenFields = getHiddenFields()
+  const columnOrder = getColumnOrder().filter(
+    (property: string) =>
+      filteredAttributes.includes(property) && !properties.isHidden(property)
+  )
+  const cql = getCqlForSize(exportSize, selectionInterface)
+  const srcs = getSrcs(selectionInterface)
+  const sorts = getSorts(selectionInterface)
+  const count = Math.min(
+    getExportCount({ exportSize, selectionInterface, customExportCount }),
+    properties.exportResultLimit
+  )
+  const args = {
+    hiddenFields: hiddenFields.length > 0 ? hiddenFields : [],
+    columnOrder: columnOrder.length > 0 ? columnOrder : {},
+    columnAliasMap: properties.attributeAliases,
+  }
+  return {
+    cql,
+    srcs,
+    count,
+    sorts,
+    args,
+  }
+}
+
+export const onDownloadClick = async (downloadInfo: DownloadInfo) => {
+  const exportFormat = encodeURIComponent(downloadInfo.exportFormat)
+  try {
+    const body = getDownloadBody(downloadInfo)
+    const response = await exportResultSet(exportFormat, body)
+    onDownloadSuccess(response)
+  } catch (error) {
+    console.error(error)
+  }
+}
+export const onDownloadSuccess = async (response: Response) => {
+  if (response.status === 200) {
+    const data = await response.blob()
+    const contentType = response.headers.get('content-type')
+    const filename = contentDisposition.parse(
+      response.headers.get('content-disposition')
+    ).parameters.filename
+    saveFile(filename, 'data:' + contentType, data)
+  } else {
+    announcement.announce({
+      title: 'Error',
+      message: 'Could not export results.',
+      type: 'error',
+    })
+  }
 }
 
 type ExportResponse = {
@@ -29,8 +193,19 @@ type ExportResponse = {
   id: string
 }
 
-type Props = {
+export type Props = {
   selectionInterface: any
+  filteredAttributes: string[]
+}
+
+type Source = {
+  id: string
+  hits: number
+}
+
+type Option = {
+  label: string
+  value: string
 }
 
 type State = {
@@ -56,10 +231,15 @@ class TableExports extends React.Component<Props, State> {
     this.setState({ formats })
   }
   render() {
+    const { formats } = this.state
+    const { selectionInterface, filteredAttributes } = this.props
     return (
       <TableExport
-        exportFormats={this.state.formats}
-        selectionInterface={this.props.selectionInterface}
+        exportFormats={formats}
+        selectionInterface={selectionInterface}
+        getWarning={getWarning}
+        onDownloadClick={onDownloadClick}
+        filteredAttributes={filteredAttributes}
       />
     )
   }

@@ -53,14 +53,20 @@ const WMS = opts => {
     LAYERS: opts.layers,
     ...opts.parameters,
   }
-  return createTile({ ...opts, params }, ol.source.TileWMS)
+  const tileWmsOptions = { ...opts, params }
+  if (opts.withCredentials) {
+    tileWmsOptions.crossOrigin = 'use-credentials'
+  }
+  return createTile(tileWmsOptions, ol.source.TileWMS)
 }
 
 const WMT = async opts => {
-  const { url } = opts
+  const { url, withCredentials } = opts
   const parser = new ol.format.WMTSCapabilities()
 
-  const res = await window.fetch(url)
+  const res = await window.fetch(url, {
+    credentials: withCredentials ? 'include' : 'same-origin',
+  })
   const text = await res.text()
   const result = parser.read(text)
 
@@ -87,6 +93,10 @@ const WMT = async opts => {
 
   if (options === null) {
     throw new Error('WMTS map layer source could not be setup.')
+  }
+
+  if (withCredentials) {
+    options.crossOrigin = 'use-credentials'
   }
 
   return createTile(opts, () => new ol.source.WMTS(options))

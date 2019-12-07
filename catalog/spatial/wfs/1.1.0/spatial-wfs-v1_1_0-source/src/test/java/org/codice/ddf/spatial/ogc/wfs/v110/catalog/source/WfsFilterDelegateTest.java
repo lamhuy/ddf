@@ -1147,19 +1147,19 @@ public class WfsFilterDelegateTest {
             '_',
             '!');
     final FilterType filter =
-        delegate.propertyIsLike(Metacard.ANY_TEXT, "\\\\f?oo*b\\?ar\\*", true);
+        delegate.propertyIsLike(Metacard.ANY_TEXT, "\\\\f\\\\*o\\*o*b\\\\?a\\?r?", true);
     final String xml = marshal(filter);
     assertThat(
         xml,
         hasXPath(
                 "ogc:Filter/ogc:Or/ogc:PropertyIsLike[@wildCard='%' and @singleChar='_' and @escapeChar='!' and ogc:PropertyName='mockProperty']/ogc:Literal/text()",
-                is("!\\f_oo%b!?ar!*"))
+                is("!\\f!\\%o!*o%b!\\_a!?r_"))
             .withNamespaceContext(singletonMap("ogc", "http://www.opengis.net/ogc")));
     assertThat(
         xml,
         hasXPath(
                 "ogc:Filter/ogc:Or/ogc:PropertyIsLike[@wildCard='%' and @singleChar='_' and @escapeChar='!' and ogc:PropertyName='mockProperty2']/ogc:Literal/text()",
-                is("!\\f_oo%b!?ar!*"))
+                is("!\\f!\\%o!*o%b!\\_a!?r_"))
             .withNamespaceContext(singletonMap("ogc", "http://www.opengis.net/ogc")));
   }
 

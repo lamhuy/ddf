@@ -33,8 +33,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
 import net.opengis.filter.v_1_1_0.AbstractIdType;
@@ -86,28 +84,6 @@ public class WfsFilterDelegate extends SimpleFilterDelegate<FilterType> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WfsFilterDelegate.class);
 
-  private static final Pattern REPLACE_UNESCAPED_WILDCARDS;
-
-  private static final Pattern REPLACE_UNESCAPED_SINGLE_CHARS;
-
-  private static final Pattern REPLACE_ESCAPE_CHAR;
-
-  static {
-    // All 3 need to be escaped since *, ?, and \ have special meanings in regular expressions
-    final String escapedEscapeChar = Pattern.quote(ESCAPE_CHAR);
-    final String escapedWildcardChar = Pattern.quote(WILDCARD_CHAR);
-    REPLACE_UNESCAPED_WILDCARDS =
-        Pattern.compile(String.format("(?<!%s)%s", escapedEscapeChar, escapedWildcardChar));
-
-    final String escapedSingleChar = Pattern.quote(SINGLE_CHAR);
-    REPLACE_UNESCAPED_SINGLE_CHARS =
-        Pattern.compile(String.format("(?<!%s)%s", escapedEscapeChar, escapedSingleChar));
-
-    REPLACE_ESCAPE_CHAR =
-        Pattern.compile(
-            String.format("%1$s([%1$s%2$s%3$s])", escapedEscapeChar, WILDCARD_CHAR, SINGLE_CHAR));
-  }
-
   // The OGC Filter 1.1 spec says the default value of matchCase is true.
   private static final boolean DEFAULT_MATCH_CASE = true;
 
@@ -136,15 +112,9 @@ public class WfsFilterDelegate extends SimpleFilterDelegate<FilterType> {
 
   private final String wildcardChar;
 
-  private final String quotedWildcardReplacement;
-
   private final String singleChar;
 
-  private final String quotedSingleCharReplacement;
-
   private final String escapeChar;
-
-  private final String quotedEscapeCharReplacement;
 
   private List<String> supportedGeo;
 
@@ -168,13 +138,9 @@ public class WfsFilterDelegate extends SimpleFilterDelegate<FilterType> {
 
     this.coordinateStrategy = coordinateStrategy;
 
-    // All must be quoted as they are used in Matcher.replaceAll()
     this.wildcardChar = wildcardChar == null ? WfsConstants.WILD_CARD : wildcardChar.toString();
-    quotedWildcardReplacement = Matcher.quoteReplacement(this.wildcardChar);
     this.singleChar = singleChar == null ? SINGLE_CHAR : singleChar.toString();
-    quotedSingleCharReplacement = Matcher.quoteReplacement(this.singleChar);
     this.escapeChar = escapeChar == null ? WfsConstants.ESCAPE : escapeChar.toString();
-    quotedEscapeCharReplacement = Matcher.quoteReplacement(this.escapeChar);
   }
 
   public void setSupportedGeometryOperands(List<QName> geometryOperands) {
@@ -746,11 +712,21 @@ public class WfsFilterDelegate extends SimpleFilterDelegate<FilterType> {
   }
 
   private String replaceSpecialPropertyIsLikeChars(final String literal) {
-    String result = literal;
-    result = REPLACE_UNESCAPED_WILDCARDS.matcher(result).replaceAll(quotedWildcardReplacement);
-    result = REPLACE_UNESCAPED_SINGLE_CHARS.matcher(result).replaceAll(quotedSingleCharReplacement);
-    result = REPLACE_ESCAPE_CHAR.matcher(result).replaceAll(quotedEscapeCharReplacement + "$1");
-    return result;
+    final char[] chars = literal.toCharArray();
+    int i = 0;
+    while (i < chars.length) {
+      if (chars[i] == ESCAPE_CHAR.charAt(0)) {
+        chars[i] = escapeChar.charAt(0);
+        // Since this char is an escape the next is a literal so we should skip it.
+        ++i;
+      } else if (chars[i] == WILDCARD_CHAR.charAt(0)) {
+        chars[i] = wildcardChar.charAt(0);
+      } else if (chars[i] == SINGLE_CHAR.charAt(0)) {
+        chars[i] = singleChar.charAt(0);
+      }
+      ++i;
+    }
+    return new String(chars);
   }
 
   private JAXBElement<PropertyIsBetweenType> createPropertyIsBetween(

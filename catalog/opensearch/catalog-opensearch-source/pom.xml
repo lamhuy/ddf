@@ -44,16 +44,17 @@
             <groupId>com.rometools</groupId>
             <artifactId>rome</artifactId>
             <version>${com.rometools.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jdom</groupId>
+                    <artifactId>jdom2</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.rometools</groupId>
             <artifactId>rome-utils</artifactId>
             <version>${com.rometools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jdom</groupId>
-            <artifactId>jdom2</artifactId>
-            <version>2.0.6</version>
         </dependency>
         <dependency>
             <groupId>ddf.catalog.opensearch</groupId>
@@ -133,7 +134,6 @@
                         <Embed-Dependency>
                             rome,
                             rome-utils,
-                            jdom2,
                             catalog-opensearch-api,
                             ddf-security-common,
                             catalog-core-api-impl,

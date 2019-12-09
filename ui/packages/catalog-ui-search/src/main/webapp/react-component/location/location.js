@@ -25,6 +25,12 @@ const readableNames = {
   east: 'longitude',
   north: 'latitude',
   south: 'latitude',
+  dmsLat: 'latitude',
+  dmsLon: 'longitude',
+  dmsNorth: 'latitude',
+  dmsSouth: 'latitude',
+  dmsWest: 'longitude',
+  dmsEast: 'longitude',
 }
 
 const validLatLon = {
@@ -96,14 +102,17 @@ const Invalid = styled.div`
 `
 
 const Component = CustomElements.registerReact('location')
-var errors = false
-var inValidInput = ''
-var inValidKey = ''
-var defaultCoord = ''
+let errors = false
+let inValidInput = ''
+let inValidKey = ''
+let defaultCoord = ''
 const LocationInput = props => {
   const { mode, setState, cursor } = props
   const input = inputs[mode] || {}
   const { Component: Input = null } = input
+  const removeErrorBox = () => {
+    setState((errors = false))
+  }
   return (
     <Component>
       <Json value={props} onChange={value => setState(value)} />
@@ -125,7 +134,8 @@ const LocationInput = props => {
             &nbsp;
             <span className="fa fa-exclamation-triangle" />
             &nbsp; {inValidInput} is not an acceptable {inValidKey} value.
-            Defaulting to {defaultCoord}.
+            Defaulting to {defaultCoord}. &nbsp; &nbsp;
+            <span className="fa fa-times" onClick={removeErrorBox} />
           </Invalid>
         ) : (
           ''
@@ -145,7 +155,7 @@ const ddValidators = {
   east: value => value <= 180 && value >= -180,
 }
 
-var isDms = false
+let isDms = false
 const dmsValidators = {
   dmsLat: value => validateInput(value, 'dd°mm\'ss.s"'),
   dmsLon: value => validateInput(value, 'ddd°mm\'ss.s"'),
@@ -170,13 +180,13 @@ module.exports = ({ state, setState, options }) => (
     setState={setState}
     cursor={key => value => {
       isDms = false
-      let validateCoords = ddValidators[key]
-      if (validateCoords === undefined) {
-        validateCoords = dmsValidators[key]
+      let coordValidator = ddValidators[key]
+      if (coordValidator === undefined) {
+        coordValidator = dmsValidators[key]
         isDms = true
       }
       if (!isDms) {
-        if (typeof validateCoords === 'function' && !validateCoords(value)) {
+        if (typeof coordValidator === 'function' && !coordValidator(value)) {
           errors = true
           inValidInput = value
           inValidKey = readableNames[key]
@@ -188,14 +198,14 @@ module.exports = ({ state, setState, options }) => (
         setState(key, value, (errors = false))
       } else {
         if (
-          typeof validateCoords === 'function' &&
-          validateCoords(value) !== value &&
+          typeof coordValidator === 'function' &&
+          coordValidator(value) !== value &&
           value !== ''
         ) {
           errors = true
           inValidInput = value
           inValidKey = readableNames[key]
-          defaultCoord = validateCoords(value)
+          defaultCoord = coordValidator(value)
           value = defaultCoord
           setState(key, value)
           return

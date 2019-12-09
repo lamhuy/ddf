@@ -13,17 +13,18 @@ const Invalid = styled.div`
 `
 
 class BaseLine extends React.Component {
-  isValid = true
-  inValidMessage = ''
+  invalidMessage = ''
   constructor(props) {
     super(props)
     const { geometryKey } = props
     const value = JSON.stringify(props[geometryKey])
-    this.state = { value }
+    this.state = { value, isValid: true }
+    this.state.isValid = true
     this.is2DArray = this.is2DArray.bind(this)
-    this.isValidListOfPoints = this.isValidListOfPoints.bind(this)
+    this.validateListOfPoints = this.validateListOfPoints.bind(this)
     this.isValidPolygon = this.isValidPolygon.bind(this)
     this.isValidInput = this.isValidInput.bind(this)
+    this.removeErrorBox = this.removeErrorBox.bind(this)
   }
   componentWillReceiveProps(props) {
     if (document.activeElement !== this.ref) {
@@ -50,8 +51,7 @@ class BaseLine extends React.Component {
             }}
             onBlur={() => this.isValidInput(this.state.value)}
             onFocus={value => {
-              this.isValid = true
-              this.setState()
+              this.setState({ isValid: true })
             }}
           />
           <Units value={props[unitKey]} onChange={cursor(unitKey)}>
@@ -64,38 +64,35 @@ class BaseLine extends React.Component {
             />
           </Units>
         </div>
-        {this.isValid ? (
+        {this.state.isValid ? (
           ''
         ) : (
           <Invalid>
             &nbsp;
             <span className="fa fa-exclamation-triangle" />
-            &nbsp; {this.inValidMessage}
+            &nbsp; {this.invalidMessage} &nbsp; &nbsp;
+            <span className="fa fa-times" onClick={this.removeErrorBox} />
           </Invalid>
         )}
       </React.Fragment>
     )
   }
+  removeErrorBox() {
+    this.setState({ isValid: true })
+  }
   isValidInput(value) {
-    this.inValidMessage = ''
-    this.inValidPoint = ''
-    if (this.isValidPolygon(value)) {
-      this.isValid = true
-      this.setState({ value })
-    } else {
-      this.isValid = false
-      this.setState({ value })
-    }
+    this.invalidMessage = ''
+    this.setState({ value, isValid: this.isValidPolygon(value) })
   }
   is2DArray(coordinates) {
     try {
-      let parsedCoords = JSON.parse(coordinates)
-      return Array.isArray(parsedCoords) && Array.isArray(parsedCoords)
+      const parsedCoords = JSON.parse(coordinates)
+      return Array.isArray(parsedCoords) && Array.isArray(parsedCoords[0])
     } catch (e) {
       return false
     }
   }
-  isValidListOfPoints(coordinates) {
+  validateListOfPoints(coordinates) {
     let message = ''
     if (this.props.mode === 'poly' && coordinates.length < 4) {
       message = 'Minimum of 4 points needed for polygon'
@@ -121,19 +118,21 @@ class BaseLine extends React.Component {
       }
     })
     if (message !== '') {
-      this.inValidMessage = message
-      return false
+      this.invalidMessage = message
+      throw 'Invalid coordinates.'
     }
-    return true
   }
   isValidPolygon(coordinates) {
     if (!this.is2DArray(coordinates)) {
-      this.inValidMessage = 'Not an acceptable value.'
-      return false
-    } else if (!this.isValidListOfPoints(JSON.parse(coordinates))) {
+      this.invalidMessage = 'Not an acceptable value.'
       return false
     }
-    return true
+    try {
+      this.validateListOfPoints(JSON.parse(coordinates))
+      return true
+    } catch (e) {
+      return false
+    }
   }
 }
 

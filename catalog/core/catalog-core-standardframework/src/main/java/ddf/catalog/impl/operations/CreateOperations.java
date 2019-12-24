@@ -239,7 +239,7 @@ public class CreateOperations {
     CreateResponse createResponse;
 
     Exception ingestError = null;
-
+    long startTime = System.currentTimeMillis();
     createRequest = queryOperations.setFlagsOnRequest(createRequest);
     createRequest = validateCreateRequest(createRequest);
     createRequest = validateLocalSource(createRequest);
@@ -255,15 +255,16 @@ public class CreateOperations {
               .collect(Collectors.toList());
       fileNames = String.join(", ", fileList);
     }
-
+    LOGGER.debug("Time elapsed for validation {} ms", System.currentTimeMillis() - startTime);
     try {
       INGEST_LOGGER.info("Started ingesting metacard with titles: {}.", fileNames);
+      startTime = System.currentTimeMillis();
       createRequest = injectAttributes(createRequest);
       createRequest = setDefaultValues(createRequest);
       createRequest = processPreAuthorizationPlugins(createRequest);
       createRequest = updateCreateRequestPolicyMap(createRequest);
       createRequest = processPrecreateAccessPlugins(createRequest);
-
+      LOGGER.debug("Time elapsed for setup {} ms", System.currentTimeMillis() - startTime);
       createRequest
           .getProperties()
           .put(
@@ -401,12 +402,14 @@ public class CreateOperations {
       throw new IngestException(
           "CreateRequest was null, either passed in from endpoint, or as output from PreIngestPlugins");
     }
+    long startTime = System.currentTimeMillis();
     List<Metacard> entries = createRequest.getMetacards();
     if (CollectionUtils.isEmpty(entries)) {
       throw new IngestException(
           "Cannot perform ingest with null/empty entry list, either passed in from endpoint, or as output from PreIngestPlugins");
     }
 
+    LOGGER.debug("Time elapsed for validateRequest {} ms", System.currentTimeMillis() - startTime);
     return createRequest;
   }
 
@@ -492,6 +495,7 @@ public class CreateOperations {
   }
 
   private CreateResponse processPostIngestPlugins(CreateResponse createResponse) {
+    long startTime = System.currentTimeMillis();
     for (final PostIngestPlugin plugin : frameworkProperties.getPostIngest()) {
       try {
         createResponse = plugin.process(createResponse);
@@ -499,6 +503,7 @@ public class CreateOperations {
         LOGGER.info("Plugin processing failed. This is allowable. Skipping to next plugin.", e);
       }
     }
+    LOGGER.debug("Time elapsed for PostIngestPlugin {} ms", System.currentTimeMillis() - startTime);
     return createResponse;
   }
 
@@ -507,7 +512,7 @@ public class CreateOperations {
     if (!opsCatStoreSupport.isCatalogStoreRequest(createRequest)) {
       return createResponse;
     }
-
+    long startTime = System.currentTimeMillis();
     CreateResponse remoteCreateResponse = doRemoteCreate(createRequest);
     if (createResponse == null) {
       createResponse = remoteCreateResponse;
@@ -515,6 +520,7 @@ public class CreateOperations {
       createResponse.getProperties().putAll(remoteCreateResponse.getProperties());
       createResponse.getProcessingErrors().addAll(remoteCreateResponse.getProcessingErrors());
     }
+    LOGGER.debug("Time elapsed for RemoteCreate {} ms", System.currentTimeMillis() - startTime);
     return createResponse;
   }
 
@@ -530,6 +536,7 @@ public class CreateOperations {
 
   private CreateRequest processPreIngestPlugins(CreateRequest createRequest)
       throws StopProcessingException {
+    long startTime = System.currentTimeMillis();
     for (PreIngestPlugin plugin : frameworkProperties.getPreIngest()) {
       try {
         createRequest = plugin.process(createRequest);
@@ -537,6 +544,7 @@ public class CreateOperations {
         LOGGER.info("Plugin processing failed. This is allowable. Skipping to next plugin.", e);
       }
     }
+    LOGGER.debug("Time elapsed for PreIngestPlugin {} ms", System.currentTimeMillis() - startTime);
     return createRequest;
   }
 

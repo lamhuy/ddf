@@ -223,7 +223,9 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
 
   @Override
   public SourceResponse query(QueryRequest request) throws UnsupportedQueryException {
+    long startTime = System.currentTimeMillis();
     SourceResponse response = client.query(request);
+    LOGGER.debug("Time elapsed for Query {} ms", System.currentTimeMillis() - startTime);
     return response;
   }
 
@@ -307,12 +309,17 @@ public class BaseSolrCatalogProvider extends MaskableImpl implements CatalogProv
       output.add(metacard);
     }
 
+    long startTime = System.currentTimeMillis();
     try {
       client.add(output, isForcedAutoCommit());
     } catch (SolrServerException | SolrException | IOException | MetacardCreationException e) {
       LOGGER.info("Solr could not ingest metacard(s) during create.", e);
       throw new IngestException("Could not ingest metacard(s).", e);
     }
+    LOGGER.debug(
+        "Time elapsed to create {} metacards is {} ms",
+        metacards.size(),
+        System.currentTimeMillis() - startTime);
 
     return new CreateResponseImpl(request, request.getProperties(), output);
   }

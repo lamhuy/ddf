@@ -235,7 +235,7 @@ module.exports = Marionette.LayoutView.extend({
     this.onBeforeShow()
   },
   save: function() {
-    const errorMessages = queryContentView.getErrorMessages()
+    const errorMessages = this.queryContent.currentView.getErrorMessages()
     if (errorMessages.length !== 0) {
       showErrorMessages(errorMessages)
       return
@@ -250,7 +250,7 @@ module.exports = Marionette.LayoutView.extend({
     this.originalType = this.model.get('type')
   },
   saveRun: function() {
-    const errorMessages = queryContentView.getErrorMessages()
+    const errorMessages = this.queryContent.currentView.getErrorMessages()
     if (errorMessages.length !== 0) {
       showErrorMessages(errorMessages)
       return

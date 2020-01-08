@@ -30,6 +30,7 @@ const wreqr = require('../../js/wreqr.js')
 const announcement = require('../announcement/index.jsx')
 const user = require('../singletons/user-instance.js')
 import { InvalidSearchFormMessage } from 'component/announcement/CommonMessages'
+import { showErrorMessages } from '../../react-component/utils/validation'
 
 module.exports = Marionette.LayoutView.extend({
   template: template,
@@ -205,8 +206,9 @@ module.exports = Marionette.LayoutView.extend({
     this.queryContent.currentView.setDefaultTitle()
   },
   saveRun: function() {
-    if (!this.queryContent.currentView.isValid()) {
-      announcement.announce(InvalidSearchFormMessage)
+    const errorMessages = this.queryContent.currentView.getErrorMessages()
+    if (errorMessages.length !== 0) {
+      showErrorMessages(errorMessages)
       return
     }
     this.queryContent.currentView.save()

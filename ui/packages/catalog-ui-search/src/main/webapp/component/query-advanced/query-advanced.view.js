@@ -23,6 +23,7 @@ const store = require('../../js/store.js')
 const QuerySettingsView = require('../query-settings/query-settings.view.js')
 const user = require('../singletons/user-instance.js')
 const properties = require('../../js/properties.js')
+import { getFilterErrors } from '../../react-component/utils/validation'
 
 import query from '../../react-component/utils/query'
 
@@ -166,8 +167,14 @@ module.exports = Marionette.LayoutView.extend({
       this.options.onSave()
     }
   },
-  isValid: function() {
-    return this.querySettings.currentView.isValid()
+  getErrorMessages() {
+    return this.querySettings.currentView
+      .getErrorMessages()
+      .concat(
+        getFilterErrors(
+          this.queryAdvanced.currentView.getFilters().filters || []
+        )
+      )
   },
   setDefaultTitle: function() {
     this.model.set('title', this.model.get('cql'))

@@ -31,6 +31,7 @@ const plugin = require('plugins/query-settings')
 const announcement = require('../announcement/index.jsx')
 import { InvalidSearchFormMessage } from 'component/announcement/CommonMessages'
 const ResultForm = require('../result-form/result-form.js')
+import { showErrorMessages } from '../../react-component/utils/validation'
 
 module.exports = plugin(
   Marionette.LayoutView.extend({
@@ -206,12 +207,13 @@ module.exports = plugin(
     saveToModel: function() {
       this.model.set(this.toJSON())
     },
-    isValid: function() {
-      return this.settingsSortField.currentView.collection.models.length !== 0
+    getErrorMessages: function() {
+      return []
     },
     save: function() {
-      if (!this.isValid()) {
-        announcement.announce(InvalidSearchFormMessage)
+      const errorMessages = this.getErrorMessages()
+      if (errorMessages.length !== 0) {
+        showErrorMessages(errorMessages)
         return
       }
       this.saveToModel()
@@ -219,8 +221,9 @@ module.exports = plugin(
       this.$el.trigger('closeDropdown.' + CustomElements.getNamespace())
     },
     run: function() {
-      if (!this.isValid()) {
-        announcement.announce(InvalidSearchFormMessage)
+      const errorMessages = this.getErrorMessages()
+      if (errorMessages.length !== 0) {
+        showErrorMessages(errorMessages)
         return
       }
       this.saveToModel()

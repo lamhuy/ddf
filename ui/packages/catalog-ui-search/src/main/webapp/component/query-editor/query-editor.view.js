@@ -26,6 +26,7 @@ const store = require('../../js/store.js')
 const user = require('../singletons/user-instance.js')
 const announcement = require('../announcement/index.jsx')
 import { InvalidSearchFormMessage } from 'component/announcement/CommonMessages'
+import { showErrorMessages } from '../../react-component/utils/validation'
 
 function isNested(filter) {
   var nested = false
@@ -234,8 +235,9 @@ module.exports = Marionette.LayoutView.extend({
     this.onBeforeShow()
   },
   save: function() {
-    if (!this.queryContent.currentView.isValid()) {
-      announcement.announce(InvalidSearchFormMessage)
+    const errorMessages = queryContentView.getErrorMessages()
+    if (errorMessages.length !== 0) {
+      showErrorMessages(errorMessages)
       return
     }
     this.queryContent.currentView.save()
@@ -248,8 +250,9 @@ module.exports = Marionette.LayoutView.extend({
     this.originalType = this.model.get('type')
   },
   saveRun: function() {
-    if (!this.queryContent.currentView.isValid()) {
-      announcement.announce(InvalidSearchFormMessage)
+    const errorMessages = queryContentView.getErrorMessages()
+    if (errorMessages.length !== 0) {
+      showErrorMessages(errorMessages)
       return
     }
     this.queryContent.currentView.save()

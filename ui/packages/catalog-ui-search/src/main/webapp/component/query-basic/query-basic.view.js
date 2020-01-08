@@ -32,6 +32,7 @@ const CQLUtils = require('../../js/CQLUtils.js')
 const QuerySettingsView = require('../query-settings/query-settings.view.js')
 const QueryTimeView = require('../query-time/query-time.view.js')
 const Common = require('../../js/Common.js')
+import { getFilterErrors } from '../../react-component/utils/validation'
 
 function isNested(filter) {
   var nested = false
@@ -450,8 +451,10 @@ module.exports = Marionette.LayoutView.extend({
       cql: generatedCQL,
     })
   },
-  isValid: function() {
-    return this.basicSettings.currentView.isValid()
+  getErrorMessages() {
+    return this.basicSettings.currentView
+      .getErrorMessages()
+      .concat(getFilterErrors(this.constructFilter().filters))
   },
   constructFilter: function() {
     var filters = []

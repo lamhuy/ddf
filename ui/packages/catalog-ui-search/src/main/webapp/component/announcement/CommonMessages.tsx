@@ -1,6 +1,5 @@
-export const InvalidSearchFormMessage = {
+export const InvalidSearchFormMessage: any = {
   title: 'Validation Issues: Search Form cannot be run.',
-  message:
-    'Please verify your search criteria and settings before attempting to search again.',
+  message: [],
   type: 'error',
 }

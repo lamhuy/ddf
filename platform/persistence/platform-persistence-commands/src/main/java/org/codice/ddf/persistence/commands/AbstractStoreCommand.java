@@ -14,9 +14,9 @@
 package org.codice.ddf.persistence.commands;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.apache.commons.lang.StringUtils;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Option;
@@ -44,7 +44,7 @@ public abstract class AbstractStoreCommand implements Action {
         "Type of entry in the persistence store to perform the current operation on.\nOptions: metacard, saved_query, notification, activity, workspace, preferences, attributes, subscriptions, event_subscriptions, alerts, or decanter",
     multiValued = false
   )
-  protected String type;
+  String type;
 
   @Option(
     name = "CQL",
@@ -54,9 +54,9 @@ public abstract class AbstractStoreCommand implements Action {
         "OGC CQL statement to query the persistence store. Not specifying returns all entries. More information on CQL is available at: http://docs.geoserver.org/stable/en/user/tutorials/cql/cql_tutorial.html",
     multiValued = false
   )
-  protected String cql;
+  String cql;
 
-  @Reference protected PersistentStore persistentStore;
+  @Reference PersistentStore persistentStore;
 
   @Override
   public Object execute() {
@@ -75,29 +75,31 @@ public abstract class AbstractStoreCommand implements Action {
   /** Calls a command that operates on the Persistent Store service. */
   abstract void storeCommand() throws PersistenceException;
 
-  protected String createCql(String user, String cql) {
-    if (StringUtils.isBlank(user)) return "";
-    if (StringUtils.isNotBlank(cql)) {
-      cql = "( " + cql + ") AND user='" + user + "'";
-    } else {
-      cql = "user='" + user + "'";
+  protected String addUserConstraintToCql(String user, String cql) {
+    if (StringUtils.isNotBlank(user)) {
+      if (StringUtils.isNotBlank(cql)) {
+        cql = cql + " AND user='" + user + "'";
+      } else {
+        cql = "user='" + user + "'";
+      }
     }
     return cql;
   }
 
-  protected List<Map<String, Object>> getResults() throws PersistenceException {
+  protected long getResults(Function<List<Map<String, Object>>, Integer> storeFunction)
+      throws PersistenceException {
 
-    List<Map<String, Object>> results = new ArrayList<>();
     List<Map<String, Object>> pagedResults;
     int startIndex = 0;
     int pageSize = 1000;
+    long resultCount = 0L;
 
     do {
       pagedResults = persistentStore.get(type, cql, startIndex, pageSize);
-      results.addAll(pagedResults);
-      startIndex += pageSize;
+      resultCount += storeFunction.apply(pagedResults);
+      startIndex += pagedResults.size();
     } while (pagedResults.size() > 0);
 
-    return results;
+    return resultCount;
   }
 }

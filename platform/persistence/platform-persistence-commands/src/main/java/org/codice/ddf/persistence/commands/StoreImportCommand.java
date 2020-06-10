@@ -13,41 +13,36 @@
  */
 package org.codice.ddf.persistence.commands;
 
-import static org.codice.ddf.persistence.PersistentItem.BINARY_SUFFIX;
-import static org.codice.ddf.persistence.PersistentItem.DATE_SUFFIX;
-import static org.codice.ddf.persistence.PersistentItem.INT_SUFFIX;
-import static org.codice.ddf.persistence.PersistentItem.LONG_SUFFIX;
-import static org.codice.ddf.persistence.PersistentItem.SUFFIXES;
-import static org.codice.ddf.persistence.PersistentItem.TEXT_SUFFIX;
-import static org.codice.ddf.persistence.PersistentItem.XML_SUFFIX;
+import static org.codice.gsonsupport.GsonTypeAdapters.MAP_STRING_TO_OBJECT_TYPE;
 
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang.StringUtils;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Completion;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.support.completers.FileCompleter;
 import org.codice.ddf.persistence.PersistenceException;
+import org.codice.gsonsupport.GsonTypeAdapters.PersistenceMapTypeAdapter;
 
 @Service
 @Command(
@@ -68,8 +63,10 @@ public class StoreImportCommand extends AbstractStoreCommand {
   @Completion(FileCompleter.class)
   String filePath;
 
-  private final Gson gson = new Gson();
-  private final SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+  int batchSize = 1000;
+
+  private final Gson gson =
+      new GsonBuilder().registerTypeAdapterFactory(PersistenceMapTypeAdapter.FACTORY).create();
 
   @Override
   public void storeCommand() throws PersistenceException {
@@ -79,7 +76,7 @@ public class StoreImportCommand extends AbstractStoreCommand {
       return;
     }
     int totalFiles = 0;
-
+    long totalImport = 0;
     try {
       totalFiles = totalFileCount(inputFile);
     } catch (IOException e) {
@@ -91,46 +88,46 @@ public class StoreImportCommand extends AbstractStoreCommand {
     console.println("Found " + totalFiles + " files to import\n");
 
     try (Stream<Path> ingestStream = Files.walk(inputFile.toPath(), FileVisitOption.FOLLOW_LINKS)) {
-      ingestStream
-          .filter(Files::isRegularFile)
-          .map(Path::toFile)
-          .map(this::processFile)
-          .filter(Objects::nonNull)
-          .forEach(importResults::add);
+      List<Path> regularFiles =
+          ingestStream.filter(Files::isRegularFile).collect(Collectors.toList());
+
+      for (Collection<Path> batch : Lists.partition(regularFiles, batchSize)) {
+        batch
+            .stream()
+            .map(Path::toFile)
+            .map(this::processFile)
+            .filter(Objects::nonNull)
+            .forEach(importResults::add);
+        persistentStore.add(type, importResults);
+        totalImport += importResults.size();
+      }
+
     } catch (IOException e) {
       console.println("Unable to import files.");
       throw new UncheckedIOException(e);
     }
-    persistentStore.add(type, importResults);
 
-    console.println("Imported " + importResults.size() + " records \n");
+    console.println("Imported " + totalImport + " records \n");
   }
 
   private Map<String, Object> processFile(File file) {
 
-    Map<String, String> jsonResult;
+    Map<String, Object> jsonResult;
     try {
-      jsonResult = gson.fromJson(new FileReader(file), Map.class);
+      Reader reader = new FileReader(file);
+      jsonResult = gson.fromJson(reader, MAP_STRING_TO_OBJECT_TYPE);
+
     } catch (FileNotFoundException e) {
       console.println("File not found for import " + file.getName() + "\n");
       return null;
     } catch (JsonSyntaxException | JsonIOException e) {
       console.println("Unable to parse json file. Skipping " + file.getName());
       return null;
+    } catch (IOException e) {
+      return null;
     }
-
-    Map<String, Object> result = new HashMap<>();
-
-    for (String key : jsonResult.keySet()) {
-      String attributeType = extractTypeSuffix(key);
-      Object value = getValue(attributeType, jsonResult.get(key));
-      if (value != null) {
-        result.put(key, value);
-      }
-    }
-
     console.println("Processing: " + file.getName());
-    return result;
+    return jsonResult;
   }
 
   private File getInputFile() {
@@ -150,48 +147,5 @@ public class StoreImportCommand extends AbstractStoreCommand {
       }
     }
     return inputFile.isHidden() ? 0 : 1;
-  }
-
-  private String extractTypeSuffix(String key) {
-    int index = StringUtils.lastIndexOfAny(key, SUFFIXES);
-    if (index > 0) {
-      return key.substring(index);
-    } else {
-      console.println("Warning Key found without type suffix, skipping attribute: " + key);
-      return null;
-    }
-  }
-
-  /**
-   * Convert the string value to its given type
-   *
-   * @param attributeType attribute type
-   * @param stringValue value of the attribute
-   * @return the attribute value as its coverted object type
-   */
-  private Object getValue(String attributeType, String stringValue) {
-    if (attributeType == null) {
-      return null;
-    }
-    switch (attributeType.toLowerCase()) {
-      case BINARY_SUFFIX:
-        return Base64.getDecoder().decode(stringValue);
-      case DATE_SUFFIX:
-        try {
-          return formatter.parse(stringValue);
-        } catch (ParseException e) {
-          console.println("Failed to parse date: " + stringValue);
-          return null;
-        }
-      case LONG_SUFFIX:
-        return Long.valueOf(stringValue);
-      case INT_SUFFIX:
-        return Integer.valueOf(stringValue);
-      case TEXT_SUFFIX:
-      case XML_SUFFIX:
-        return stringValue;
-      default:
-        return null;
-    }
   }
 }

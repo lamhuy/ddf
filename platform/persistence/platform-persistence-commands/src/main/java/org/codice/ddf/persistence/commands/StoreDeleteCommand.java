@@ -16,6 +16,7 @@ package org.codice.ddf.persistence.commands;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
@@ -35,9 +36,15 @@ public class StoreDeleteCommand extends AbstractStoreCommand {
   @Override
   public void storeCommand() throws PersistenceException {
 
-    List<Map<String, Object>> results = getResults();
-    if (!results.isEmpty()) {
-      console.println(results.size() + " results matched cql.");
+    Function<List<Map<String, Object>>, Integer> noOp =
+        results -> {
+          return results.size();
+        };
+
+    long totalCount = getResults(noOp);
+
+    if (totalCount > 0) {
+      console.println(totalCount + " results matched cql.");
       String message = "\nAre you sure you want to delete? (yes/no): ";
       while (true) {
         try {
